@@ -10,7 +10,11 @@ When code is added, update this file with the real build/test/run commands.
 
 ## Language convention
 
-The project documents and the user communicate in **German**. Write specs, PRDs, commit messages, and user-facing text in German to match the existing corpus. Code identifiers and this guidance file are in English.
+- **Implementation docs (plans, design notes, READMEs), code identifiers, code comments, and this guidance file: English.** This is the new default as of 2026-06-04 and supersedes the earlier German-docs rule. Existing German specs/PRDs stay as-is; new implementation docs are written in English.
+- **In-app user-facing strings stay German** — the product itself is German (UI labels, messages, content).
+- **Existing canonical specs/PRDs** ([docs/superpowers/specs/](docs/superpowers/specs/)) remain in German as historical source-of-truth; do not translate them.
+- **Conversation language mirrors the user.** The user may write in English or German; respond in the language they used in that message.
+- **Commit messages:** either language is fine; keep them consistent within a change.
 
 ## Canonical documents
 

@@ -1,117 +1,119 @@
-# Smart Lists — Meta-Projektplan (MVP, Ansatz A)
+# Smart Lists — Meta Project Plan (MVP, Approach A)
 
-> **Für agentische Worker:** Dies ist der **Dachplan** über alle 8 vertikalen Scheiben des MVP.
-> Er wird **nicht** Schritt für Schritt ausgeführt — er koordiniert die Einzelpläne und führt den Fortschritt.
-> Jede Scheibe hat (oder bekommt) einen eigenen, ausführbaren Plan unter `docs/superpowers/plans/`.
+> **For agentic workers:** This is the **umbrella plan** over all 8 vertical slices of the MVP.
+> It is **not** executed step-by-step — it coordinates the individual slice plans and tracks progress.
+> Each slice has (or will get) its own executable plan under `docs/superpowers/plans/`.
 >
-> **PFLICHT für jeden Agenten:** Wenn du einen Slice-Plan fertig umgesetzt und verifiziert hast,
-> trage das Ergebnis unten im Abschnitt **[Fortschritts-Log](#fortschritts-log)** ein (siehe
-> [Pflege-Anleitung](#pflege-anleitung-für-zukünftige-agenten)). Das ist Teil der „Definition of Done"
-> einer Scheibe — nicht optional.
+> **REQUIRED of every agent:** When you have implemented and verified a slice plan, record the result
+> below in the **[Progress Log](#progress-log)** (see the
+> [maintenance guide](#maintenance-guide-for-future-agents)). This is part of a slice's "Definition of
+> Done" — not optional.
 
-**Ziel:** Ein kollaborativer Listen-PWA-MVP (Ansatz A) gemäß
-[MVP-Design](../specs/2026-06-02-smart-lists-mvp-design.md) und
-[Vision-PRD](../specs/2026-06-02-smart-lists-vision-prd.md).
+**Goal:** A collaborative list PWA MVP (Approach A) per the
+[MVP design](../specs/2026-06-02-smart-lists-mvp-design.md) and
+[Vision PRD](../specs/2026-06-02-smart-lists-vision-prd.md).
 
-**Sprache:** Doku, Specs, Commit-Messages und nutzersichtbarer Text auf **Deutsch**.
-Code-Identifier und technische Dateien auf Englisch (siehe [CLAUDE.md](../../../CLAUDE.md)).
+**Language:** Per [CLAUDE.md](../../../CLAUDE.md), implementation docs, code, and code comments are written
+in **English** (project default as of 2026-06-04). **In-app user-facing strings stay German** (the product
+is German). The existing canonical specs/PRDs remain in German. Commit messages: either is fine; keep them
+consistent within a slice.
 
 ---
 
-## Festgeschriebener Tech-Stack
+## Locked tech stack
 
-Dieser Stack ist die verbindliche Technologiewahl, die das MVP-Design (bewusst technologieneutral)
-bislang offen ließ. Alle Slice-Pläne bauen darauf auf.
+This is the binding technology choice that the MVP design (deliberately technology-neutral) left open.
+All slice plans build on it.
 
-| Schicht | Wahl | Begründung |
+| Layer | Choice | Rationale |
 |---|---|---|
-| Frontend + API | **Next.js** (App Router, TypeScript), als installierbare PWA | Ein Repo für Frontend **und** API (Route Handlers); deckt die in der Vision angedeutete JS-Frontend + Polling-Architektur ab. |
-| Auth | **Auth.js (NextAuth v5)** + Google-Provider, JWT-Session | Standard für Next.js; der `signIn`-Callback ist der natürliche Ort für das Allowlist-Gate. |
-| Datenbank | **Neon** (serverless Postgres) via **Prisma ORM** | Postgres = relationale DB, passt zum verknüpften Domänenmodell. Neon = betreibt Postgres in der Cloud (inkl. Test-Branches). Prisma = typsicherer, einsteigerfreundlicher Übersetzer zwischen TypeScript und SQL. |
-| Tests | **Vitest** + Testing Library | Schnell, TS-nativ, gut für TDD. |
-| Hosting | **Vercel** (Plugin bereits aktiv in `.claude/settings.json`) | Native Next.js-Plattform. |
+| Frontend + API | **Next.js** (App Router, TypeScript), as an installable PWA | One repo for frontend **and** API (Route Handlers); covers the JS-frontend + polling architecture the vision hints at. |
+| Auth | **Auth.js (NextAuth v5)** + Google provider, JWT session | Standard for Next.js; the `signIn` callback is the natural place for the allowlist gate. |
+| Database | **Neon** (serverless Postgres) via **Prisma ORM** | Postgres = relational DB, fits the linked domain model. Neon = runs Postgres in the cloud (incl. test branches). Prisma = type-safe, beginner-friendly translator between TypeScript and SQL. |
+| Tests | **Vitest** + Testing Library | Fast, TS-native, good for TDD. |
+| Hosting | **Vercel** (plugin already active in `.claude/settings.json`) | Native Next.js platform. |
 
-**Wichtige stack-weite Konventionen** (in allen Slices einhalten):
+**Important stack-wide conventions** (honor in every slice):
 
-- **Stabile UUIDs** für alle Entitäten, client-generierbar (Vorbereitung auf Offline-Phase 2).
-- **Eintragsbasierte, idempotente Operationen** als Mutationsmodell (`add_item`, `update_item`,
-  `check_item`, `remove_item`) ab Scheibe 3 — API-Verträge feld-/eintrags-granular halten.
-- **Jede API-Operation prüft Membership + Rolle** erneut (kein Vertrauen auf den Client).
-- **Test-First (TDD)**, kleine vertikale Schnitte, häufige Commits.
-- DB-Zugriff über eine **injizierbare Prisma-Instanz**, damit Logik isoliert testbar bleibt
-  (siehe Testbarkeits-Schnitte, MVP-Design §7).
+- **Stable UUIDs** for all entities, client-generatable (preparation for offline Phase 2).
+- **Entry-level, idempotent operations** as the mutation model (`add_item`, `update_item`,
+  `check_item`, `remove_item`) from Slice 3 on — keep API contracts field/entry-granular.
+- **Every API operation re-checks membership + role** (never trust the client).
+- **Test-first (TDD)**, small vertical slices, frequent commits.
+- DB access through an **injectable Prisma instance**, so logic stays testable in isolation
+  (see test seams, MVP design §7).
 
 ---
 
-## Die 8 Scheiben (Build-Order)
+## The 8 slices (build order)
 
-Reihenfolge aus MVP-Design §9. Jede Scheibe ist für sich lauffähige, getestete Software.
+Order from MVP design §9. Each slice is working, tested software on its own.
 
-| # | Scheibe | Liefert | Plan | Status |
+| # | Slice | Delivers | Plan | Status |
 |---|---|---|---|---|
-| 1 | **Auth + Allowlist** | Scaffold, Google-Login, E-Mail-Allowlist, JIT-User-Provisioning, Admin-Seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ⬜ Offen |
-| 2 | **Projekte + Membership** | Projekte CRUD, Rollen (Owner/Member), Mitglieder einladen/entfernen, Berechtigungs-Guard | _noch zu erstellen_ | ⬜ Offen |
-| 3 | **Listen + Einträge (Operationen)** | Listen CRUD, ListItems, eintragsbasierte Operationen, Kategorie/Menge/Einheit/Erledigt | _noch zu erstellen_ | ⬜ Offen |
-| 4 | **Katalog + Autovervollständigung** | Pro-Projekt-CatalogItem, `normalized_name`, Autocomplete, Kategorie-Rückfluss | _noch zu erstellen_ | ⬜ Offen |
-| 5 | **Favoriten + Vorschläge** | Favoriten pro Projekt, reine Vorschlags-Lesefunktion (Favoriten ∪ N-von-M-Statistik), Vorbefüllung | _noch zu erstellen_ | ⬜ Offen |
-| 6 | **Abschluss + Archiv** | Liste abschließen (manuell + Auto-Vorschlag bei „alles abgehakt"), Archivsicht | _noch zu erstellen_ | ⬜ Offen |
-| 7 | **Polling / Sync** | Cursor-basierter Delta-Endpunkt, Client-Polling (1–3 s), Last-Writer-Wins-Merge | _noch zu erstellen_ | ⬜ Offen |
-| 8 | **PWA-Feinschliff** | Manifest, Service Worker, iPhone-Optimierung (Safe Areas, Home-Screen, Touch) | _noch zu erstellen_ | ⬜ Offen |
+| 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ⬜ Open |
+| 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | _to be created_ | ⬜ Open |
+| 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | _to be created_ | ⬜ Open |
+| 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | _to be created_ | ⬜ Open |
+| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
+| 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | _to be created_ | ⬜ Open |
+| 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | _to be created_ | ⬜ Open |
+| 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 
-**Status-Legende:** ⬜ Offen · 🟨 In Arbeit · ✅ Fertig & verifiziert
+**Status legend:** ⬜ Open · 🟨 In progress · ✅ Done & verified
 
-### Abhängigkeiten zwischen den Scheiben
+### Dependencies between slices
 
 ```
-1 Auth ──> 2 Projekte/Membership ──> 3 Listen/Einträge ──> 4 Katalog ──> 5 Favoriten/Vorschläge
-                                          │                                      ^
-                                          ├──> 6 Abschluss/Archiv ───────────────┘
+1 Auth ──> 2 Projects/Membership ──> 3 Lists/Entries ──> 4 Catalog ──> 5 Favorites/Suggestions
+                                          │                                    ^
+                                          ├──> 6 Completion/Archive ───────────┘
                                           └──> 7 Polling/Sync
-8 PWA-Feinschliff: durchgängig, finaler Schliff am Ende.
+8 PWA polish: throughout, final polish at the end.
 ```
 
-- Scheibe 2 braucht 1 (Auth-Identität für Membership-Checks).
-- Scheibe 3 braucht 2 (Listen leben in Projekten; Operationen prüfen Membership).
-- Scheibe 4 braucht 3 (Katalog hängt an ListItems / Eingabe).
-- Scheibe 5 braucht 4 (Vorschläge lesen Katalog) **und** 6 (Statistik braucht abgeschlossene Listen).
-- Scheibe 6 + 7 hängen an 3.
+- Slice 2 needs 1 (auth identity for membership checks).
+- Slice 3 needs 2 (lists live in projects; operations check membership).
+- Slice 4 needs 3 (catalog hangs off ListItems / input).
+- Slice 5 needs 4 (suggestions read the catalog) **and** 6 (the statistic needs completed lists).
+- Slices 6 + 7 hang off 3.
 
 ---
 
-## Pflege-Anleitung (für zukünftige Agenten)
+## Maintenance guide (for future agents)
 
-Wenn du eine Scheibe abgeschlossen hast, mach **vor** dem finalen Commit Folgendes:
+When you have finished a slice, **before** the final commit do the following:
 
-1. **Status-Tabelle oben aktualisieren:** Setze die Scheibe auf ✅ (oder 🟨, falls nur teilweise),
-   und trage den realen Dateinamen des Slice-Plans ein, falls du ihn neu erstellt hast.
-2. **Fortschritts-Log-Eintrag** unten anhängen (Vorlage siehe dort). Pflicht-Inhalte:
-   - Datum, Scheibe, dein Ergebnis (was läuft jetzt, was ist getestet).
-   - **Abweichungen** vom Slice-Plan und **warum** (für den Lernmodus wichtig).
-   - **Folge-Entscheidungen**, die spätere Scheiben betreffen (z.B. „Session enthält jetzt `isAdmin`").
-   - Offene Punkte / Schulden, die die nächste Scheibe erbt.
-3. **Nächste Scheibe vorbereiten:** Wenn für die nächste Scheibe noch kein Plan existiert, erstelle ihn
-   mit der `superpowers:writing-plans`-Skill, speichere ihn als
-   `docs/superpowers/plans/YYYY-MM-DD-slice-N-<name>.md` und verlinke ihn in der Status-Tabelle.
-4. **CLAUDE.md aktualisieren**, sobald echte Build-/Test-/Run-Befehle existieren (siehe Hinweis dort:
-   „When code is added, update this file with the real build/test/run commands.").
+1. **Update the status table above:** set the slice to ✅ (or 🟨 if only partial), and fill in the real
+   filename of the slice plan if you created it.
+2. **Add a progress log entry** below (template there). Required content:
+   - Date, slice, your result (what works now, what is tested).
+   - **Deviations** from the slice plan and **why** (important for learning mode).
+   - **Follow-up decisions** that affect later slices (e.g. "session now carries `isAdmin`").
+   - Open items / debt the next slice inherits.
+3. **Prepare the next slice:** if no plan exists yet for the next slice, create it with the
+   `superpowers:writing-plans` skill, save it as `docs/superpowers/plans/YYYY-MM-DD-slice-N-<name>.md`,
+   and link it in the status table.
+4. **Update CLAUDE.md** once real build/test/run commands exist (see the note there: "When code is added,
+   update this file with the real build/test/run commands.").
 
-> Halte Log-Einträge knapp und faktisch. Dieser Dachplan ist die geteilte Wahrheit über den
-> Projektfortschritt — er muss stimmen, wenn ein frischer Agent ohne Kontext hier landet.
+> Keep log entries short and factual. This umbrella plan is the shared source of truth about project
+> progress — it must be correct when a fresh agent lands here with no context.
 
 ---
 
-## Fortschritts-Log
+## Progress log
 
-> Neueste Einträge oben. Vorlage:
+> Newest entries on top. Template:
 >
 > ```
-> ### YYYY-MM-DD — Scheibe N: <Name> — <Status>
-> - **Geliefert:** …
-> - **Getestet:** … (Befehl + Ergebnis)
-> - **Abweichungen vom Plan:** … (oder „keine")
-> - **Folge-Entscheidungen für spätere Scheiben:** …
-> - **Geerbte offene Punkte:** … (oder „keine")
+> ### YYYY-MM-DD — Slice N: <name> — <status>
+> - **Delivered:** …
+> - **Tested:** … (command + result)
+> - **Deviations from the plan:** … (or "none")
+> - **Follow-up decisions for later slices:** …
+> - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
 
-_(Noch keine Einträge — Scheibe 1 ist die erste.)_
+_(No entries yet — Slice 1 is the first.)_
