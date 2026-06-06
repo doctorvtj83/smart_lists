@@ -1,0 +1,55 @@
+// Dev container for Smart Lists (Next.js · TypeScript · Prisma · Neon · Vitest).
+// Runs via OrbStack as the Docker engine. Open with: VS Code/Cursor → "Reopen in Container".
+// JSONC: comments are allowed in devcontainer.json.
+{
+  "name": "smart-lists-dev",
+
+  // Base image: Microsoft's official TypeScript + Node 22 (LTS) image.
+  // Ships with node, npm and git already installed, so we don't build a Dockerfile.
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+
+  // Features = pre-packaged installers layered onto the base image at build time.
+  "features": {
+    // Installs the Claude Code CLI (the `claude` command) inside the container.
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    // Installs the GitHub CLI (`gh`) for PRs/auth later.
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Persist data across container rebuilds via named volumes (Docker keeps these
+  // separate from the container's own throwaway filesystem).
+  "mounts": [
+    // Claude Code stores its login + settings in ~/.claude (= /home/node/.claude here).
+    // Without this volume you'd have to re-authenticate `claude` after every rebuild.
+    "source=smart-lists-claude-config,target=/home/node/.claude,type=volume"
+  ],
+
+  // Runs once after the container is created.
+  // 1) A fresh named volume is owned by root, but we run as `node` -> fix ownership
+  //    so `claude` can write to its config dir.
+  // 2) Install npm deps — but only once the app exists (Slice 1 Task 0 creates
+  //    package.json; until then this is skipped so the build doesn't error).
+  "postCreateCommand": "sudo chown -R node:node /home/node/.claude && (if [ -f package.json ]; then npm install; fi)",
+
+  // Forward the Next.js dev server port so http://localhost:3000 on your Mac
+  // reaches the server running inside the container.
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Next.js dev server" }
+  },
+
+  "customizations": {
+    "vscode": {
+      // Extensions installed INTO the container (your Mac-side extensions don't
+      // automatically apply inside it).
+      "extensions": [
+        "anthropic.claude-code", // Claude Code for VS Code / Cursor
+        "Prisma.prisma", // schema syntax + autocomplete for prisma/schema.prisma
+        "dbaeumer.vscode-eslint" // ESLint integration (the scaffold sets ESLint up)
+      ]
+    }
+  },
+
+  // Run as the image's non-root user (avoids root-owned files in your project).
+  "remoteUser": "node"
+}
