@@ -9,11 +9,22 @@
   "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
 
   // Features = pre-packaged installers layered onto the base image at build time.
+  // NOTE: We intentionally do NOT use ghcr.io/anthropics/devcontainer-features/claude-code.
+  // That feature installs the CLI via `npm install -g @anthropic-ai/claude-code`, which is
+  // now deprecated and fails the build. We install Claude Code with its native installer in
+  // postCreateCommand instead (see below) — no npm, no Node dependency for the CLI.
   "features": {
-    // Installs the Claude Code CLI (the `claude` command) inside the container.
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
     // Installs the GitHub CLI (`gh`) for PRs/auth later.
     "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Make the native-installer location available on PATH.
+  // The Claude Code installer drops its self-contained binary into ~/.local/bin
+  // (= /home/node/.local/bin for our `node` user). That dir is NOT on PATH by
+  // default, so without this the `claude` command — and the VS Code extension that
+  // shells out to it — wouldn't be found.
+  "remoteEnv": {
+    "PATH": "/home/node/.local/bin:${containerEnv:PATH}"
   },
 
   // Persist data across container rebuilds via named volumes (Docker keeps these
@@ -24,12 +35,15 @@
     "source=smart-lists-claude-config,target=/home/node/.claude,type=volume"
   ],
 
-  // Runs once after the container is created.
+  // Runs once after the container is created. Three steps, chained with &&:
   // 1) A fresh named volume is owned by root, but we run as `node` -> fix ownership
   //    so `claude` can write to its config dir.
-  // 2) Install npm deps — but only once the app exists (Slice 1 Task 0 creates
+  // 2) Install Claude Code via its official native installer. This downloads a
+  //    self-contained binary into ~/.local/bin (owned by `node`, so in-session
+  //    `claude update` works without root). No npm, no Node dependency.
+  // 3) Install npm deps — but only once the app exists (Slice 1 Task 0 creates
   //    package.json; until then this is skipped so the build doesn't error).
-  "postCreateCommand": "sudo chown -R node:node /home/node/.claude && (if [ -f package.json ]; then npm install; fi)",
+  "postCreateCommand": "sudo chown -R node:node /home/node/.claude && curl -fsSL https://claude.ai/install.sh | bash && (if [ -f package.json ]; then npm install; fi)",
 
   // Forward the Next.js dev server port so http://localhost:3000 on your Mac
   // reaches the server running inside the container.
