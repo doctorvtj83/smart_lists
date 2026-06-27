@@ -2,16 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Next.js scaffold exists
+## Build / Test / Run
 
-This repository now contains the initial Next.js App Router scaffold for Slice 1. The historical design documents remain the source of truth for product behavior, while the application code starts from the generated `src/app` structure.
+The repository now contains the Slice 1 Next.js App Router implementation. The historical design documents remain the source of truth for product behavior, while the application code follows the locked stack in the meta project plan.
 
-Current commands:
+- Install: `npm install`
+- Dev server: `npm run dev` (http://localhost:3000)
+- Tests: `npm test` (Vitest against the Neon test branch; needs `.env.test`)
+- Lint: `npm run lint`
+- DB migration (dev): `npx prisma migrate dev`
+- Seed (admin/allowlist): `npx prisma db seed`
+- Build: `npm run build`
+- Production server after a build: `npm run start`
 
-- `npm run dev` — start the local Next.js development server.
-- `npm run build` — create a production build.
-- `npm run start` — run the production server after a build.
-- `npm run lint` — run ESLint over the project.
+Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
+Tests additionally need `.env.test` with the `DATABASE_URL` of the Neon `test` branch.
 
 ## Language convention
 
