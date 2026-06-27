@@ -34,3 +34,6 @@ next-env.d.ts
 
 # Vercel
 .vercel
+
+# Git worktrees used by agent workflows; ignored so nested checkouts are never tracked.
+.worktrees/
