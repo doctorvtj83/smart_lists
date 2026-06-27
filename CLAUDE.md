@@ -2,11 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: planning stage, no code yet
+## Project status: Next.js scaffold exists
 
-This repository currently contains **only design documentation** — no application code, build system, or tests exist. There is therefore nothing to build, lint, or run yet. The immediate work is producing an implementation plan from the existing design, then scaffolding the app.
+This repository now contains the initial Next.js App Router scaffold for Slice 1. The historical design documents remain the source of truth for product behavior, while the application code starts from the generated `src/app` structure.
 
-When code is added, update this file with the real build/test/run commands.
+Current commands:
+
+- `npm run dev` — start the local Next.js development server.
+- `npm run build` — create a production build.
+- `npm run start` — run the production server after a build.
+- `npm run lint` — run ESLint over the project.
 
 ## Language convention
 
