@@ -4,7 +4,13 @@ import { prisma } from "@/lib/db";
 import { isEmailAllowed, provisionUser } from "@/lib/auth/allowlist";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [Google],
+  providers: [
+    // Auth.js defaults to AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET, but the project plan standardizes on these names.
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
   // JWT sessions keep the MVP schema small: Auth.js does not need its own session table.
   session: { strategy: "jwt" },
   pages: {
