@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "users" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "google_sub" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "display_name" TEXT,
@@ -12,9 +12,9 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "allowlist_entries" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "email" TEXT NOT NULL,
-    "invited_by" TEXT,
+    "invited_by" UUID,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "allowlist_entries_pkey" PRIMARY KEY ("id")

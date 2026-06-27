@@ -12,7 +12,7 @@ datasource db {
 
 // A signed-in user. Created on first successful login (JIT provisioning).
 model User {
-  id          String   @id @default(uuid())            // stable UUID (convention: client-generatable)
+  id          String   @id @default(uuid()) @db.Uuid   // stable UUID (convention: client-generatable)
   googleSub   String   @unique @map("google_sub")      // stable Google identity (OAuth "sub")
   email       String                                    // email from the Google profile (stored normalized)
   displayName String?  @map("display_name")            // display name, optional
@@ -24,9 +24,9 @@ model User {
 
 // Email gate for login. Only emails in this table are allowed to sign in.
 model AllowlistEntry {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @db.Uuid
   email     String   @unique                            // always stored normalized (lowercase + trim)
-  invitedBy String?  @map("invited_by")                 // User.id of the inviter; null for the very first seed
+  invitedBy String?  @db.Uuid @map("invited_by")        // User.id of the inviter; null for the very first seed
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("allowlist_entries")
