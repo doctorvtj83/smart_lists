@@ -1,0 +1,33 @@
+// Prisma schema: describes our DB tables in one central place.
+// From this schema Prisma generates the type-safe client (Task 2, Step 5).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A signed-in user. Created on first successful login (JIT provisioning).
+model User {
+  id          String   @id @default(uuid())            // stable UUID (convention: client-generatable)
+  googleSub   String   @unique @map("google_sub")      // stable Google identity (OAuth "sub")
+  email       String                                    // email from the Google profile (stored normalized)
+  displayName String?  @map("display_name")            // display name, optional
+  isAdmin     Boolean  @default(false) @map("is_admin") // may maintain the allowlist
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+// Email gate for login. Only emails in this table are allowed to sign in.
+model AllowlistEntry {
+  id        String   @id @default(uuid())
+  email     String   @unique                            // always stored normalized (lowercase + trim)
+  invitedBy String?  @map("invited_by")                 // User.id of the inviter; null for the very first seed
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("allowlist_entries")
+}
