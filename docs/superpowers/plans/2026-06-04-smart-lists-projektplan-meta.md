@@ -60,7 +60,7 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | _to be created_ | ⬜ Open |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 
-**Status legend:** ⬜ Open · 🟨 In progress · ✅ Done & verified
+**Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
 ### Dependencies between slices
 
@@ -122,4 +122,4 @@ When you have finished a slice, **before** the final commit do the following:
 - **Deviations from the plan:** Prisma seed configuration lives in `prisma.config.ts` instead of deprecated `package.json#prisma`, removing the seed deprecation warning. Next 16 warns that `middleware` is deprecated in favor of `proxy`; the slice keeps `src/middleware.ts` because the plan requested it and the build succeeds.
 - **Follow-up decisions for later slices:** Session carries `user.id` (UUID) and `user.isAdmin`; JWT strategy, so DB permission changes only take effect on next login. Membership checks (Slice 2) build on `session.user.id`.
 - **Inherited open items:** Complete a manual Google sign-in pass for enabled-user login/logout/admin flag refresh once browser interaction can finish OAuth. Revisit `middleware` -> `proxy` migration in a later Next.js maintenance slice.
-- **Commit(s):** 2b117aaefc22d19ad863a02b88062b2b8428b6eb, 61b1cce1aa0787a3f25d522d4eb83a14be7dc838
+- **Commit(s):** 2b117aaefc22d19ad863a02b88062b2b8428b6eb, 61b1cce1aa0787a3f25d522d4eb83a14be7dc838, a3ce3bd7675e96cf11c065717d5d001d605a129c. This line records the finalized Slice 1 / Task 9 documentation commits through the prior metadata consistency update; later commits may be metadata-only tracking fixes.
