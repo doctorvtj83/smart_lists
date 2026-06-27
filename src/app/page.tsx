@@ -1,8 +1,13 @@
 import { auth, signOut } from "@/auth";
+import { redirect } from "next/navigation";
 
-// Thanks to middleware.ts this page is only reachable with a session, making it a compact auth-chain smoke test.
+// Middleware is the first protection layer; this explicit check keeps the page safe if middleware behavior changes.
 export default async function HomePage() {
   const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
 
   return (
     <main style={{ padding: 24 }}>

@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// This first allowlist entry bootstraps closed access so the initial administrator can log in.
+// This first allowlist entry bootstraps closed access; keep it lowercase because allowlist emails are stored normalized.
 const ADMIN_EMAIL = "volkertjaden@gmail.com";
 
 // Seeds the first allowed email and promotes the matching user after they have been provisioned by login.
