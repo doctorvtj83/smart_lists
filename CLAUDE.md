@@ -50,32 +50,25 @@ Auth + allowlist → Projects + membership → Lists + entries (operations) → 
 
 The design is deliberately technology-neutral. The vision draft *floats* (does not commit to) Vercel hosting, Neon DB, a JS frontend framework, polling, and Google auth. The Vercel Claude plugin is enabled in [.claude/settings.json](.claude/settings.json). Do not assume a stack until the implementation plan commits to one.
 
-# Lernmodus
+## Code documentation standard
 
-Ich bin Entwickler-Einsteiger und möchte beim Programmieren verstehen, *warum* Dinge
-so funktionieren — nicht nur, dass sie funktionieren. Bitte halte dich an folgende
-Regeln:
+All code written in this project must be **meticulously documented with inline comments**. This is a learning project and the developer reads every line to understand what is happening. Follow these rules:
 
-## Erklärungen und Arbeitsweise
-- Erkläre mir mehr als du einem erfahrenen Entwickler erklären würdest
-- Mache immer kleinere, schrittweise Änderungen statt großer Modifikationen auf einmal
-- Erkläre bei Code-Änderungen jeden Schritt — nicht nur *was*, sondern auch *warum*
-  es so funktioniert
-- Erkläre neue Konzepte mit Hintergrundwissen, damit ich wirklich verstehe, was
-  passiert — nicht nur kopiere
-- Füge Inline-Kommentare in Code hinzu, den du schreibst oder änderst, damit ich
-  nachvollziehen kann, was jeder Teil tut (ich kann sie später entfernen)
-- Erinnere mich immer daran, größere Änderungen zu prüfen, bevor sie umgesetzt werden
+- Every function gets a comment explaining what it does and **why** it exists (what problem it solves).
+- Every non-obvious line or block gets an inline comment explaining the reasoning — not just what the code does, but why it does it that way.
+- When a pattern (e.g. singleton, upsert, dependency injection) is used, name it and briefly explain why it was chosen.
+- When a decision has a constraint behind it (a framework quirk, a design rule from the specs, a future-proofing choice), note it in a comment.
+- Comments are in **English** (code identifier language); in-app user-facing strings stay German.
+- Do not remove or thin out existing comments when editing a file.
 
-## Signale für riskante Änderungen
-- Verwende klare visuelle Signale wie "⚠️ GROSSE ÄNDERUNG" oder "🔴 HOHES RISIKO"
-  bei größeren oder riskanten Änderungen
-- Warte immer auf meine Bestätigung, bevor du bedeutende Modifikationen vornimmst
+## Implementation review (per slice)
 
-## Schnellmodus (nur diese Sitzung)
-- Wenn ich "schnell weiter" oder etwas Ähnliches sage, wechsle für den Rest der
-  Sitzung in den Schnellmodus — überspringe schrittweise Erklärungen und
-  implementiere einfach effizient
-- Wenn ich "zurück zum Lernmodus" oder etwas Ähnliches sage, kehre zu ausführlichen
-  Erklärungen zurück
-- Dieser Schalter gilt nur für die aktuelle Sitzung und ändert diese Datei nicht
+After completing each implementation slice, create a review document in `docs/implementation-reviews/` named `slice-<N>-<slug>.md`. This document is for the developer to build a mental model of what was built. It must cover:
+
+1. **What was achieved** — a plain-language summary of the slice goal and whether it was fully met.
+2. **Steps taken** — brief description of each task completed and what changed.
+3. **Core components built** — list each new file/function with a sentence on its role.
+4. **Most important lines of code** — quote the 5–10 lines (or small blocks) that carry the most conceptual weight, with an explanation of why each is significant.
+5. **Architecture contribution** — which part of the overall system architecture was assembled by this slice, and how it connects to what comes next.
+
+The review is written in English. It is part of the Definition of Done for every slice.

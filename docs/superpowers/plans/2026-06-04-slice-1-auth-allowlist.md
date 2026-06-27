@@ -8,6 +8,16 @@
 > [meta project plan](2026-06-04-smart-lists-projektplan-meta.md) (status table + progress log).
 > This is part of the Definition of Done.
 >
+> **Code documentation:** All code must be meticulously documented with inline comments — every
+> function, every non-obvious line, every pattern choice. See the "Code documentation standard"
+> section in [CLAUDE.md](../../../CLAUDE.md). This is mandatory, not optional.
+>
+> **Implementation review:** After completing this slice, write
+> `docs/implementation-reviews/slice-1-auth-allowlist.md` covering: what was achieved, steps
+> taken, core components built, most important lines of code (quoted), and architecture
+> contribution. See the "Implementation review" section in [CLAUDE.md](../../../CLAUDE.md).
+> This is part of the Definition of Done.
+>
 > **Learning mode:** The user is a beginner developer learning along the way. While implementing,
 > explain each step — *what* and *why* — and keep the inline comments in the code (see
 > [CLAUDE.md](../../../CLAUDE.md)). In-app user-facing strings stay German (the product is German).
@@ -1009,11 +1019,22 @@ Modify `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md`:
   JWT strategy, so DB permission changes only take effect on next login. Membership checks (Slice 2)
   build on `session.user.id`."
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Write the implementation review**
+
+Create `docs/implementation-reviews/slice-1-auth-allowlist.md` covering all five required sections
+(see CLAUDE.md "Implementation review"):
+
+1. **What was achieved** — closed-access Google login gated by an email allowlist; JIT user provisioning.
+2. **Steps taken** — one paragraph per task (0–8): scaffold, Vitest, Prisma, test infra, normalizeEmail, isEmailAllowed, provisionUser, Auth.js wiring, pages + seed + browser verification.
+3. **Core components built** — each new file with its role (use the file-structure table from the top of this plan as a starting point, and add what each file actually does in one sentence).
+4. **Most important lines of code** — quote and explain the 5–10 lines that carry the most conceptual weight. Good candidates: the `signIn` callback gate, the `upsert` in `provisionUser`, the singleton pattern in `db.ts`, the middleware `matcher` pattern, the `normalizeEmail` one-liner and why it is the identity basis.
+5. **Architecture contribution** — this slice assembled the security perimeter of the whole app; explain how `session.user.id` and `session.user.isAdmin` become the inputs that every subsequent slice's permission checks consume.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "docs: CLAUDE.md commands + meta project plan progress (Slice 1 done)"
+git commit -m "docs: CLAUDE.md commands + meta project plan + implementation review (Slice 1 done)"
 ```
 
 ---
@@ -1027,6 +1048,8 @@ git commit -m "docs: CLAUDE.md commands + meta project plan progress (Slice 1 do
 - [ ] A protected route without a session → redirect to `/login`.
 - [ ] Admin seed works; `session.user.isAdmin` correct after a fresh login.
 - [ ] `CLAUDE.md` contains real commands; the meta project plan shows Slice 1 as ✅ with a log entry.
+- [ ] All code is meticulously documented with inline comments (see CLAUDE.md "Code documentation standard").
+- [ ] `docs/implementation-reviews/slice-1-auth-allowlist.md` exists and covers all five required sections.
 
 ## Test-seam coverage (against MVP design §7)
 
