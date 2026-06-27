@@ -122,4 +122,4 @@ When you have finished a slice, **before** the final commit do the following:
 - **Deviations from the plan:** Prisma seed configuration lives in `prisma.config.ts` instead of deprecated `package.json#prisma`, removing the seed deprecation warning. Next 16 warns that `middleware` is deprecated in favor of `proxy`; the slice keeps `src/middleware.ts` because the plan requested it and the build succeeds.
 - **Follow-up decisions for later slices:** Session carries `user.id` (UUID) and `user.isAdmin`; JWT strategy, so DB permission changes only take effect on next login. Membership checks (Slice 2) build on `session.user.id`.
 - **Inherited open items:** Complete a manual Google sign-in pass for enabled-user login/logout/admin flag refresh once browser interaction can finish OAuth. Revisit `middleware` -> `proxy` migration in a later Next.js maintenance slice.
-- **Commit(s):** Final Slice 1 wrap-up commit.
+- **Commit(s):** 2b117aaefc22d19ad863a02b88062b2b8428b6eb

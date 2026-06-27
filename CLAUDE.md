@@ -56,9 +56,9 @@ These are the load-bearing decisions in the MVP design — honor them in any imp
 
 Auth + allowlist → Projects + membership → Lists + entries (operations) → Catalog + autocomplete → Favorites + suggestions → Completion/archive → Polling/sync → PWA polish. Prefer vertical, test-first slices; the MVP design's §7 lists the testable seams.
 
-## Tech stack: not yet chosen
+## Tech stack
 
-The design is deliberately technology-neutral. The vision draft *floats* (does not commit to) Vercel hosting, Neon DB, a JS frontend framework, polling, and Google auth. The Vercel Claude plugin is enabled in [.claude/settings.json](.claude/settings.json). Do not assume a stack until the implementation plan commits to one.
+Slice 1 established the current MVP foundation: **Next.js App Router** with **TypeScript** and **npm**, **Auth.js (NextAuth v5)** with Google OAuth and JWT sessions, **Prisma ORM** against **Neon Postgres**, and **Vitest** for tests. Later slices may add client libraries, PWA tooling, or testing helpers, but they should build on this locked stack unless the meta project plan is intentionally updated.
 
 ## Code documentation standard
 
