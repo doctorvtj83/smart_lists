@@ -55,4 +55,33 @@ describe("provisionUser", () => {
     expect(await db.user.count()).toBe(1); // Idempotent provisioning prevents duplicate users.
     expect(second.displayName).toBe("Bob New Name"); // Profile changes should refresh on later logins.
   });
+
+  it("keeps admin rights while refreshing a changed normalized email", async () => {
+    const first = await provisionUser(db, {
+      googleSub: "google-admin",
+      email: "admin@example.com",
+      displayName: "Admin User",
+    });
+
+    await db.user.update({
+      where: { id: first.id },
+      data: { isAdmin: true }, // Admin rights are granted out-of-band and must survive later profile refreshes.
+    });
+
+    const second = await provisionUser(db, {
+      googleSub: "google-admin",
+      email: "  Admin.New@Example.com ",
+      displayName: "Admin User",
+    });
+    const persisted = await db.user.findUniqueOrThrow({
+      where: { googleSub: "google-admin" },
+    });
+
+    expect(second.id).toBe(first.id); // Same googleSub must still map to one stable app user.
+    expect(await db.user.count()).toBe(1); // The email refresh must not create a duplicate identity.
+    expect(second.isAdmin).toBe(true);
+    expect(persisted.isAdmin).toBe(true);
+    expect(second.email).toBe("admin.new@example.com");
+    expect(persisted.email).toBe("admin.new@example.com");
+  });
 });
