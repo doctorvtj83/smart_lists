@@ -2,6 +2,6 @@
 export { auth as middleware } from "@/auth";
 
 export const config = {
-  // Keep auth endpoints, auth pages, Next internals, and the favicon reachable without a session.
-  matcher: ["/((?!api/auth|login|auth/error|_next/static|_next/image|favicon.ico).*)"],
+  // Keep auth endpoints, auth pages, Next internals, and public files with extensions reachable without a session.
+  matcher: ["/((?!api/auth|login|auth/error|_next/static|_next/image|.*\\..*).*)"],
 };

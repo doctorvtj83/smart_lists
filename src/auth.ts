@@ -19,15 +19,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/auth/error",
   },
   callbacks: {
+    // Auth.js v5 only blocks middleware-matched routes when this callback says the request is authorized.
+    authorized({ auth }) {
+      return Boolean(auth?.user?.id);
+    },
+
     // This callback is the OAuth gate: returning false rejects users before app access is created.
     async signIn({ profile }) {
       const email = profile?.email;
+      const googleSub = profile?.sub;
+      const googleProfile = profile as { email_verified?: unknown } | undefined;
       if (!email) return false;
+      if (!googleSub) return false;
+      if (googleProfile?.email_verified !== true) return false;
       if (!(await isEmailAllowed(prisma, email))) return false;
 
       // Just-in-time provisioning keeps the allowlist as the source of admission while users appear on first login.
       await provisionUser(prisma, {
-        googleSub: String(profile.sub),
+        googleSub: String(googleSub),
         email,
         displayName: (profile.name as string) ?? null,
       });
