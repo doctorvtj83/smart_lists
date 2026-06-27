@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     // node environment: this slice tests server/DB logic, no DOM.
     environment: "node",
-    // The global setup file is added in Task 3; not needed yet.
+    // The setup file loads .env.test first and migrates the test DB once.
+    setupFiles: ["./src/test/setup.ts"],
+    // DB tests mutate shared tables, so files must run serially to stay isolated.
+    fileParallelism: false,
   },
 });
