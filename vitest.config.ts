@@ -7,7 +7,9 @@ export default defineConfig({
   test: {
     // node environment: this slice tests server/DB logic, no DOM.
     environment: "node",
-    // The setup file loads .env.test first and migrates the test DB once.
+    // The global setup migrates the test DB once before test files start.
+    globalSetup: ["./src/test/global-setup.ts"],
+    // Each test file still loads .env.test before creating Prisma clients.
     setupFiles: ["./src/test/setup.ts"],
     // DB tests mutate shared tables, so files must run serially to stay isolated.
     fileParallelism: false,
