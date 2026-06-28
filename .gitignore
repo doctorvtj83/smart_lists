@@ -1,39 +1,45 @@
-# Dependencies (added when Slice 1 scaffold exists)
-node_modules/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Next.js build output
-.next/
-out/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Environment files with real secrets — never commit
-.env
-.env.test
-.env*.local
+# testing
+/coverage
 
-# .env.example is the committed template (no real values)
+# next.js
+/.next/
+/out/
 
-# Prisma
-/prisma/*.db
-/prisma/*.db-journal
+# production
+/build
 
-# Vitest / test coverage
-coverage/
-
-# OS / editor
+# misc
 .DS_Store
 *.pem
 
-# Debug logs
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
-# TypeScript
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Vercel
-.vercel
 
 # Git worktrees used by agent workflows; ignored so nested checkouts are never tracked.
 .worktrees/

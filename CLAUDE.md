@@ -2,11 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: planning stage, no code yet
+## Build / Test / Run
 
-This repository currently contains **only design documentation** — no application code, build system, or tests exist. There is therefore nothing to build, lint, or run yet. The immediate work is producing an implementation plan from the existing design, then scaffolding the app.
+The repository now contains the Slice 1 Next.js App Router implementation. The historical design documents remain the source of truth for product behavior, while the application code follows the locked stack in the meta project plan.
 
-When code is added, update this file with the real build/test/run commands.
+- Install: `npm install`
+- Dev server: `npm run dev` (http://localhost:3000)
+- Tests: `npm test` (Vitest against the Neon test branch; needs `.env.test`)
+- Lint: `npm run lint`
+- DB migration (dev): `npx prisma migrate dev`
+- Seed (admin/allowlist): `npx prisma db seed`
+- Build: `npm run build`
+- Production server after a build: `npm run start`
+
+Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
+Tests additionally need `.env.test` with the `DATABASE_URL` of the Neon `test` branch.
 
 ## Language convention
 
@@ -46,9 +56,9 @@ These are the load-bearing decisions in the MVP design — honor them in any imp
 
 Auth + allowlist → Projects + membership → Lists + entries (operations) → Catalog + autocomplete → Favorites + suggestions → Completion/archive → Polling/sync → PWA polish. Prefer vertical, test-first slices; the MVP design's §7 lists the testable seams.
 
-## Tech stack: not yet chosen
+## Tech stack
 
-The design is deliberately technology-neutral. The vision draft *floats* (does not commit to) Vercel hosting, Neon DB, a JS frontend framework, polling, and Google auth. The Vercel Claude plugin is enabled in [.claude/settings.json](.claude/settings.json). Do not assume a stack until the implementation plan commits to one.
+Slice 1 established the current MVP foundation: **Next.js App Router** with **TypeScript** and **npm**, **Auth.js (NextAuth v5)** with Google OAuth and JWT sessions, **Prisma ORM** against **Neon Postgres**, and **Vitest** for tests. Later slices may add client libraries, PWA tooling, or testing helpers, but they should build on this locked stack unless the meta project plan is intentionally updated.
 
 ## Code documentation standard
 
