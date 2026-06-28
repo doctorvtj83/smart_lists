@@ -1,7 +1,12 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/db";
-import { isEmailAllowed, provisionUser } from "@/lib/auth/allowlist";
+import {
+  handleSignIn,
+  enrichToken,
+  enrichSession,
+  isRequestAuthorized,
+} from "@/lib/auth/callbacks";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -18,52 +23,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
     error: "/auth/error",
   },
+  // The callback bodies live in @/lib/auth/callbacks so they can be unit-tested
+  // in isolation; here we only bind them to the production Prisma singleton.
   callbacks: {
     // Auth.js v5 only blocks middleware-matched routes when this callback says the request is authorized.
     authorized({ auth }) {
-      return Boolean(auth?.user?.id);
+      return isRequestAuthorized(auth);
     },
 
     // This callback is the OAuth gate: returning false rejects users before app access is created.
-    async signIn({ profile }) {
-      const email = profile?.email;
-      const googleSub = profile?.sub;
-      const googleProfile = profile as { email_verified?: unknown } | undefined;
-      if (!email) return false;
-      if (!googleSub) return false;
-      if (googleProfile?.email_verified !== true) return false;
-      if (!(await isEmailAllowed(prisma, email))) return false;
-
-      // Just-in-time provisioning keeps the allowlist as the source of admission while users appear on first login.
-      await provisionUser(prisma, {
-        googleSub: String(googleSub),
-        email,
-        displayName: (profile.name as string) ?? null,
-      });
-      return true;
+    signIn({ profile }) {
+      return handleSignIn(prisma, profile);
     },
 
     // The JWT carries app-specific user facts so every later request can authorize without a session table.
-    async jwt({ token, profile }) {
-      if (profile?.sub) {
-        const user = await prisma.user.findUnique({
-          where: { googleSub: String(profile.sub) },
-        });
-        if (user) {
-          token.userId = user.id;
-          token.isAdmin = user.isAdmin;
-        }
-      }
-      return token;
+    jwt({ token, profile }) {
+      return enrichToken(prisma, token, profile);
     },
 
     // Mirroring token fields into the session gives server and client code a typed app user identity.
-    async session({ session, token }) {
-      if (token.userId) {
-        session.user.id = token.userId as string;
-        session.user.isAdmin = Boolean(token.isAdmin);
-      }
-      return session;
+    session({ session, token }) {
+      return enrichSession(session, token);
     },
   },
 });

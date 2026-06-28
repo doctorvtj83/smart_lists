@@ -4,7 +4,7 @@
 
 Slice 1 assembled the closed-access security perimeter for Smart Lists. Users authenticate with Google, but the app only admits Google accounts whose normalized email exists in the allowlist. Allowed users are provisioned just in time on first successful login, so the allowlist remains the admission source while the `users` table becomes the app's stable identity store.
 
-The code, tests, seed command, route protection, login/error/home pages, and unauthenticated browser smoke checks are complete. Full enabled-user Google login, logout, and admin-flag refresh verification is still pending manual completion of the Google OAuth sign-in step. Automated/browser verification reached the Google sign-in screen; unauthenticated `/` redirect to `/login`, login page rendering, Google OAuth start, and `/auth/error` rendering were verified.
+The code, tests, seed command, route protection, login/error/home pages, and unauthenticated browser smoke checks are complete. The admission gate and identity-wiring callbacks are now extracted into `src/lib/auth/callbacks.ts` and unit-tested directly (`callbacks.test.ts`), so each sign-in rejection reason, the provisioning happy path, JWT/session enrichment, and the middleware predicate are covered without booting the OAuth runtime. Full enabled-user Google login, logout, and admin-flag refresh verification through a live browser is still pending manual completion of the Google OAuth sign-in step. Automated/browser verification reached the Google sign-in screen; unauthenticated `/` redirect to `/login`, login page rendering, Google OAuth start, and `/auth/error` rendering were verified.
 
 ## 2. Steps taken
 
@@ -41,7 +41,9 @@ The code, tests, seed command, route protection, login/error/home pages, and una
 - `src/lib/auth/normalize.test.ts`: Proves email normalization lowercases, trims, and is idempotent.
 - `src/lib/auth/allowlist.ts`: Provides `isEmailAllowed` and `provisionUser`, the testable auth core used by the OAuth callback.
 - `src/lib/auth/allowlist.test.ts`: Covers allowed/denied emails plus idempotent user provisioning against the test database.
-- `src/auth.ts`: Configures Auth.js, Google OAuth, the allowlist gate, JIT provisioning, JWT enrichment, session enrichment, and route authorization behavior.
+- `src/lib/auth/callbacks.ts`: The Auth.js callback bodies (`handleSignIn`, `enrichToken`, `enrichSession`, `isRequestAuthorized`) extracted out of `auth.ts` with the Prisma client injected, so the admission gate and identity wiring are unit-testable without booting the Auth.js runtime.
+- `src/lib/auth/callbacks.test.ts`: Exercises every rejection reason of the sign-in gate (missing email/sub, unverified email, non-allowlisted email), the admit-and-provision happy path, normalized-casing admission, JWT enrichment on sign-in vs. pass-through on later requests, session mirroring, and the middleware authorization predicate.
+- `src/auth.ts`: Thin wiring layer that binds the `callbacks.ts` functions to the production Prisma singleton and configures Auth.js, Google OAuth, and JWT sessions.
 - `src/app/api/auth/[...nextauth]/route.ts`: Exposes Auth.js GET/POST handlers for provider login, callback, and sign-out endpoints.
 - `src/types/next-auth.d.ts`: Extends Auth.js types so `session.user.id`, `session.user.isAdmin`, `token.userId`, and `token.isAdmin` are type-safe.
 - `src/middleware.ts`: Protects application routes while excluding auth routes, public auth pages, Next internals, images, and static files.

@@ -56,7 +56,13 @@ describe("provisionUser", () => {
     expect(second.displayName).toBe("Bob New Name"); // Profile changes should refresh on later logins.
   });
 
-  it("keeps admin rights while refreshing a changed normalized email", async () => {
+  // NOTE: this tests provisionUser in isolation. It does NOT imply that a user
+  // can freely change their Google email and keep access — the signIn gate
+  // (handleSignIn) re-checks the new email against the allowlist before
+  // provisionUser is ever called, so in the real flow the new address must also
+  // be allowlisted. What this asserts is narrower: when provisioning does run
+  // with a changed email, it refreshes the stored email and never touches isAdmin.
+  it("refreshes a changed normalized email and preserves admin rights (provisioning in isolation)", async () => {
     const first = await provisionUser(db, {
       googleSub: "google-admin",
       email: "admin@example.com",
