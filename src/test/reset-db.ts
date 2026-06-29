@@ -8,6 +8,6 @@ export async function resetDb(db: PrismaClient): Promise<void> {
   // cross-table reset primitive; RESTART IDENTITY keeps future auto values
   // deterministic, and CASCADE keeps this helper valid when FKs arrive later.
   await db.$executeRawUnsafe(
-    'TRUNCATE TABLE "users", "allowlist_entries" RESTART IDENTITY CASCADE;'
+    'TRUNCATE TABLE "users", "allowlist_entries", "projects", "memberships" RESTART IDENTITY CASCADE;'
   );
 }

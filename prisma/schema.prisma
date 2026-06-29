@@ -19,6 +19,12 @@ model User {
   isAdmin     Boolean  @default(false) @map("is_admin") // may maintain the allowlist
   createdAt   DateTime @default(now()) @map("created_at")
 
+  // Back-relations added in Slice 2 (Projects + Membership).
+  // ownedProjects: projects this user created (Project.ownerId points here).
+  ownedProjects Project[]
+  // memberships: every project this user belongs to (any role).
+  memberships   Membership[]
+
   @@map("users")
 }
 
@@ -30,4 +36,47 @@ model AllowlistEntry {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("allowlist_entries")
+}
+
+// Project roles. The MVP has exactly two (no viewer role — that is Phase 2).
+enum Role {
+  owner
+  member
+}
+
+// A Project groups lists. Lists/catalog/favorites (later slices) all hang off a project.
+model Project {
+  // @db.Uuid: native Postgres uuid type, matching Slice 1's User.id. FK columns pointing here must match.
+  id      String @id @default(uuid()) @db.Uuid // stable, client-generatable UUID (offline-prep convention)
+  name    String
+  ownerId String @db.Uuid @map("owner_id") // the creator; also gets an owner Membership row (see createProject)
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  // Parameters of the suggestion statistic (MVP design §4.3). Stored now so Slice 5 needs no migration;
+  // editing them is out of scope for this slice. Defaults: appears in >= N of the last M completed lists.
+  suggestionRuleN Int @default(2) @map("suggestion_rule_n")
+  suggestionRuleM Int @default(4) @map("suggestion_rule_m")
+
+  createdAt   DateTime     @default(now()) @map("created_at")
+  memberships Membership[]
+
+  @@map("projects")
+}
+
+// Join row between User and Project carrying the role. Membership is the unit every permission check reads.
+model Membership {
+  id        String @id @default(uuid()) @db.Uuid
+  projectId String @db.Uuid @map("project_id")
+  // onDelete: Cascade -> deleting a project removes its memberships automatically (see deleteProject).
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String @db.Uuid @map("user_id")
+  // onDelete: Cascade -> if a user is ever deleted, their memberships go too.
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // A user has at most one membership per project (the identity rule from MVP design §3.1).
+  // Prisma exposes this as the compound selector `projectId_userId` in findUnique/upsert.
+  @@unique([projectId, userId])
+  @@map("memberships")
 }
