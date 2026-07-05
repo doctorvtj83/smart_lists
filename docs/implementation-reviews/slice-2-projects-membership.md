@@ -143,3 +143,30 @@ Request
 Every future project-scoped operation in Slices 3–6 (lists, entries, catalog, favorites, completion, polling) sits on top of this chain. The pattern is: call `requireUserId` to resolve the caller, then call `requireMembership` (or `requireOwner`) to check their role against the project being accessed, then call the data function. The guard functions accept an injected `PrismaClient` so they remain testable in isolation.
 
 Slice 3 (Lists + Entries) will add `List` and `ListItem` models that reference a `projectId`. Every list operation will call `requireMembership(db, projectId, userId)` before touching data — the same function, the same pattern, no new authorization code needed.
+
+## 6. Post-review fixes (2026-07-05)
+
+A code review of the slice surfaced a set of security/robustness issues that were fixed test-first
+(13 new tests) on top of the original implementation:
+
+1. **Member-list data exposure (security).** `listMembers` used `include: { user: true }` and thereby
+   serialized every member's `googleSub` (OAuth identity) and `isAdmin` flag through
+   `GET /api/projects/:id/members`. It now selects only `id`, `email`, `displayName`
+   (new exported type `MemberUser` in `membership.ts`). Restricting at the data-access layer means
+   every transport (REST and UI) inherits the restriction automatically.
+2. **Malformed UUIDs no longer cause 500s.** A non-UUID id in a URL segment (e.g.
+   `GET /api/projects/abc`) made Prisma throw P2023 against the Postgres `uuid` column, which the
+   error mapper reported as an unexpected 500. A new `isUuid` shape check (`src/lib/validate.ts`)
+   is applied in `getRole` (covers every guard consumer → consistent 404 existence-hiding) and in
+   `removeMember` (the target `userId` also comes from the URL).
+3. **Input length limits.** Project names are capped at 200 chars (`MAX_PROJECT_NAME_LENGTH`,
+   enforced in `createProject` **and** `renameProject` so the cap cannot be bypassed via rename)
+   and invite emails at 254 chars (`MAX_EMAIL_LENGTH`, RFC 5321 practical limit). Both are enforced
+   in the core functions — defense in depth below the route-level trim/empty checks, covering
+   server actions and any future transport.
+4. **Deterministic email lookup.** `addMember`'s `findFirst` now orders by `createdAt asc`: if two
+   accounts ever share an email (`User.email` is not unique — `googleSub` is the identity), the
+   oldest account wins instead of an arbitrary row.
+5. **Smaller cleanups.** Removed a factually wrong comment in the PATCH route (claimed renaming
+   "cascades to the catalog" — there is no catalog until Slice 4); the project detail page now
+   fetches project and members with `Promise.all` instead of sequentially.

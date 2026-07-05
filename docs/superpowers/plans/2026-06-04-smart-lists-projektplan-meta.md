@@ -116,6 +116,26 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Commit(s):** <hash(es)>
 > ```
 
+### 2026-07-05 — Slice 2: post-review security/robustness fixes
+- **Delivered:** Fixes from the Slice 2 code review, implemented test-first (13 new tests):
+  `listMembers` no longer exposes `googleSub`/`isAdmin` (selects only `id`/`email`/`displayName`;
+  new `MemberUser` type); malformed (non-UUID) URL ids now yield 404 instead of a Prisma-P2023 500
+  (new `isUuid` in `src/lib/validate.ts`, applied in `getRole` and `removeMember`); input length
+  limits (`MAX_PROJECT_NAME_LENGTH` = 200 enforced in create **and** rename, `MAX_EMAIL_LENGTH` =
+  254 in `addMember`); deterministic oldest-account pick for duplicate emails in `addMember`
+  (`orderBy createdAt asc`); corrected a factually wrong comment in the PATCH route; project detail
+  page fetches project + members via `Promise.all`. Details in the implementation review, section 6.
+- **Tested:** `npm test` passed (9 files, 56 tests — 43 from the slice + 13 new); `npm run lint`
+  passed; `npm run build` passed cleanly.
+- **Deviations from the plan:** n/a (post-plan review fixes).
+- **Follow-up decisions for later slices:**
+  - `isUuid` (`src/lib/validate.ts`) is the standard shape check before passing URL-derived ids to
+    uuid DB columns; the guard applies it automatically for all project-scoped operations.
+  - Length limits for user input belong in the core functions (not only the routes), so server
+    actions and future transports inherit them automatically.
+- **Inherited open items:** none.
+- **Commit(s):** ed6b87c (code + tests), plus the docs commit carrying this entry
+
 ### 2026-07-05 — Slice 2: Projects + Membership — Manual browser verification complete
 - **Delivered:** (no code changes) Closed the open Task 8 browser verification from 2026-06-29.
 - **Tested:** Manual E2E in Safari with two allowlisted Google accounts (`volkertjaden@gmail.com` as Owner, `luise.enda.tjaden@gmail.com` as Member). Verified: login/logout, home → `/projects`, project create/rename/delete, owner detail page and controls, invite existing user, reject unknown email (`Nutzer nicht gefunden …`), member view without owner controls, non-member redirect to `/projects`. Re-ran `npm test` (43/43), `npm run lint`, `npm run build` — all green.
