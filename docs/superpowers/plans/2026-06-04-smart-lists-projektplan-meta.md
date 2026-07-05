@@ -51,8 +51,8 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 
 | # | Slice | Delivers | Plan | Status |
 |---|---|---|---|---|
-| 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done (code/tests; manual OAuth verification pending) |
-| 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | _to be created_ | ⬜ Open |
+| 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done / verified |
+| 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | _to be created_ | ⬜ Open |
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | _to be created_ | ⬜ Open |
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
@@ -115,6 +115,46 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-05 — Slice 2: post-review security/robustness fixes
+- **Delivered:** Fixes from the Slice 2 code review, implemented test-first (13 new tests):
+  `listMembers` no longer exposes `googleSub`/`isAdmin` (selects only `id`/`email`/`displayName`;
+  new `MemberUser` type); malformed (non-UUID) URL ids now yield 404 instead of a Prisma-P2023 500
+  (new `isUuid` in `src/lib/validate.ts`, applied in `getRole` and `removeMember`); input length
+  limits (`MAX_PROJECT_NAME_LENGTH` = 200 enforced in create **and** rename, `MAX_EMAIL_LENGTH` =
+  254 in `addMember`); deterministic oldest-account pick for duplicate emails in `addMember`
+  (`orderBy createdAt asc`); corrected a factually wrong comment in the PATCH route; project detail
+  page fetches project + members via `Promise.all`. Details in the implementation review, section 6.
+- **Tested:** `npm test` passed (9 files, 56 tests — 43 from the slice + 13 new); `npm run lint`
+  passed; `npm run build` passed cleanly.
+- **Deviations from the plan:** n/a (post-plan review fixes).
+- **Follow-up decisions for later slices:**
+  - `isUuid` (`src/lib/validate.ts`) is the standard shape check before passing URL-derived ids to
+    uuid DB columns; the guard applies it automatically for all project-scoped operations.
+  - Length limits for user input belong in the core functions (not only the routes), so server
+    actions and future transports inherit them automatically.
+- **Inherited open items:** none.
+- **Commit(s):** ed6b87c (code + tests), plus the docs commit carrying this entry
+
+### 2026-07-05 — Slice 2: Projects + Membership — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 8 browser verification from 2026-06-29.
+- **Tested:** Manual E2E in Safari with two allowlisted Google accounts (`volkertjaden@gmail.com` as Owner, `luise.enda.tjaden@gmail.com` as Member). Verified: login/logout, home → `/projects`, project create/rename/delete, owner detail page and controls, invite existing user, reject unknown email (`Nutzer nicht gefunden …`), member view without owner controls, non-member redirect to `/projects`. Re-ran `npm test` (43/43), `npm run lint`, `npm run build` — all green.
+- **Deviations from the plan:** None. Member removal (`Entfernen`) was not exercised manually; covered by unit tests.
+- **Follow-up decisions for later slices:** Unchanged from 2026-06-29 entry (guard, ApiError, addMember login requirement, 404 for non-members).
+- **Inherited open items:** None for Slice 2. Slice 1 manual OAuth also verified in the same session.
+- **Commit(s):** (documentation-only update; no new code commits)
+
+### 2026-06-29 — Slice 2: Projects + Membership — Done (browser verification pending)
+- **Delivered:** Projects CRUD (create/list/get/rename/delete), Owner/Member role model, invite/remove members (idempotent upsert, owner-removal guard), reusable permission guard (`getRole` / `requireMembership` / `requireOwner`), REST API (7 route handlers), server-rendered UI (project list + detail pages with server actions), HTTP error convention (`ApiError` + `toErrorResponse`), and `requireUserId` session helper.
+- **Tested:** `npm test` passed (8 files, 43 tests — 20 new in Slice 2 + 23 from Slice 1); `npm run lint` passed; `npm run build` passed cleanly.
+- **Deviations from the plan:** None. All 8 tasks completed as specified.
+- **Follow-up decisions for later slices:**
+  - The permission guard `src/lib/projects/guard.ts` (`getRole` / `requireMembership` / `requireOwner`) is the reusable authorization primitive — Slices 3–6 MUST call it for every project-scoped operation.
+  - `ApiError` + `toErrorResponse` (`src/lib/http/errors.ts`) is the standard HTTP error convention; `requireUserId` (`src/lib/auth/session.ts`) is the standard way route handlers resolve the caller.
+  - `addMember` requires the invitee to have logged in once (a `User` row must exist). Pending email-only invitations are deferred to Phase 2 (would need a model change).
+  - Non-members receive `404` (not `403`) for project access, to avoid leaking project existence.
+- **Inherited open items:** Browser end-to-end verification (Task 8) was skipped in agent context — must be completed manually before considering Slice 2 fully done. Also inherits the Slice 1 open item: complete a manual Google sign-in pass.
+- **Commit(s):** c8e7d0d, 97690a5, c649bfc, d673a19, f16cba8, c89bc50, 407f888, fa28986
 
 ### 2026-06-27 — Slice 1: Auth + Allowlist — Done
 - **Delivered:** Next.js/App Router scaffold, Prisma auth schema and migration, Google Auth.js wiring, closed-access allowlist gate, just-in-time user provisioning, admin/allowlist seed, protected home page, login/error pages, middleware protection, and test infrastructure.
