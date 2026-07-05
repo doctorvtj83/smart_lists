@@ -60,6 +60,10 @@ model Project {
   createdAt   DateTime     @default(now()) @map("created_at")
   memberships Membership[]
 
+  // Back-relations added in Slice 3 (Lists + Entries + minimal Catalog).
+  lists        List[]
+  catalogItems CatalogItem[]
+
   @@map("projects")
 }
 
@@ -79,4 +83,100 @@ model Membership {
   // Prisma exposes this as the compound selector `projectId_userId` in findUnique/upsert.
   @@unique([projectId, userId])
   @@map("memberships")
+}
+
+// Lifecycle of a list. Slice 3 only ever creates `active` lists; Slice 6 (Completion + Archive)
+// flips lists to `completed`. The enum + completedAt exist NOW so Slice 6 needs no migration —
+// same precedent as suggestionRuleN/M in Slice 2.
+enum ListStatus {
+  active
+  completed
+}
+
+// An article in the project's catalog — the project's "memory" (MVP design §3.1).
+// Slice 3 creates catalog items implicitly when an entry with a new name is added (get-or-create);
+// Slice 4 adds autocomplete over this table and the category/unit flow-back on entry edits.
+model CatalogItem {
+  id        String  @id @default(uuid()) @db.Uuid // stable, client-generatable UUID (offline-prep convention)
+  projectId String  @db.Uuid @map("project_id")
+  // onDelete: Cascade -> deleting a project removes its catalog (the catalog is project-scoped memory).
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Display name exactly as first typed (trimmed, inner whitespace collapsed) — what the UI shows.
+  name String
+  // Identity key: lowercase + trim + collapse spaces (normalizeName, MVP design §4.4). Two spellings
+  // of the same article ("Milch", " milch ") MUST resolve to one catalog row — this uniqueness is
+  // what makes autocomplete (Slice 4) and the suggestion statistic (Slice 5) work per article.
+  normalizedName String @map("normalized_name")
+
+  // Defaults inherited by new list entries referencing this article. Nullable: unknown until a user
+  // sets them. Slice 4 adds the flow-back that updates these when an entry's category/unit is edited.
+  defaultCategory String? @map("default_category")
+  defaultUnit     String? @map("default_unit")
+
+  createdAt DateTime   @default(now()) @map("created_at")
+  listItems ListItem[]
+
+  // One catalog row per article identity per project. Prisma exposes this as the compound
+  // selector `projectId_normalizedName` in findUnique/upsert — the race-safe get-or-create key.
+  @@unique([projectId, normalizedName])
+  @@map("catalog_items")
+}
+
+// A list (shopping / to-do / packing) inside a project. Entries hang off it as ListItems.
+model List {
+  id        String  @id @default(uuid()) @db.Uuid // client MAY supply this id (offline-prep); default is the server fallback
+  projectId String  @db.Uuid @map("project_id")
+  // onDelete: Cascade -> deleting a project removes its lists (and, transitively, their items).
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+
+  // active | completed. Slice 3 never sets `completed`; the field exists for Slice 6 (see enum comment).
+  status      ListStatus @default(active)
+  completedAt DateTime?  @map("completed_at") // set by Slice 6 when the list is completed
+
+  createdAt DateTime   @default(now()) @map("created_at")
+  items     ListItem[]
+
+  @@map("lists")
+}
+
+// A single entry on a list. The MUTATION UNIT of the whole app: all changes arrive as entry-level
+// operations carrying this row's stable id (MVP design §4.5) — that granularity is what makes
+// Phase 2 offline merge possible without API changes.
+model ListItem {
+  // NO server-only id: the client GENERATES this UUID for add_item (so an entry created offline in
+  // Phase 2 keeps its identity across the sync). @default(uuid()) is only a fallback for callers
+  // that don't supply one.
+  id     String @id @default(uuid()) @db.Uuid
+  listId String @db.Uuid @map("list_id")
+  // onDelete: Cascade -> deleting a list removes its entries.
+  list   List   @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  // The article this entry refers to. The entry has NO name column — the name lives on the catalog
+  // item (article identity, MVP design §3.1). onDelete: Cascade keeps project deletion consistent:
+  // when the project cascade removes catalog_items, dependent list_items go too (there is no
+  // standalone catalog-item deletion in the MVP, so this cascade only ever fires via project delete).
+  catalogItemId String      @db.Uuid @map("catalog_item_id")
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  // Quantity/unit/category are all nullable per the domain model. category is COPIED from the
+  // catalog default at add time (then overridable per entry) — a snapshot, not a live reference,
+  // so later catalog edits don't rewrite existing lists.
+  quantity Float?
+  unit     String?
+  category String?
+
+  checked Boolean @default(false)
+
+  // Manual ordering within the list (and within category groups). Server-assigned max+1 on add;
+  // mutable via update_item(field: "sortIndex").
+  sortIndex Int @map("sort_index")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  // @updatedAt: Prisma bumps this on EVERY update. This is the last-writer-wins timestamp and the
+  // sync-cursor basis for Slice 7 — do not remove or set manually.
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("list_items")
 }
