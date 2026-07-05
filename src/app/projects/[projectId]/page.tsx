@@ -31,8 +31,12 @@ export default async function ProjectDetailPage({ params }: Props) {
   }
 
   // If we reach here, role is guaranteed to be "owner" | "member".
-  const project = await getProject(prisma, projectId);
-  const members = await listMembers(prisma, projectId);
+  // The two reads are independent, so run them in parallel (Promise.all) instead of sequentially —
+  // one DB round-trip of latency instead of two.
+  const [project, members] = await Promise.all([
+    getProject(prisma, projectId),
+    listMembers(prisma, projectId),
+  ]);
 
   // Convenience flag used to conditionally render owner-only UI sections.
   const isOwner = role === "owner";

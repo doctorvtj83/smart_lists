@@ -1,4 +1,20 @@
 import type { PrismaClient, Project } from "@prisma/client";
+import { ApiError } from "@/lib/http/errors";
+
+// Upper bound for project names. The DB column is unbounded TEXT, so without this check a client
+// could store megabytes in a single name. 200 chars is generous for a human-entered list name.
+// Exported so transports (routes/UI) can reference the same limit instead of hardcoding their own.
+export const MAX_PROJECT_NAME_LENGTH = 200;
+
+// Validates a project name at the core level (defense in depth: routes trim/check too, but server
+// actions and any future transport go through the same core, so the rule is enforced exactly once).
+// Throws ApiError(400) with a German user-facing message, consistent with the route-level checks.
+function assertValidProjectName(name: string): void {
+  if (!name.trim()) throw new ApiError(400, "Name darf nicht leer sein");
+  if (name.length > MAX_PROJECT_NAME_LENGTH) {
+    throw new ApiError(400, `Name darf höchstens ${MAX_PROJECT_NAME_LENGTH} Zeichen lang sein`);
+  }
+}
 
 // Input for creating a project. ownerId comes from the trusted session, never from the request body.
 export interface CreateProjectInput {
@@ -13,6 +29,8 @@ export async function createProject(
   db: PrismaClient,
   input: CreateProjectInput,
 ): Promise<Project> {
+  // Validate before opening the transaction — no point acquiring a DB transaction for bad input.
+  assertValidProjectName(input.name);
   return db.$transaction(async (tx) => {
     const project = await tx.project.create({
       data: { name: input.name, ownerId: input.ownerId },
@@ -50,6 +68,8 @@ export async function renameProject(
   projectId: string,
   name: string,
 ): Promise<Project> {
+  // Same name rules as createProject — otherwise the length limit could be bypassed via rename.
+  assertValidProjectName(name);
   return db.project.update({ where: { id: projectId }, data: { name } });
 }
 

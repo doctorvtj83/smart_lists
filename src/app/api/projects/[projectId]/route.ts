@@ -85,7 +85,8 @@ export async function PATCH(request: Request, { params }: Context) {
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     if (!name) throw new ApiError(400, "Name darf nicht leer sein");
 
-    // Update the project name in the database (cascades to the catalog — see projects.ts).
+    // Update the project name in the database (renameProject also re-validates the name — core-level
+    // defense in depth on top of the route check above).
     const project = await renameProject(prisma, projectId, name);
 
     return NextResponse.json(project);

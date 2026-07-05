@@ -51,6 +51,23 @@ describe("requireMembership", () => {
   });
 });
 
+// Malformed (non-UUID) ids arrive straight from the URL. Postgres uuid columns reject them with a
+// driver error (Prisma P2023); the guard must treat them as "no membership" instead of crashing,
+// so the API answers 404 (consistent existence-hiding) rather than 500.
+describe("malformed ids", () => {
+  it("getRole returns null for a non-UUID projectId instead of throwing", async () => {
+    expect(await getRole(db, "not-a-uuid", ownerId)).toBeNull();
+  });
+
+  it("getRole returns null for a non-UUID userId instead of throwing", async () => {
+    expect(await getRole(db, projectId, "not-a-uuid")).toBeNull();
+  });
+
+  it("requireMembership maps a malformed projectId to 404", async () => {
+    await expect(requireMembership(db, "not-a-uuid", ownerId)).rejects.toMatchObject({ status: 404 });
+  });
+});
+
 describe("requireOwner", () => {
   it("passes for the owner", async () => {
     await expect(requireOwner(db, projectId, ownerId)).resolves.toBe("owner");

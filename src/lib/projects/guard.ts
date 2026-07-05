@@ -1,5 +1,6 @@
 import type { PrismaClient, Role } from "@prisma/client";
 import { ApiError } from "@/lib/http/errors";
+import { isUuid } from "@/lib/validate";
 
 /**
  * Reads the caller's role in a project, or null if they are not a member.
@@ -20,6 +21,11 @@ export async function getRole(
   projectId: string,
   userId: string,
 ): Promise<Role | null> {
+  // Ids typically arrive straight from URL segments. A malformed (non-UUID) id can never match a
+  // row in a uuid column — but Prisma would throw P2023 instead of returning null (see validate.ts).
+  // Treating it as "no membership" here means every guard consumer answers 404, not 500.
+  if (!isUuid(projectId) || !isUuid(userId)) return null;
+
   // Uses the compound unique index (projectId_userId) to do an indexed lookup
   // rather than a table scan. This is essential for performance at scale.
   // The schema.prisma defines @@unique([projectId, userId]) which Prisma exposes

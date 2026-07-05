@@ -37,6 +37,20 @@ describe("createProject", () => {
     });
     expect(membership?.role).toBe("owner");
   });
+
+  // Core-level validation (defense in depth): routes trim/check too, but server actions and any
+  // future transport must not be able to write empty or absurdly long names into the DB.
+  it("rejects an empty (whitespace-only) name with 400", async () => {
+    await expect(createProject(db, { name: "   ", ownerId: userId })).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
+  it("rejects a name longer than 200 characters with 400", async () => {
+    await expect(
+      createProject(db, { name: "x".repeat(201), ownerId: userId }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
 });
 
 describe("listProjectsForUser", () => {
@@ -55,6 +69,19 @@ describe("renameProject", () => {
     const project = await createProject(db, { name: "Alt", ownerId: userId });
     const renamed = await renameProject(db, project.id, "Neu");
     expect(renamed.name).toBe("Neu");
+  });
+
+  // Rename must enforce the same name rules as create — otherwise the limit could be bypassed.
+  it("rejects an empty (whitespace-only) name with 400", async () => {
+    const project = await createProject(db, { name: "Alt", ownerId: userId });
+    await expect(renameProject(db, project.id, "   ")).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("rejects a name longer than 200 characters with 400", async () => {
+    const project = await createProject(db, { name: "Alt", ownerId: userId });
+    await expect(renameProject(db, project.id, "x".repeat(201))).rejects.toMatchObject({
+      status: 400,
+    });
   });
 });
 
