@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { deleteProject, getProject, renameProject } from "@/lib/projects/projects";
 import { addMember, listMembers, removeMember } from "@/lib/projects/membership";
 import { requireMembership, requireOwner } from "@/lib/projects/guard";
+import Link from "next/link";
+import { createList, listLists } from "@/lib/lists/lists";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
 // This type reflects the new async params API introduced in Next.js 15/16.
@@ -33,9 +35,11 @@ export default async function ProjectDetailPage({ params }: Props) {
   // If we reach here, role is guaranteed to be "owner" | "member".
   // The two reads are independent, so run them in parallel (Promise.all) instead of sequentially —
   // one DB round-trip of latency instead of two.
-  const [project, members] = await Promise.all([
+  const [project, members, lists] = await Promise.all([
     getProject(prisma, projectId),
     listMembers(prisma, projectId),
+    // Slice 3: the project's lists (newest first) render alongside the members.
+    listLists(prisma, projectId),
   ]);
 
   // Convenience flag used to conditionally render owner-only UI sections.
@@ -96,6 +100,19 @@ export default async function ProjectDetailPage({ params }: Props) {
     revalidatePath(`/projects/${projectId}`);
   }
 
+  // Create-list action (Slice 3). MEMBER-level, not owner-only: per the permission matrix
+  // (MVP design §6) every member may create lists — so this re-checks membership, not ownership.
+  async function createListAction(formData: FormData) {
+    "use server";
+    const s = await auth();
+    // requireMembership (not requireOwner): any member may create lists in the project.
+    await requireMembership(prisma, projectId, s!.user.id);
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return; // Ignore empty submissions (same convention as the other actions).
+    await createList(prisma, { projectId, name });
+    revalidatePath(`/projects/${projectId}`);
+  }
+
   return (
     <main style={{ padding: 24 }}>
       {/* Project name as heading; project may be null if deleted concurrently, so use optional chaining. */}
@@ -116,6 +133,20 @@ export default async function ProjectDetailPage({ params }: Props) {
                 <button type="submit">Entfernen</button>
               </form>
             )}
+          </li>
+        ))}
+      </ul>
+
+      {/* Slice 3: the project's lists. Visible and usable for EVERY member (member-level actions). */}
+      <h2>Listen</h2>
+      <form action={createListAction}>
+        <input name="name" placeholder="Listenname" aria-label="Listenname" />
+        <button type="submit">Liste anlegen</button>
+      </form>
+      <ul>
+        {lists.map((l) => (
+          <li key={l.id}>
+            <Link href={`/lists/${l.id}`}>{l.name}</Link>
           </li>
         ))}
       </ul>
