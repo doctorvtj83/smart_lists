@@ -51,8 +51,8 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 
 | # | Slice | Delivers | Plan | Status |
 |---|---|---|---|---|
-| 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done (code/tests; manual OAuth verification pending) |
-| 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done (code/tests; browser verification pending) |
+| 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done / verified |
+| 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | _to be created_ | ⬜ Open |
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | _to be created_ | ⬜ Open |
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
@@ -115,6 +115,14 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-05 — Slice 2: Projects + Membership — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 8 browser verification from 2026-06-29.
+- **Tested:** Manual E2E in Safari with two allowlisted Google accounts (`volkertjaden@gmail.com` as Owner, `luise.enda.tjaden@gmail.com` as Member). Verified: login/logout, home → `/projects`, project create/rename/delete, owner detail page and controls, invite existing user, reject unknown email (`Nutzer nicht gefunden …`), member view without owner controls, non-member redirect to `/projects`. Re-ran `npm test` (43/43), `npm run lint`, `npm run build` — all green.
+- **Deviations from the plan:** None. Member removal (`Entfernen`) was not exercised manually; covered by unit tests.
+- **Follow-up decisions for later slices:** Unchanged from 2026-06-29 entry (guard, ApiError, addMember login requirement, 404 for non-members).
+- **Inherited open items:** None for Slice 2. Slice 1 manual OAuth also verified in the same session.
+- **Commit(s):** (documentation-only update; no new code commits)
 
 ### 2026-06-29 — Slice 2: Projects + Membership — Done (browser verification pending)
 - **Delivered:** Projects CRUD (create/list/get/rename/delete), Owner/Member role model, invite/remove members (idempotent upsert, owner-removal guard), reusable permission guard (`getRole` / `requireMembership` / `requireOwner`), REST API (7 route handlers), server-rendered UI (project list + detail pages with server actions), HTTP error convention (`ApiError` + `toErrorResponse`), and `requireUserId` session helper.

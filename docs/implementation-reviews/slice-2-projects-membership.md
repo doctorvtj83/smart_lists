@@ -11,8 +11,7 @@ Slice 2 delivered the full Projects + Membership layer of the Smart Lists MVP. C
 - **Server-rendered UI:** project list page (with create form), project detail page (members list, rename/delete, invite/remove), and a link from the home page.
 - **HTTP error convention:** `ApiError` + `toErrorResponse` unify all error handling across the API surface.
 - **43 tests** across 8 test files (20 new in this slice + 23 from Slice 1), all green; `npm run lint` and `npm run build` pass cleanly.
-
-One item remains pending: **browser end-to-end verification** (Task 8) was intentionally skipped because the agent environment cannot complete interactive Google OAuth. This must be done manually before Slice 2 is declared fully verified.
+- **Manual browser verification (Task 8):** Completed 2026-07-05 in Safari with two allowlisted Google accounts. Owner flow (create, rename, delete, invite, unknown-email error) and permission matrix (member sees no owner controls; non-member redirected to `/projects`) confirmed. Slice 2 Definition of Done is fully met.
 
 ---
 
@@ -32,7 +31,7 @@ One item remains pending: **browser end-to-end verification** (Task 8) was inten
 
 **Task 7 — Member REST routes:** Created `src/app/api/projects/[projectId]/members/route.ts` (GET list + POST invite) and `src/app/api/projects/[projectId]/members/[userId]/route.ts` (DELETE remove). All handlers follow the same session-check → permission-guard → data-function pattern established in Task 6.
 
-**Task 8 — Server-rendered UI + browser verification:** Created `src/app/projects/page.tsx` (project list with create form, using React Server Components + server actions) and `src/app/projects/[projectId]/page.tsx` (detail page with members list, rename/delete form, and invite/remove form). Added a "Meine Projekte" link on the home page. Interactive browser verification was skipped in the agent context and remains a manual step.
+**Task 8 — Server-rendered UI + browser verification:** Created `src/app/projects/page.tsx` (project list with create form, using React Server Components + server actions) and `src/app/projects/[projectId]/page.tsx` (detail page with members list, rename/delete form, and invite/remove form). Added a "Meine Projekte" link on the home page. Manual browser verification completed 2026-07-05 (see §1).
 
 ---
 
