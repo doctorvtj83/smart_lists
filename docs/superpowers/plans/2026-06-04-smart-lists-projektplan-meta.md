@@ -53,7 +53,7 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 |---|---|---|---|---|
 | 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done / verified |
 | 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
-| 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | _to be created_ | ⬜ Open |
+| 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | [2026-07-05-slice-3-lists-entries.md](2026-07-05-slice-3-lists-entries.md) | ✅ Done / verified |
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | _to be created_ | ⬜ Open |
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | _to be created_ | ⬜ Open |
@@ -115,6 +115,20 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-05 — Slice 3: Lists + Entries (operations) — Done
+- **Delivered:** Lists CRUD inside projects (`createList`, `listLists`, `getListWithItems`, `renameList`, `deleteList`); minimal catalog identity (`normalizeName`, `getOrCreateCatalogItem` with per-project `normalized_name` uniqueness); list-scoped access guard (`requireListAccess`); entry-level operations model (`parseOperation`, `applyOperation` for `add_item`, `update_item`, `check_item`, `remove_item` with idempotency semantics); REST routes (`/api/projects/:id/lists`, `/api/lists/:id`, `/api/lists/:id/ops`); server-rendered UI (project detail "Listen" section + list detail page with entries grouped by category, quantity/unit, check/remove). Prisma schema adds `ListStatus`, `CatalogItem`, `List`, `ListItem` with client-generatable UUIDs and `@updatedAt` on entries.
+- **Tested:** `npm test` passed (14 files, 106 tests — 50 new in Slice 3 + 56 from Slices 1+2); `npm run lint` passed; `npm run build` passed cleanly.
+- **Deviations from the plan:** None. All 9 tasks completed as specified.
+- **Follow-up decisions for later slices:**
+  - `requireListAccess` (`src/lib/lists/access.ts`) is the list-scoped guard — Slices 6 + 7 MUST use it for every list-scoped operation (it composes `requireMembership` and hides existence with 404).
+  - `applyOperation` (`src/lib/lists/operations.ts`) is the ONLY mutation path for entries — the Slice 7 sync endpoint and any future transport must funnel through it, never ad-hoc writes.
+  - Idempotency semantics: replayed `add_item` (same id, same list) is a no-op returning the existing entry; `remove_item` on a missing entry is a silent no-op; `update_item`/`check_item` on a missing entry are 404 — Slice 7's merge design must account for the 404 case (stale clients operating on removed entries).
+  - `remove_item` deletes the row (no tombstones). Slice 7's delta endpoint must therefore make deletions observable to pollers (e.g. include the list's current item ids in the delta response).
+  - `CatalogItem` exists with get-or-create identity (`getOrCreateCatalogItem`); the first-typed display name wins and defaults stay null until Slice 4 adds autocomplete + flow-back.
+  - `ListItem.updatedAt` is maintained via Prisma `@updatedAt` on every operation — the Slice 7 cursor/LWW basis.
+- **Inherited open items:** Slice 4 plan (`docs/superpowers/plans/YYYY-MM-DD-slice-4-catalog-autocomplete.md`) still to be created per maintenance guide step 3. Browser end-to-end verification for Slice 3 (Task 8 manual checks) not recorded in agent context — recommended before starting Slice 4.
+- **Commit(s):** b26555c, 20cd0ab, 92fa235, cab6e29, a271b87, 39ef205, 7388bd5, 0dd5ae0, plus the docs commit carrying this entry
 
 ### 2026-07-05 — Slice 2: post-review security/robustness fixes
 - **Delivered:** Fixes from the Slice 2 code review, implemented test-first (13 new tests):
