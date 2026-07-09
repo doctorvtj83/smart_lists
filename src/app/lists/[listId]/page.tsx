@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { searchCatalog } from "@/lib/catalog/search";
 import { prisma } from "@/lib/db";
 import { requireListAccess } from "@/lib/lists/access";
 import { deleteList, getListWithItems, type ListWithItems } from "@/lib/lists/lists";
@@ -36,14 +37,21 @@ export default async function ListDetailPage({ params }: Props) {
   const userId = session!.user.id;
 
   // Guard: same rule as the REST routes. requireListAccess throws (404-style) for non-members,
-  // unknown ids, and malformed ids — all of them land back on the projects overview.
+  // unknown ids, and malformed ids — all of them land back on the projects overview. We KEEP its
+  // result this time: it carries projectId, which the catalog read needs (no second list lookup).
+  let projectId: string;
   try {
-    await requireListAccess(prisma, listId, userId);
+    ({ list: { projectId } } = await requireListAccess(prisma, listId, userId));
   } catch {
     redirect("/projects");
   }
 
-  const list = await getListWithItems(prisma, listId);
+  // Load the list (with items) and the project's catalog suggestions in parallel. The suggestions
+  // populate the <datalist> below, giving the name input native autocomplete with zero client JS.
+  const [list, suggestions] = await Promise.all([
+    getListWithItems(prisma, listId),
+    searchCatalog(prisma, projectId, ""), // "" = browse: all articles (capped) for the datalist
+  ]);
   // Deleted between guard and read (rare race) — same redirect as an unknown list.
   if (!list) redirect("/projects");
 
@@ -121,9 +129,18 @@ export default async function ListDetailPage({ params }: Props) {
       </p>
       <h1>{list.name}</h1>
 
-      {/* Add-entry form: name is required, the value fields are optional. */}
+      {/* Add-entry form: name is required, the value fields are optional. The name input is wired to
+          a native <datalist> (server-rendered from the project catalog) for zero-JS autocomplete —
+          MVP design §4.4. Category/unit are left to inherit from the catalog default at add time, so
+          leaving them blank still fills them on the created entry (flow-back keeps them current). */}
+      <datalist id="catalog-suggestions">
+        {suggestions.map((s) => (
+          // Only the value is needed — the browser inserts it into the input on selection.
+          <option key={s.id} value={s.name} />
+        ))}
+      </datalist>
       <form action={addItem}>
-        <input name="name" placeholder="Artikel" aria-label="Artikel" />
+        <input name="name" placeholder="Artikel" aria-label="Artikel" list="catalog-suggestions" />
         <input name="quantity" placeholder="Menge" aria-label="Menge" inputMode="decimal" />
         <input name="unit" placeholder="Einheit" aria-label="Einheit" />
         <input name="category" placeholder="Kategorie" aria-label="Kategorie" />
