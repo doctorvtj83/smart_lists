@@ -62,10 +62,11 @@ export async function flowBackCatalogDefaults(
 ): Promise<void> {
   const data: { defaultCategory?: string; defaultUnit?: string } = {};
 
+  // `!= null` (loose) catches BOTH null (explicit clear) and undefined (field not touched) in one check.
   if (changes.category != null) data.defaultCategory = changes.category;
   if (changes.unit != null) data.defaultUnit = changes.unit;
 
-  // No concrete value -> no-op (clearing an entry must not erase catalog memory).
+  // Nothing concrete to write (both omitted/cleared) -> skip the DB round-trip entirely.
   if (Object.keys(data).length === 0) return;
 
   await db.catalogItem.update({ where: { id: catalogItemId }, data });
