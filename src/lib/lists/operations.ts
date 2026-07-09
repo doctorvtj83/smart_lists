@@ -1,5 +1,5 @@
 import type { List, ListItem, PrismaClient } from "@prisma/client";
-import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
+import { flowBackCatalogDefaults, getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
 
@@ -200,7 +200,7 @@ export async function applyOperation(
       });
       const sortIndex = (maxAgg._max.sortIndex ?? 0) + 1;
 
-      return db.listItem.create({
+      const created = await db.listItem.create({
         data: {
           id: operation.itemId, // the client-generated id IS the identity — never remap it
           listId: list.id,
@@ -213,6 +213,16 @@ export async function applyOperation(
           sortIndex,
         },
       });
+
+      // Flow-back (Slice 4, MVP design §4.4): a category/unit the user supplied EXPLICITLY at add
+      // time becomes the catalog default, so future lists inherit it. Inherited values arrive here
+      // as undefined/null and are skipped by the helper — so this never writes a default back onto
+      // itself. Runs only on first creation (replays returned early above), keeping add idempotent.
+      await flowBackCatalogDefaults(db, catalogItem.id, {
+        category: operation.category,
+        unit: operation.unit,
+      });
+      return created;
     }
 
     case "update_item": {
@@ -250,10 +260,21 @@ export async function applyOperation(
       // Computed property name ([operation.field]) writes exactly ONE column — the field
       // granularity that Slice 7's per-field last-writer-wins depends on. @updatedAt bumps the
       // LWW timestamp automatically.
-      return db.listItem.update({
+      const updated = await db.listItem.update({
         where: { id: item.id },
         data: { [operation.field]: operation.value },
       });
+
+      // Flow-back (Slice 4): editing an entry's category/unit updates the article's catalog default
+      // (MVP design §4.4). Only these two fields flow back — quantity/sortIndex are entry-specific,
+      // not catalog memory. The helper ignores a null value, so clearing an entry's field never
+      // erases the shared default. `item.catalogItemId` came from the findFirst load above.
+      if (operation.field === "category" || operation.field === "unit") {
+        await flowBackCatalogDefaults(db, item.catalogItemId, {
+          [operation.field]: operation.value as string | null,
+        });
+      }
+      return updated;
     }
 
     case "check_item": {

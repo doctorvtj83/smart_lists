@@ -296,3 +296,59 @@ describe("independent operations", () => {
     expect(breadRow.checked).toBe(false); // untouched by the milk check
   });
 });
+
+describe("catalog flow-back", () => {
+  it("add_item with an explicit category seeds the catalog default", async () => {
+    await applyOperation(db, list, {
+      op: "add_item",
+      itemId: randomUUID(),
+      name: "Bananen",
+      category: "Obst",
+    });
+    const cat = await db.catalogItem.findFirstOrThrow({
+      where: { projectId, normalizedName: "bananen" },
+    });
+    expect(cat.defaultCategory).toBe("Obst"); // learned from the add-time value
+  });
+
+  it("update_item category flows back to the catalog default", async () => {
+    const item = await addMilk(); // adds Milch (category "Kühlregal") -> default seeded on add
+    await applyOperation(db, list, {
+      op: "update_item",
+      itemId: item.id,
+      field: "category",
+      value: "Vorrat",
+    });
+    const cat = await db.catalogItem.findUniqueOrThrow({ where: { id: item.catalogItemId } });
+    expect(cat.defaultCategory).toBe("Vorrat"); // edit overwrites the default (last value wins)
+  });
+
+  it("clearing an entry's category does NOT erase the catalog default", async () => {
+    const item = await addMilk(); // default becomes "Kühlregal"
+    await applyOperation(db, list, {
+      op: "update_item",
+      itemId: item.id,
+      field: "category",
+      value: null,
+    });
+    const cat = await db.catalogItem.findUniqueOrThrow({ where: { id: item.catalogItemId } });
+    expect(cat.defaultCategory).toBe("Kühlregal"); // unchanged
+  });
+
+  it("a later add of the same article inherits the flowed-back default", async () => {
+    const item = await addMilk();
+    await applyOperation(db, list, {
+      op: "update_item",
+      itemId: item.id,
+      field: "category",
+      value: "Vorrat",
+    });
+    // Add the same article WITHOUT a category -> inherits the (now updated) catalog default.
+    const created = (await applyOperation(db, list, {
+      op: "add_item",
+      itemId: randomUUID(),
+      name: "Milch",
+    }))!;
+    expect(created.category).toBe("Vorrat");
+  });
+});
