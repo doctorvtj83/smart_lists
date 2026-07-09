@@ -54,7 +54,7 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done / verified |
 | 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | [2026-07-05-slice-3-lists-entries.md](2026-07-05-slice-3-lists-entries.md) | ✅ Done / verified |
-| 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | _to be created_ | ⬜ Open |
+| 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | [2026-07-08-slice-4-catalog-autocomplete.md](2026-07-08-slice-4-catalog-autocomplete.md) | ✅ Done / verified |
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | _to be created_ | ⬜ Open |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | _to be created_ | ⬜ Open |
@@ -115,6 +115,18 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-09 — Slice 4: Catalog + Autocomplete — Done
+- **Delivered:** `searchCatalog` (prefix match on `normalizedName`, blank=browse, lean `CatalogSuggestion` shape, capped at 20); `flowBackCatalogDefaults` (non-null category/unit → catalog default); flow-back wired into `applyOperation` for `add_item` (explicit values) and `update_item` (category/unit); `GET /api/projects/:id/catalog?q=` member-level autocomplete endpoint; server-rendered `<datalist>` autocomplete on the list detail page (category/unit inherit at add time — no input prefill).
+- **Tested:** `npm test` passed (15 files, 118 tests — 12 new in Slice 4 + 106 from Slices 1–3); `npm run lint` passed; `npm run build` passed cleanly. Manual browser check of datalist autocomplete + category inheritance: **not performed in automated run — verify manually before production**.
+- **Deviations from the plan:** None. All 6 tasks completed as specified.
+- **Follow-up decisions for later slices:**
+  - `searchCatalog` (`src/lib/catalog/search.ts`) is the catalog read seam — Slice 5 suggestions and the future PWA client build on it.
+  - `flowBackCatalogDefaults` runs INSIDE `applyOperation` only — the catalog default is only ever mutated through the operations funnel (keeps the single mutation path intact for Slice 7 sync).
+  - Flow-back is non-null only: clearing an entry's category/unit never erases the catalog default (deliberate — shared project memory).
+  - Autocomplete UI is a native `<datalist>` (no client component yet); a fetch-based dropdown with live category/unit prefill remains a possible PWA-polish upgrade (Slice 8), consuming the GET endpoint already built here.
+- **Inherited open items:** Slice 5 plan (`docs/superpowers/plans/YYYY-MM-DD-slice-5-favorites-suggestions.md`) to be created per maintenance guide step 3. Manual browser verification of datalist autocomplete + category inheritance not performed in automated run — recommended before production.
+- **Commit(s):** e5ebf30, ed51baa, 1692a81, 7919524, 4c9ad64, 92158a8, plus the docs commit carrying this entry
 
 ### 2026-07-05 — Slice 3: Lists + Entries (operations) — Done
 - **Delivered:** Lists CRUD inside projects (`createList`, `listLists`, `getListWithItems`, `renameList`, `deleteList`); minimal catalog identity (`normalizeName`, `getOrCreateCatalogItem` with per-project `normalized_name` uniqueness); list-scoped access guard (`requireListAccess`); entry-level operations model (`parseOperation`, `applyOperation` for `add_item`, `update_item`, `check_item`, `remove_item` with idempotency semantics); REST routes (`/api/projects/:id/lists`, `/api/lists/:id`, `/api/lists/:id/ops`); server-rendered UI (project detail "Listen" section + list detail page with entries grouped by category, quantity/unit, check/remove). Prisma schema adds `ListStatus`, `CatalogItem`, `List`, `ListItem` with client-generatable UUIDs and `@updatedAt` on entries.
