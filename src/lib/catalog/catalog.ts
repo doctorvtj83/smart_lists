@@ -42,3 +42,31 @@ export async function getOrCreateCatalogItem(
     create: { projectId: input.projectId, name: displayName, normalizedName },
   });
 }
+
+// Partial defaults a user may set on a list entry; only concrete (non-null) values flow back to the
+// catalog. Null/undefined means "clear on this entry" — it must NOT wipe shared catalog memory
+// (locked MVP design decision: clearing is entry-local, catalog defaults are sticky).
+export interface CatalogDefaults {
+  category?: string | null;
+  unit?: string | null;
+}
+
+// Writes user-set category/unit from an entry edit back to the catalog item's defaults so future
+// entries and autocomplete inherit the latest choice. Sparse update: only fields with a concrete
+// value (`!= null`) are written; null/undefined/missing fields are ignored. If nothing concrete is
+// present, returns immediately — no DB round-trip.
+export async function flowBackCatalogDefaults(
+  db: PrismaClient,
+  catalogItemId: string,
+  changes: CatalogDefaults,
+): Promise<void> {
+  const data: { defaultCategory?: string; defaultUnit?: string } = {};
+
+  if (changes.category != null) data.defaultCategory = changes.category;
+  if (changes.unit != null) data.defaultUnit = changes.unit;
+
+  // No concrete value -> no-op (clearing an entry must not erase catalog memory).
+  if (Object.keys(data).length === 0) return;
+
+  await db.catalogItem.update({ where: { id: catalogItemId }, data });
+}

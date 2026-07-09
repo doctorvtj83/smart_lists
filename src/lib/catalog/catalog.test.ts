@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
-import { getOrCreateCatalogItem } from "./catalog";
+import { flowBackCatalogDefaults, getOrCreateCatalogItem } from "./catalog";
 
 const db = new PrismaClient();
 let projectId: string;
@@ -55,5 +55,36 @@ describe("getOrCreateCatalogItem", () => {
     await expect(
       getOrCreateCatalogItem(db, { projectId, name: "x".repeat(201) }),
     ).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe("flowBackCatalogDefaults", () => {
+  it("sets concrete category and unit as catalog default", async () => {
+    const item = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
+    await flowBackCatalogDefaults(db, item.id, { category: "Milchprodukte", unit: "Liter" });
+
+    const updated = await db.catalogItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(updated.defaultCategory).toBe("Milchprodukte");
+    expect(updated.defaultUnit).toBe("Liter");
+  });
+
+  it("does NOT erase existing default when value is null (clearing)", async () => {
+    const item = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
+    await flowBackCatalogDefaults(db, item.id, { category: "Milchprodukte", unit: "Liter" });
+    await flowBackCatalogDefaults(db, item.id, { category: null, unit: null });
+
+    const updated = await db.catalogItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(updated.defaultCategory).toBe("Milchprodukte");
+    expect(updated.defaultUnit).toBe("Liter");
+  });
+
+  it("updates only the field that carries a concrete value", async () => {
+    const item = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
+    await flowBackCatalogDefaults(db, item.id, { category: "Milchprodukte", unit: "Liter" });
+    await flowBackCatalogDefaults(db, item.id, { unit: "Flasche" });
+
+    const updated = await db.catalogItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(updated.defaultCategory).toBe("Milchprodukte");
+    expect(updated.defaultUnit).toBe("Flasche");
   });
 });
