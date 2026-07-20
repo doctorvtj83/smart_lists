@@ -55,12 +55,17 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | [2026-07-05-slice-3-lists-entries.md](2026-07-05-slice-3-lists-entries.md) | ✅ Done / verified |
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | [2026-07-08-slice-4-catalog-autocomplete.md](2026-07-08-slice-4-catalog-autocomplete.md) | ✅ Done / verified |
-| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
-| 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | _to be created_ | ⬜ Open |
+| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ⬜ Open — **build after 6** |
+| 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ⬜ Open — **build next** |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | _to be created_ | ⬜ Open |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
+
+> **Build-order note (2026-07-20):** Slice **6 is built before Slice 5**. Slice 5's N-of-M statistic
+> reads *completed* lists, which only exist once Slice 6 ships — the real dependency arrow runs 6 → 5,
+> not by slice number. Both plans exist; the Slice 5 plan carries a header block requiring Slice 6
+> first and listing the two shared-file edits to reconcile afterward.
 
 ### Dependencies between slices
 
