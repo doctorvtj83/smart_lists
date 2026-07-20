@@ -22,14 +22,22 @@ type Context = { params: Promise<{ projectId: string }> };
  * Returns the project's lists, newest first. Member-level.
  * Response: 200 List[]
  */
-export async function GET(_request: Request, { params }: Context) {
+export async function GET(request: Request, { params }: Context) {
   try {
     // Identity first — no session means 401 before any data access.
     const userId = await requireUserId();
     const { projectId } = await params;
     // Any member may read; non-members get 404 (existence hidden).
     await requireMembership(prisma, projectId, userId);
-    const lists = await listLists(prisma, projectId);
+
+    // Optional ?status=active|completed filter (Slice 6 archive). Anything else (or absent) means
+    // "all lists" — listLists ignores an undefined status. We only forward the two valid values so a
+    // junk query can never reach the enum column.
+    const statusParam = new URL(request.url).searchParams.get("status");
+    const status =
+      statusParam === "active" || statusParam === "completed" ? statusParam : undefined;
+
+    const lists = await listLists(prisma, projectId, status);
     return NextResponse.json(lists);
   } catch (error) {
     return toErrorResponse(error);
