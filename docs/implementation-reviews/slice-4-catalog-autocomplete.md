@@ -10,7 +10,7 @@ Slice 4 turned the per-project article catalog from passive identity storage int
 - **REST endpoint:** `GET /api/projects/:projectId/catalog?q=` exposes autocomplete to any project member (non-members get 404).
 - **UI autocomplete:** The list detail page renders a native, server-rendered `<datalist>` wired to the name input — zero client JavaScript; category/unit inherit at add time when left blank.
 - **118 tests** across 15 test files (12 new in this slice + 106 from Slices 1–3), all green; `npm run lint` and `npm run build` pass cleanly.
-- The slice goal was **fully met**: the catalog remembers articles, suggests them on input, and learns category/unit defaults from user edits. Manual browser verification was **not performed in the automated run** — verify manually before production.
+- The slice goal was **fully met**: the catalog remembers articles, suggests them on input, and learns category/unit defaults from user edits. Manual browser verification (2026-07-20) **passed**: datalist autocomplete, add-time flow-back, category inheritance on blank-category re-add, and flow-back via re-add with a new explicit category (no entry-edit UI in Slice 3/4 — `update_item` is API-only).
 
 **Locked design decisions honored:** (1) autocomplete UI = native server-rendered `<datalist>` (no client component, no fetch-on-keystroke); (2) flow-back fires on add AND edit, non-null only.
 
@@ -102,4 +102,4 @@ Slice 4 completes the **catalog memory layer** of the MVP architecture:
 - **Self-improving catalog:** every entry add/edit with an explicit category/unit teaches the catalog, so subsequent adds of the same article inherit the latest defaults — the behavioral loop that makes lists "smart."
 - **Prerequisite for Slice 5:** favorites and the N-of-M statistic both read `CatalogItem` rows; Slice 4 ensures those rows carry meaningful `defaultCategory`/`defaultUnit` values learned from real usage.
 
-**Inherited for later slices:** Slice 5 plan still to be created. Manual browser verification of datalist autocomplete + category inheritance not performed in automated run — recommended before production.
+**Inherited for later slices:** Slice 5 plan still to be created. Manual browser verification of Slice 4 is complete (2026-07-20).

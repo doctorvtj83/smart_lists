@@ -116,16 +116,24 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Commit(s):** <hash(es)>
 > ```
 
+### 2026-07-20 — Slice 4: Catalog + Autocomplete — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 5 browser verification from 2026-07-09.
+- **Tested:** Manual E2E on list detail page ("Rewe") while logged in as an allowlisted member. Verified: (1) add "Bananen" with category "Obst" → entry under Obst; (2) typing "Ban" suggests "Bananen" from `<datalist>`; (3) re-add "Bananen" with blank category → inherits Obst; (4) re-add "Bananen" with a new explicit category → catalog default updates; subsequent blank-category add inherits the newest category. Note: no entry-edit UI yet — Check 4 used re-add with explicit category (plan alternative); `update_item` remains API/core-only.
+- **Deviations from the plan:** None for the verification itself. Entry edit UI was never in Slice 3/4 scope.
+- **Follow-up decisions for later slices:** Unchanged from 2026-07-09 entry.
+- **Inherited open items:** None for Slice 4. Slice 5 plan still to be created.
+- **Commit(s):** (documentation-only update; no new code commits)
+
 ### 2026-07-09 — Slice 4: Catalog + Autocomplete — Done
 - **Delivered:** `searchCatalog` (prefix match on `normalizedName`, blank=browse, lean `CatalogSuggestion` shape, capped at 20); `flowBackCatalogDefaults` (non-null category/unit → catalog default); flow-back wired into `applyOperation` for `add_item` (explicit values) and `update_item` (category/unit); `GET /api/projects/:id/catalog?q=` member-level autocomplete endpoint; server-rendered `<datalist>` autocomplete on the list detail page (category/unit inherit at add time — no input prefill).
-- **Tested:** `npm test` passed (15 files, 118 tests — 12 new in Slice 4 + 106 from Slices 1–3); `npm run lint` passed; `npm run build` passed cleanly. Manual browser check of datalist autocomplete + category inheritance: **not performed in automated run — verify manually before production**.
+- **Tested:** `npm test` passed (15 files, 118 tests — 12 new in Slice 4 + 106 from Slices 1–3); `npm run lint` passed; `npm run build` passed cleanly. Manual browser check of datalist autocomplete + category inheritance: completed 2026-07-20 (see entry above).
 - **Deviations from the plan:** None. All 6 tasks completed as specified.
 - **Follow-up decisions for later slices:**
   - `searchCatalog` (`src/lib/catalog/search.ts`) is the catalog read seam — Slice 5 suggestions and the future PWA client build on it.
   - `flowBackCatalogDefaults` runs INSIDE `applyOperation` only — the catalog default is only ever mutated through the operations funnel (keeps the single mutation path intact for Slice 7 sync).
   - Flow-back is non-null only: clearing an entry's category/unit never erases the catalog default (deliberate — shared project memory).
   - Autocomplete UI is a native `<datalist>` (no client component yet); a fetch-based dropdown with live category/unit prefill remains a possible PWA-polish upgrade (Slice 8), consuming the GET endpoint already built here.
-- **Inherited open items:** Slice 5 plan (`docs/superpowers/plans/YYYY-MM-DD-slice-5-favorites-suggestions.md`) to be created per maintenance guide step 3. Manual browser verification of datalist autocomplete + category inheritance not performed in automated run — recommended before production.
+- **Inherited open items:** Slice 5 plan (`docs/superpowers/plans/YYYY-MM-DD-slice-5-favorites-suggestions.md`) to be created per maintenance guide step 3. Manual browser verification completed 2026-07-20.
 - **Commit(s):** e5ebf30, ed51baa, 1692a81, 7919524, 4c9ad64, 92158a8, plus the docs commit carrying this entry
 
 ### 2026-07-05 — Slice 3: Lists + Entries (operations) — Done
