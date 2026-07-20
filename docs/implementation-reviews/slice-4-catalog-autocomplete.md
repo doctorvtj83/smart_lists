@@ -4,7 +4,7 @@
 
 Slice 4 turned the per-project article catalog from passive identity storage into **active project memory** — the distinguishing foundation for intelligent pre-filling in later slices. Concretely:
 
-- **Autocomplete read:** `searchCatalog` performs a pure, project-scoped prefix match on `normalizedName` (case-insensitive via normalization), with a blank-query browse mode and a lean `CatalogSuggestion` shape capped at 20 results.
+- **Autocomplete read:** `searchCatalog` performs a pure, project-scoped prefix match on `normalizedName` (case-insensitive via normalization), with a blank-query browse mode and a lean `CatalogSuggestion` shape. The API/default cap is `CATALOG_SEARCH_LIMIT` (20); the list-detail `<datalist>` browse uses the separate `CATALOG_DATALIST_LIMIT` (1000), because a native datalist filters only over pre-rendered options.
 - **Category/unit flow-back:** `flowBackCatalogDefaults` writes user-set category/unit from entry edits back to the catalog item's defaults; only concrete (non-null) values flow back — clearing an entry field never erases shared catalog memory.
 - **Operations integration:** Flow-back is wired inside `applyOperation` for `add_item` (explicit values at add time) and `update_item` (category/unit fields), keeping the catalog mutation path inside the single operations funnel.
 - **REST endpoint:** `GET /api/projects/:projectId/catalog?q=` exposes autocomplete to any project member (non-members get 404).
@@ -36,7 +36,7 @@ Slice 4 turned the per-project article catalog from passive identity storage int
 
 | File | Role |
 |---|---|
-| `src/lib/catalog/search.ts` | `searchCatalog` — pure-read autocomplete over the project catalog; `CatalogSuggestion` lean shape; `CATALOG_SEARCH_LIMIT` |
+| `src/lib/catalog/search.ts` | `searchCatalog` — pure-read autocomplete over the project catalog; `CatalogSuggestion` lean shape; `CATALOG_SEARCH_LIMIT` (API) + `CATALOG_DATALIST_LIMIT` (datalist browse) |
 | `src/lib/catalog/search.test.ts` | Unit tests for prefix match, browse mode, cap, project isolation, lean shape |
 | `src/lib/catalog/catalog.ts` (amended) | `CatalogDefaults` + `flowBackCatalogDefaults` — sparse write-back of category/unit to catalog defaults |
 | `src/lib/catalog/catalog.test.ts` (amended) | Unit tests for flow-back semantics (concrete write, null ignored, partial update) |
@@ -89,7 +89,7 @@ Why it matters: raw `operation.category`/`operation.unit` are passed through —
 <input name="name" ... list="catalog-suggestions" />
 ```
 
-Why it matters: this is the zero-JS autocomplete decision — the browser natively suggests catalog names without a client component or fetch-on-keystroke. Category/unit are **not** prefilled into input boxes; leaving them blank lets `add_item` inherit the flowed-back catalog default, so the category still lands on the created entry. The GET endpoint built in Task 4 is ready for a fetch-based dropdown upgrade in Slice 8 PWA polish.
+Why it matters: this is the zero-JS autocomplete decision — the browser natively suggests catalog names without a client component or fetch-on-keystroke. Category/unit are **not** prefilled into input boxes; leaving them blank lets `add_item` inherit the flowed-back catalog default, so the category still lands on the created entry. The page seeds the datalist via `searchCatalog(..., "", CATALOG_DATALIST_LIMIT)` so household-sized catalogs stay fully suggestable; the GET endpoint (Task 4) keeps the short `CATALOG_SEARCH_LIMIT` for a fetch-based dropdown upgrade in Slice 8 PWA polish.
 
 ---
 
