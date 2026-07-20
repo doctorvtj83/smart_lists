@@ -6,6 +6,16 @@ import { normalizeName } from "./normalize";
 // (the REST endpoint, Task 4) references the same default.
 export const CATALOG_SEARCH_LIMIT = 20;
 
+// Separate, much larger cap for the server-rendered <datalist> browse (the list detail page).
+// WHY a second constant instead of reusing CATALOG_SEARCH_LIMIT: a native <datalist> filters
+// ENTIRELY client-side over the <option>s we pre-render — it never re-queries as the user types. So
+// the datalist must be seeded with the WHOLE catalog; with only 20 options, any article past the
+// first 20 (alphabetically) would be silently unsuggestable. This ceiling stays generous because a
+// household catalog is at most a few hundred articles and each <option> is a few bytes. When Slice 8
+// replaces the datalist with a fetch-on-keystroke dropdown (querying ?q= at CATALOG_SEARCH_LIMIT),
+// this constant becomes unused and can be removed.
+export const CATALOG_DATALIST_LIMIT = 1000;
+
 // The lean shape autocomplete needs: the display name to insert plus the defaults, so the caller can
 // prefill or (in our UI) rely on inheritance for category/unit. Deliberately omits
 // projectId/normalizedName/createdAt — same "don't over-expose" precedent as Slice 2's MemberUser.

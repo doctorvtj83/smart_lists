@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { searchCatalog } from "@/lib/catalog/search";
+import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
 import { prisma } from "@/lib/db";
 import { requireListAccess } from "@/lib/lists/access";
 import { deleteList, getListWithItems, type ListWithItems } from "@/lib/lists/lists";
@@ -50,7 +50,11 @@ export default async function ListDetailPage({ params }: Props) {
   // populate the <datalist> below, giving the name input native autocomplete with zero client JS.
   const [list, suggestions] = await Promise.all([
     getListWithItems(prisma, listId),
-    searchCatalog(prisma, projectId, ""), // "" = browse: all articles (capped) for the datalist
+    // "" = browse mode: render the whole catalog into the <datalist>. We pass the larger
+    // CATALOG_DATALIST_LIMIT (not searchCatalog's short default) because a native datalist filters
+    // client-side over exactly these options — anything not pre-rendered is never suggested, so the
+    // browse must not be capped at the per-keystroke endpoint's 20. See CATALOG_DATALIST_LIMIT.
+    searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
   ]);
   // Deleted between guard and read (rare race) — same redirect as an unknown list.
   if (!list) redirect("/projects");
