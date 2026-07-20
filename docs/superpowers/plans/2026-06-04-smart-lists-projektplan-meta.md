@@ -54,7 +54,7 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 1 | **Auth + Allowlist** | Scaffold, Google login, email allowlist, JIT user provisioning, admin seed | [2026-06-04-slice-1-auth-allowlist.md](2026-06-04-slice-1-auth-allowlist.md) | ✅ Done / verified |
 | 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | [2026-07-05-slice-3-lists-entries.md](2026-07-05-slice-3-lists-entries.md) | ✅ Done / verified |
-| 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | _to be created_ | ⬜ Open |
+| 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | [2026-07-08-slice-4-catalog-autocomplete.md](2026-07-08-slice-4-catalog-autocomplete.md) | ✅ Done / verified |
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | _to be created_ | ⬜ Open |
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | _to be created_ | ⬜ Open |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | _to be created_ | ⬜ Open |
@@ -115,6 +115,34 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-20 — Slice 4 follow-up: `CATALOG_DATALIST_LIMIT` for datalist browse
+- **Delivered:** Separate browse cap `CATALOG_DATALIST_LIMIT` (1000) in `search.ts`; list detail page seeds `<datalist>` with that limit instead of `CATALOG_SEARCH_LIMIT` (20). Native datalist filters only over pre-rendered options, so the API's short cap was silently hiding later articles.
+- **Tested:** Lint/compile only for the follow-up (behavior change is the numeric limit passed to already-tested `searchCatalog`); full Slice 4 manual browser verification already recorded in the entry below.
+- **Deviations from the plan:** Intentional post-slice fix; plan Task 5 used the default search limit for browse.
+- **Follow-up decisions for later slices:** When Slice 8 replaces the datalist with fetch-on-keystroke (`?q=` at `CATALOG_SEARCH_LIMIT`), remove `CATALOG_DATALIST_LIMIT`.
+- **Inherited open items:** Unchanged (Slice 5 plan still open).
+- **Commit(s):** bfffcd0, plus the docs commit carrying this entry
+
+### 2026-07-20 — Slice 4: Catalog + Autocomplete — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 5 browser verification from 2026-07-09.
+- **Tested:** Manual E2E on list detail page ("Rewe") while logged in as an allowlisted member. Verified: (1) add "Bananen" with category "Obst" → entry under Obst; (2) typing "Ban" suggests "Bananen" from `<datalist>`; (3) re-add "Bananen" with blank category → inherits Obst; (4) re-add "Bananen" with a new explicit category → catalog default updates; subsequent blank-category add inherits the newest category. Note: no entry-edit UI yet — Check 4 used re-add with explicit category (plan alternative); `update_item` remains API/core-only.
+- **Deviations from the plan:** None for the verification itself. Entry edit UI was never in Slice 3/4 scope.
+- **Follow-up decisions for later slices:** Unchanged from 2026-07-09 entry.
+- **Inherited open items:** None for Slice 4. Slice 5 plan still to be created.
+- **Commit(s):** (documentation-only update; no new code commits)
+
+### 2026-07-09 — Slice 4: Catalog + Autocomplete — Done
+- **Delivered:** `searchCatalog` (prefix match on `normalizedName`, blank=browse, lean `CatalogSuggestion` shape; API default `CATALOG_SEARCH_LIMIT` = 20); `flowBackCatalogDefaults` (non-null category/unit → catalog default); flow-back wired into `applyOperation` for `add_item` (explicit values) and `update_item` (category/unit); `GET /api/projects/:id/catalog?q=` member-level autocomplete endpoint; server-rendered `<datalist>` autocomplete on the list detail page (category/unit inherit at add time — no input prefill; datalist browse uses `CATALOG_DATALIST_LIMIT` = 1000, not the API's 20).
+- **Tested:** `npm test` passed (15 files, 118 tests — 12 new in Slice 4 + 106 from Slices 1–3); `npm run lint` passed; `npm run build` passed cleanly. Manual browser check of datalist autocomplete + category inheritance: completed 2026-07-20 (see entry above).
+- **Deviations from the plan:** None for the six planned tasks. Post-slice follow-up: `CATALOG_DATALIST_LIMIT` (see 2026-07-20 follow-up entry) so the native datalist is not silently capped at 20.
+- **Follow-up decisions for later slices:**
+  - `searchCatalog` (`src/lib/catalog/search.ts`) is the catalog read seam — Slice 5 suggestions and the future PWA client build on it.
+  - `flowBackCatalogDefaults` runs INSIDE `applyOperation` only — the catalog default is only ever mutated through the operations funnel (keeps the single mutation path intact for Slice 7 sync).
+  - Flow-back is non-null only: clearing an entry's category/unit never erases the catalog default (deliberate — shared project memory).
+  - Autocomplete UI is a native `<datalist>` (no client component yet); datalist browse uses `CATALOG_DATALIST_LIMIT` (1000) because options are filtered client-side only. A fetch-based dropdown with live category/unit prefill remains a possible PWA-polish upgrade (Slice 8), consuming the GET endpoint at `CATALOG_SEARCH_LIMIT` — at which point `CATALOG_DATALIST_LIMIT` can be removed.
+- **Inherited open items:** Slice 5 plan (`docs/superpowers/plans/YYYY-MM-DD-slice-5-favorites-suggestions.md`) to be created per maintenance guide step 3. Manual browser verification completed 2026-07-20.
+- **Commit(s):** e5ebf30, ed51baa, 1692a81, 7919524, 4c9ad64, 92158a8, plus the docs commit carrying this entry
 
 ### 2026-07-05 — Slice 3: Lists + Entries (operations) — Done
 - **Delivered:** Lists CRUD inside projects (`createList`, `listLists`, `getListWithItems`, `renameList`, `deleteList`); minimal catalog identity (`normalizeName`, `getOrCreateCatalogItem` with per-project `normalized_name` uniqueness); list-scoped access guard (`requireListAccess`); entry-level operations model (`parseOperation`, `applyOperation` for `add_item`, `update_item`, `check_item`, `remove_item` with idempotency semantics); REST routes (`/api/projects/:id/lists`, `/api/lists/:id`, `/api/lists/:id/ops`); server-rendered UI (project detail "Listen" section + list detail page with entries grouped by category, quantity/unit, check/remove). Prisma schema adds `ListStatus`, `CatalogItem`, `List`, `ListItem` with client-generatable UUIDs and `@updatedAt` on entries.
