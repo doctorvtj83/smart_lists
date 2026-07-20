@@ -35,11 +35,13 @@ export default async function ProjectDetailPage({ params }: Props) {
   // If we reach here, role is guaranteed to be "owner" | "member".
   // The two reads are independent, so run them in parallel (Promise.all) instead of sequentially —
   // one DB round-trip of latency instead of two.
-  const [project, members, lists] = await Promise.all([
+  const [project, members, activeLists, archivedLists] = await Promise.all([
     getProject(prisma, projectId),
     listMembers(prisma, projectId),
-    // Slice 3: the project's lists (newest first) render alongside the members.
-    listLists(prisma, projectId),
+    // Slice 6: split the project's lists into the working set ("Listen") and the archive ("Archiv").
+    // Active = newest-created first; archive = newest-completed first (see listLists).
+    listLists(prisma, projectId, "active"),
+    listLists(prisma, projectId, "completed"),
   ]);
 
   // Convenience flag used to conditionally render owner-only UI sections.
@@ -144,12 +146,29 @@ export default async function ProjectDetailPage({ params }: Props) {
         <button type="submit">Liste anlegen</button>
       </form>
       <ul>
-        {lists.map((l) => (
+        {activeLists.map((l) => (
           <li key={l.id}>
             <Link href={`/lists/${l.id}`}>{l.name}</Link>
           </li>
         ))}
       </ul>
+
+      {/* Slice 6: the archive of completed lists. Rendered only when non-empty so an all-active
+          project shows no empty heading. Completed lists stay visible (and feed Slice 5's statistic)
+          until deleted (MVP design §4.6). */}
+      {archivedLists.length > 0 && (
+        <>
+          <h2>Archiv</h2>
+          <ul>
+            {archivedLists.map((l) => (
+              <li key={l.id}>
+                <Link href={`/lists/${l.id}`}>{l.name}</Link>
+                {l.completedAt ? ` (${l.completedAt.toLocaleDateString("de-DE")})` : ""}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {/* Owner-only controls: invite, rename, delete. Hidden from plain members. */}
       {isOwner && (
