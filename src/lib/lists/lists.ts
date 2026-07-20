@@ -45,10 +45,22 @@ export async function createList(db: PrismaClient, input: CreateListInput): Prom
   });
 }
 
-// All lists of a project, newest first: on a phone you almost always want the list you just
-// created or used most recently at the top. (Slice 6 will split active vs. archived views.)
-export async function listLists(db: PrismaClient, projectId: string): Promise<List[]> {
-  return db.list.findMany({ where: { projectId }, orderBy: { createdAt: "desc" } });
+// All lists of a project, optionally filtered by lifecycle status (Slice 6 archive split).
+// - no status  -> every list, newest-CREATED first (unchanged behavior; the REST collection default).
+// - "active"   -> open lists, newest-created first (what you're working on sits on top).
+// - "completed"-> the archive, newest-COMPLETED first (recently finished lists on top) — a different
+//   sort key on purpose, because for archived lists the meaningful recency is when they were closed.
+export async function listLists(
+  db: PrismaClient,
+  projectId: string,
+  status?: ListStatus,
+): Promise<List[]> {
+  return db.list.findMany({
+    // Spread the status filter only when one is given, so the no-arg call still returns everything.
+    where: { projectId, ...(status ? { status } : {}) },
+    // Completed lists sort by completedAt (archive recency); everything else by createdAt.
+    orderBy: status === "completed" ? { completedAt: "desc" } : { createdAt: "desc" },
+  });
 }
 
 // Single list with its items (ordered by sortIndex = the manual order) and each item's catalog

@@ -76,6 +76,28 @@ describe("listLists", () => {
     const lists = await listLists(db, projectId);
     expect(lists.map((l) => l.name)).toEqual(["Neu", "Alt"]);
   });
+
+  it("filters to active lists when status='active'", async () => {
+    const active = await createList(db, { projectId, name: "Offen" });
+    const done = await createList(db, { projectId, name: "Fertig" });
+    await completeList(db, done.id);
+    const lists = await listLists(db, projectId, "active");
+    expect(lists.map((l) => l.name)).toEqual(["Offen"]);
+    expect(active.id).toBeTruthy(); // (created above; referenced to satisfy the linter)
+  });
+
+  it("returns completed lists newest-completed first when status='completed'", async () => {
+    const first = await createList(db, { projectId, name: "Zuerst" });
+    const second = await createList(db, { projectId, name: "Danach" });
+    await completeList(db, first.id);
+    // Force a later completedAt on `second` so the desc ordering is deterministic.
+    await db.list.update({
+      where: { id: second.id },
+      data: { status: "completed", completedAt: new Date(Date.now() + 60_000) },
+    });
+    const archived = await listLists(db, projectId, "completed");
+    expect(archived.map((l) => l.name)).toEqual(["Danach", "Zuerst"]);
+  });
 });
 
 describe("getListWithItems", () => {
