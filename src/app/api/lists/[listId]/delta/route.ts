@@ -32,9 +32,9 @@ export async function GET(request: Request, { params }: Context) {
     // Resolve the list AND check membership in its project (404 for both failure modes).
     await requireListAccess(prisma, listId, userId);
 
-    // Optional ?since cursor. Anything non-numeric (or absent) means "baseline pull" — we pass
-    // undefined so junk can never poison the epoch-ms comparison. Number("") is 0, so we guard the
-    // empty string explicitly by requiring a finite number.
+    // Optional ?since cursor. Absent or non-numeric values become undefined ("baseline pull").
+    // Present numeric strings parse via Number(); note that ?since= (empty) yields since = 0 because
+    // Number("") is 0 and is finite — only NaN/Infinity fall through to undefined.
     const sinceParam = new URL(request.url).searchParams.get("since");
     const sinceNum = sinceParam !== null ? Number(sinceParam) : Number.NaN;
     const since = Number.isFinite(sinceNum) ? sinceNum : undefined;

@@ -67,6 +67,7 @@ export default function ListSyncPoller({
         });
         if (!res.ok || cancelled) return; // transient error / unmounted — just try again next tick
         const delta = await res.json();
+        if (cancelled) return; // unmounted while JSON was parsing — skip ref advance / refresh
 
         // Did anything change vs. what is on screen? Three independent signals:
         //  - a changed/added entry body came back (updatedAt > cursor),
