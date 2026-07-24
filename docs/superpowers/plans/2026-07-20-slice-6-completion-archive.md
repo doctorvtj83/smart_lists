@@ -638,14 +638,14 @@ Replace it with the active-lists map plus a conditional "Archiv" section:
 Run: `npm run lint && npm run build`
 Expected: PASS — clean build, no type errors.
 
-- [ ] **Step 7: Manual browser verification**
+- [x] **Step 7: Manual browser verification** *(completed 2026-07-24)*
 
 Start the dev server (`npm run dev`) and, logged in as an allowlisted member:
-1. Open a list with a few entries → "Liste abschließen" button is visible; no auto-suggest prompt while any entry is unchecked.
-2. Check every entry → the "Alle Einträge sind abgehakt. Liste abschließen?" prompt appears above the button.
-3. Click "Liste abschließen" → the page now shows "✓ Abgeschlossen am <date>" and a "Wieder öffnen" button; the entry list still renders.
-4. Go back to the project page → the list is gone from "Listen" and appears under "Archiv" with its completion date.
-5. Open the archived list, click "Wieder öffnen" → it returns to active; back on the project page it is under "Listen" again and out of "Archiv".
+1. [x] Open a list with a few entries → "Liste abschließen" button is visible; no auto-suggest prompt while any entry is unchecked. *(verified 2026-07-24)*
+2. [x] Check every entry → the "Alle Einträge sind abgehakt. Liste abschließen?" prompt appears above the button. *(verified 2026-07-24)*
+3. [x] Click "Liste abschließen" → the page now shows "✓ Abgeschlossen am <date>" and a "Wieder öffnen" button; the entry list still renders. *(verified 2026-07-24)*
+4. [x] Go back to the project page → the list is gone from "Listen" and appears under "Archiv" with its completion date. *(verified 2026-07-24)*
+5. [x] Open the archived list, click "Wieder öffnen" → it returns to active; back on the project page it is under "Listen" again and out of "Archiv". *(verified 2026-07-24)*
 
 Record the outcome in the Task 5 review; do not claim success without running these.
 

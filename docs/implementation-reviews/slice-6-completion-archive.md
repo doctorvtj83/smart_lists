@@ -14,7 +14,7 @@ Slice 6 adds the list lifecycle that the MVP design's §4.6 "Abschluss-Logik" de
 
 The slice goal was **fully met**: lists now have a lifecycle with a stable completion timestamp, which is exactly the prerequisite Slice 5's N-of-M statistic needs (it reads *completed* lists — none existed before this slice shipped).
 
-**Manual browser verification (Task 4, Step 7) was NOT completed in this environment.** The app's login is Google OAuth only, and no interactive Google sign-in is possible from this agent session. The complete → archive → reopen flow described in the plan is therefore **pending human verification**, not confirmed working end-to-end in a browser. All automated checks (unit/integration tests, lint, build) passed; the honesty caveat is carried into the meta-plan progress-log entry below rather than claimed as a pass.
+**Manual browser verification (Task 4, Step 7) completed 2026-07-24 (human).** All five checks passed: manual "Liste abschließen" without premature auto-suggest; auto-suggest prompt once every entry is checked; complete shows "✓ Abgeschlossen" + "Wieder öffnen" with entries still rendered; completed list moves from "Listen" to "Archiv" with date; reopen returns it to active under "Listen". All automated checks (unit/integration tests, lint, build) also passed.
 
 **Locked design decisions honored:** (1) completion is idempotent and never re-stamps `completedAt`; (2) reopening clears the timestamp entirely (no history of prior completions); (3) auto-suggest is a UI prompt derived from already-loaded data, not a stored flag; (4) completed lists remain fully editable — no read-only archive lock was introduced.
 
