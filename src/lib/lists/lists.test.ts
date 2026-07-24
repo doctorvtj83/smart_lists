@@ -1,7 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
-import { createList, deleteList, getListWithItems, listLists, renameList } from "./lists";
+import {
+  allItemsChecked,
+  completeList,
+  createList,
+  deleteList,
+  getListWithItems,
+  listLists,
+  renameList,
+  reopenList,
+} from "./lists";
 
 const db = new PrismaClient();
 let projectId: string;
@@ -67,6 +76,28 @@ describe("listLists", () => {
     const lists = await listLists(db, projectId);
     expect(lists.map((l) => l.name)).toEqual(["Neu", "Alt"]);
   });
+
+  it("filters to active lists when status='active'", async () => {
+    const active = await createList(db, { projectId, name: "Offen" });
+    const done = await createList(db, { projectId, name: "Fertig" });
+    await completeList(db, done.id);
+    const lists = await listLists(db, projectId, "active");
+    expect(lists.map((l) => l.name)).toEqual(["Offen"]);
+    expect(active.id).toBeTruthy(); // (created above; referenced to satisfy the linter)
+  });
+
+  it("returns completed lists newest-completed first when status='completed'", async () => {
+    const first = await createList(db, { projectId, name: "Zuerst" });
+    const second = await createList(db, { projectId, name: "Danach" });
+    await completeList(db, first.id);
+    // Force a later completedAt on `second` so the desc ordering is deterministic.
+    await db.list.update({
+      where: { id: second.id },
+      data: { status: "completed", completedAt: new Date(Date.now() + 60_000) },
+    });
+    const archived = await listLists(db, projectId, "completed");
+    expect(archived.map((l) => l.name)).toEqual(["Danach", "Zuerst"]);
+  });
 });
 
 describe("getListWithItems", () => {
@@ -119,5 +150,49 @@ describe("deleteList", () => {
     await deleteList(db, list.id);
     expect(await getListWithItems(db, list.id)).toBeNull();
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(0);
+  });
+});
+
+describe("completeList", () => {
+  it("marks an active list completed and stamps completedAt", async () => {
+    const list = await createList(db, { projectId, name: "Einkauf" });
+    const completed = await completeList(db, list.id);
+    expect(completed.status).toBe("completed");
+    expect(completed.completedAt).toBeInstanceOf(Date);
+  });
+
+  it("is idempotent: re-completing does NOT re-stamp completedAt", async () => {
+    const list = await createList(db, { projectId, name: "Einkauf" });
+    await completeList(db, list.id);
+    // Force a known past timestamp, then complete again: the status guard must skip the write, so
+    // the timestamp Slice 5 orders by is preserved.
+    const past = new Date("2020-01-01T00:00:00.000Z");
+    await db.list.update({ where: { id: list.id }, data: { completedAt: past } });
+    const again = await completeList(db, list.id);
+    expect(again.completedAt).toEqual(past); // unchanged — not re-stamped to "now"
+  });
+});
+
+describe("reopenList", () => {
+  it("reopens a completed list (undo): status active, completedAt cleared", async () => {
+    const list = await createList(db, { projectId, name: "Einkauf" });
+    await completeList(db, list.id);
+    const reopened = await reopenList(db, list.id);
+    expect(reopened.status).toBe("active");
+    expect(reopened.completedAt).toBeNull();
+  });
+});
+
+describe("allItemsChecked", () => {
+  it("is false for a list with no entries (nothing to complete)", () => {
+    expect(allItemsChecked([])).toBe(false);
+  });
+
+  it("is false when at least one entry is unchecked", () => {
+    expect(allItemsChecked([{ checked: true }, { checked: false }])).toBe(false);
+  });
+
+  it("is true when the list has entries and all are checked", () => {
+    expect(allItemsChecked([{ checked: true }, { checked: true }])).toBe(true);
   });
 });

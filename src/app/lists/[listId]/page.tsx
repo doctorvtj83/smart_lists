@@ -6,7 +6,14 @@ import { auth } from "@/auth";
 import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
 import { prisma } from "@/lib/db";
 import { requireListAccess } from "@/lib/lists/access";
-import { deleteList, getListWithItems, type ListWithItems } from "@/lib/lists/lists";
+import {
+  allItemsChecked,
+  completeList,
+  deleteList,
+  getListWithItems,
+  type ListWithItems,
+  reopenList,
+} from "@/lib/lists/lists";
 import { applyOperation } from "@/lib/lists/operations";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
@@ -60,6 +67,12 @@ export default async function ListDetailPage({ params }: Props) {
   if (!list) redirect("/projects");
 
   const groups = groupByCategory(list.items);
+
+  // Completion UI state. `isCompleted` switches the banner between "abschließen" and "wieder öffnen".
+  // `suggestComplete` is the auto-suggest trigger: all entries checked on a still-open list — the
+  // cue to prompt the user to finish it (MVP design §4.6). Both are derived, not stored.
+  const isCompleted = list.status === "completed";
+  const suggestComplete = !isCompleted && allItemsChecked(list.items);
 
   // --- Server actions. Each re-derives identity and re-runs the guard (defense in depth:
   // server actions are individually addressable POST endpoints, exactly like in Slice 2), and
@@ -115,6 +128,25 @@ export default async function ListDetailPage({ params }: Props) {
     revalidatePath(`/lists/${listId}`);
   }
 
+  // Complete the list (member-level). Manual completion AND the auto-suggest prompt both submit
+  // this action (MVP design §4.6). completeList is idempotent, so a double submit is harmless.
+  async function completeListAction() {
+    "use server";
+    const s = await auth();
+    const { list: l } = await requireListAccess(prisma, listId, s!.user.id);
+    await completeList(prisma, l.id);
+    revalidatePath(`/lists/${listId}`);
+  }
+
+  // Reopen the list — the "undo" of completion (MVP design §4.6, "mit Undo"). Member-level.
+  async function reopenListAction() {
+    "use server";
+    const s = await auth();
+    const { list: l } = await requireListAccess(prisma, listId, s!.user.id);
+    await reopenList(prisma, l.id);
+    revalidatePath(`/lists/${listId}`);
+  }
+
   // Delete the whole list (member-level per the permission matrix), then back to the project.
   async function removeList() {
     "use server";
@@ -132,6 +164,29 @@ export default async function ListDetailPage({ params }: Props) {
         <Link href={`/projects/${list.projectId}`}>← Zum Projekt</Link>
       </p>
       <h1>{list.name}</h1>
+
+      {/* Completion controls (Slice 6, MVP design §4.6). A completed list shows an archive banner +
+          undo; an open list shows the manual "abschließen" button, preceded by an auto-suggest
+          prompt once every entry is checked. */}
+      {isCompleted ? (
+        <section>
+          <p>
+            ✓ Abgeschlossen
+            {list.completedAt ? ` am ${list.completedAt.toLocaleDateString("de-DE")}` : ""}
+          </p>
+          <form action={reopenListAction}>
+            <button type="submit">Wieder öffnen</button>
+          </form>
+        </section>
+      ) : (
+        <section>
+          {/* Auto-suggest: shown only when all entries are checked (never on an empty list). */}
+          {suggestComplete && <p>Alle Einträge sind abgehakt. Liste abschließen?</p>}
+          <form action={completeListAction}>
+            <button type="submit">Liste abschließen</button>
+          </form>
+        </section>
+      )}
 
       {/* Add-entry form: name is required, the value fields are optional. The name input is wired to
           a native <datalist> (server-rendered from the project catalog) for zero-JS autocomplete —

@@ -55,8 +55,8 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | [2026-07-05-slice-3-lists-entries.md](2026-07-05-slice-3-lists-entries.md) | ✅ Done / verified |
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | [2026-07-08-slice-4-catalog-autocomplete.md](2026-07-08-slice-4-catalog-autocomplete.md) | ✅ Done / verified |
-| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ⬜ Open — **build after 6** |
-| 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ⬜ Open — **build next** |
+| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ⬜ Open — **build next** |
+| 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ✅ Done / verified |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ⬜ Open |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 
@@ -120,6 +120,25 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-24 — Slice 6: Completion + Archive — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 4 Step 7 browser verification from 2026-07-20.
+- **Tested:** Manual E2E while logged in as an allowlisted member. Verified: (1) open list → "Liste abschließen" visible, no auto-suggest while unchecked; (2) check every entry → auto-suggest prompt appears; (3) complete → "✓ Abgeschlossen am <date>" + "Wieder öffnen", entries still render; (4) project page → list under "Archiv" with date, gone from "Listen"; (5) reopen → active again under "Listen", out of "Archiv".
+- **Deviations from the plan:** None for the verification itself.
+- **Follow-up decisions for later slices:** Unchanged from the Slice 6 Done entry.
+- **Inherited open items:** None for Slice 6 manual verification. Slice 5 plan reconciliation against this slice's project-page edits still applies when executing Slice 5.
+- **Commit(s):** (documentation-only update; no new code commits)
+
+### 2026-07-20 — Slice 6: Completion + Archive — Done
+- **Delivered:** `completeList` (idempotent, stamps completedAt), `reopenList` (undo, clears it), `allItemsChecked` predicate; `listLists` optional status filter (active by createdAt, archive by completedAt); `POST /api/lists/:id/complete` + `/reopen` endpoints; `?status=` filter on the lists GET; list-page completion UI (manual + auto-suggest prompt + undo) and project-page "Archiv" section.
+- **Tested:** `npm test` passed (15 files, 126 tests — 8 new in Slice 6); `npm run lint` + `npm run build` passed cleanly. Manual browser check of complete → archive → reopen: completed 2026-07-24 (see entry above).
+- **Deviations from the plan:** none.
+- **Follow-up decisions for later slices:**
+  - Completion is idempotent and never re-stamps completedAt — Slice 5 may rely on a stable "last M completed" ordering.
+  - List lifecycle changes (complete/reopen) are list-level mutations, NOT entry operations; Slice 7's delta must surface `status`/`completedAt` changes separately from the entry ops.
+  - Completed lists remain editable (read-only archive was intentionally out of scope) — revisit if needed.
+- **Inherited open items:** Slice 5 plan (`docs/superpowers/plans/2026-07-20-slice-5-favorites-suggestions.md`) is written and ready; its statistic is now live because completed lists exist. Reconcile Slice 5's project-page edits against this slice's changes to the same file (see that plan's header note). Manual browser verification completed 2026-07-24.
+- **Commit(s):** 14da449, ed32905, 03cc6dc, 61026a6, plus the docs commit carrying this entry
 
 ### 2026-07-20 — Slice 4 follow-up: `CATALOG_DATALIST_LIMIT` for datalist browse
 - **Delivered:** Separate browse cap `CATALOG_DATALIST_LIMIT` (1000) in `search.ts`; list detail page seeds `<datalist>` with that limit instead of `CATALOG_SEARCH_LIMIT` (20). Native datalist filters only over pre-rendered options, so the API's short cap was silently hiding later articles.

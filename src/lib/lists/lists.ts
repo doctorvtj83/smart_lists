@@ -1,4 +1,4 @@
-import type { CatalogItem, List, ListItem, PrismaClient } from "@prisma/client";
+import type { CatalogItem, List, ListItem, ListStatus, PrismaClient } from "@prisma/client";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
 
@@ -45,10 +45,22 @@ export async function createList(db: PrismaClient, input: CreateListInput): Prom
   });
 }
 
-// All lists of a project, newest first: on a phone you almost always want the list you just
-// created or used most recently at the top. (Slice 6 will split active vs. archived views.)
-export async function listLists(db: PrismaClient, projectId: string): Promise<List[]> {
-  return db.list.findMany({ where: { projectId }, orderBy: { createdAt: "desc" } });
+// All lists of a project, optionally filtered by lifecycle status (Slice 6 archive split).
+// - no status  -> every list, newest-CREATED first (unchanged behavior; the REST collection default).
+// - "active"   -> open lists, newest-created first (what you're working on sits on top).
+// - "completed"-> the archive, newest-COMPLETED first (recently finished lists on top) — a different
+//   sort key on purpose, because for archived lists the meaningful recency is when they were closed.
+export async function listLists(
+  db: PrismaClient,
+  projectId: string,
+  status?: ListStatus,
+): Promise<List[]> {
+  return db.list.findMany({
+    // Spread the status filter only when one is given, so the no-arg call still returns everything.
+    where: { projectId, ...(status ? { status } : {}) },
+    // Completed lists sort by completedAt (archive recency); everything else by createdAt.
+    orderBy: status === "completed" ? { completedAt: "desc" } : { createdAt: "desc" },
+  });
 }
 
 // Single list with its items (ordered by sortIndex = the manual order) and each item's catalog
@@ -80,4 +92,40 @@ export async function renameList(db: PrismaClient, listId: string, name: string)
 // Deletes a list. Its items are removed automatically by the onDelete: Cascade FK (schema, Task 1).
 export async function deleteList(db: PrismaClient, listId: string): Promise<void> {
   await db.list.delete({ where: { id: listId } });
+}
+
+// Marks a list as completed (MVP design §4.6, "Abschließen"). List-level lifecycle mutation — NOT an
+// entry operation — so it lives here beside renameList/deleteList, not in the operations funnel.
+//
+// IDEMPOTENCY (locked decision): the write is guarded by `status: "active"`, so completing an
+// already-completed list changes nothing and, crucially, does NOT re-stamp completedAt. Slice 5
+// orders the "last M completed lists" window by completedAt, so a re-stamp would silently reshuffle
+// that window. updateMany (not update) tolerates the guarded no-match without throwing.
+export async function completeList(db: PrismaClient, listId: string): Promise<List> {
+  await db.list.updateMany({
+    where: { id: listId, status: "active" }, // only an active list transitions (idempotent guard)
+    data: { status: "completed", completedAt: new Date() },
+  });
+  // Return the current row whether we just completed it or it was already completed. findUniqueOrThrow
+  // is safe: the caller has already resolved the list via requireListAccess, so it exists.
+  return db.list.findUniqueOrThrow({ where: { id: listId } });
+}
+
+// Reopens a completed list — the "undo" of the auto-suggest prompt (MVP design §4.6, "mit Undo").
+// Clears completedAt so the list leaves the archive (and, once Slice 5 ships, the statistic window)
+// until it is completed again.
+export async function reopenList(db: PrismaClient, listId: string): Promise<List> {
+  return db.list.update({
+    where: { id: listId },
+    data: { status: "active", completedAt: null },
+  });
+}
+
+// Pure predicate: are ALL of a list's entries checked (and is there at least one)? Drives the
+// auto-suggest completion prompt (§7 "Auto-Vorschlag bei vollständig abgehakt"). Kept pure and
+// synchronous — it takes just the checked flags — so the UI can call it on already-loaded items and
+// it is trivially unit-testable without a DB. An EMPTY list is deliberately NOT "all checked": there
+// is nothing to complete, so we must not nag the user to finish an empty list.
+export function allItemsChecked(items: { checked: boolean }[]): boolean {
+  return items.length > 0 && items.every((item) => item.checked);
 }
