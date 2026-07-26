@@ -1,40 +1,33 @@
-# Slice 7 SDD Progress
+# Slice 5 SDD Progress
 
-Plan: docs/superpowers/plans/2026-07-20-slice-7-polling-sync.md
-Branch: slice-7-polling-sync (merged and deleted)
-Worktree: /workspaces/smart_lists/.worktrees/slice-7-polling-sync (removed)
-Base: slice-6-completion-archive @ 609bd12
-Started: 2026-07-22
-Merged: ab81e2f (PR #6) into main on 2026-07-26 — slice complete.
-
-> Note: the branch was rebased onto main before merging, so the commit hashes
-> originally logged against each task were rewritten. The hashes below are the
-> POST-rebase ones actually reachable from main; the originals (1996bd5,
-> cc74c57, 21b1415, b99ee4a, 4947e3b, 8eb767d) are unreachable and will be
-> garbage-collected.
+Plan: docs/superpowers/plans/2026-07-20-slice-5-favorites-suggestions.md
+Branch: slice-5-favorites-suggestions
+Worktree: /workspaces/smart_lists/.worktrees/slice-5-favorites-suggestions
+Base: main @ 8136cc2
+Started: 2026-07-26
 
 ## Tasks
 
+Task 1: complete (commits 8136cc2..cc4ebd2, review clean)
+Task 2: complete (commits cc4ebd2..9b869b8, review clean; minor: 404 message assertion; removeFavorite malformed-id test gap)
+Task 3: complete (commits 9b869b8..a993cb6, review clean; minor: NULLS LAST / M / de-sort test gaps)
+Task 4: complete (commits a993cb6..47064f0, review clean; deviation: sortIndex assert [1,2] not plan [0,1] — matches applyOperation)
+Task 5: complete (commits 47064f0..8971c10, review clean; ⚠️ applyOperation via createPrefilledList confirmed in Task 4)
+Task 6: code complete (commits 8971c10..7169c42, review clean); MANUAL VERIFY PENDING (OAuth — awaiting user login for Step 7 checks 1-8)
+Task 6: complete (commits 8971c10..7169c42, review clean; manual Step 7 checks 1-8 all passed 2026-07-26 on project Einkauf)
+Task 7: complete (commits 7169c42..bba0973, review clean)
+Final review: Approve with minor notes (no Critical/Important). Minors recorded in progress ledger.
 
-Task 1: complete (commit e384f03, review clean)
+---
 
-Task 2: complete (commit 04fb04e, review clean; minor: empty since→0)
+# Slice 5 Review Fixes SDD Progress
 
-Task 3: complete (commit e4ce7fe, review approved; minor: overlapping poll / cancelled-before-json)
+Plan: docs/superpowers/plans/2026-07-26-slice-5-review-fixes.md
+Branch: slice-5-favorites-suggestions
+Worktree: /workspaces/smart_lists/.worktrees/slice-5-favorites-suggestions
+Base: bba0973
+Started: 2026-07-26
 
-Task 4: complete (commit 01883ac, review approved; manual two-session browser verified 2026-07-26, recorded in e96f7ad)
+## Review-fix tasks
 
-Task 5: complete (commit 4abd569, review clean)
-
-All tasks complete. Final whole-branch review done earlier; manual verification closed 2026-07-26.
-
-Final review: With fixes applied (3827080). Minor: overlapping polls left as MVP-ok.
-Manual browser verification (Task 4 Step 5): all 6 checks passed 2026-07-26.
-Post-review follow-up on the branch: a145136 (back-link from the project page to /projects).
-
-Open items carried forward (not blockers; also in the meta plan's Slice 7 entries):
-empty `?since=` becomes cursor 0; overlapping polls; cancelled-before-JSON race.
-
-Next: Slice 5 (Favorites + Suggestions) is the last unbuilt functional slice — its
-plan was reconciled against this slice in 1c3b829. Slice 8 (PWA polish) still needs
-a plan.
+(none complete yet)
