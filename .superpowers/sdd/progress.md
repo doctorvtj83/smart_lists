@@ -30,4 +30,11 @@ Started: 2026-07-26
 
 ## Review-fix tasks
 
-(none complete yet)
+Task 1: complete (commits bba0973..03b0bac, review clean)
+Task 2: complete (commits 03b0bac..0197e1f, review clean)
+Task 3: complete (commits 0197e1f..1246c66, review clean)
+Task 4: complete (commits 1246c66..6e23629, review clean)
+Task 5: complete (commits 6e23629..b8d241b, review clean)
+Task 6: complete (commits b8d241b..0da1ef4, review clean after fix pass)
+Final review: Approve with fixes → applied (stale §4 code excerpts refreshed)
+
