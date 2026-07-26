@@ -28,14 +28,23 @@ This slice closes that gap: an admin manages access from a page in the app.
 
 - Invite an email (add an allowlist entry).
 - Revoke an email (remove an allowlist entry) — blocks future logins.
+- **Two distinct revocation intents**, chosen by the admin during the flow (§6):
+  - *Deaktivieren* — only the allowlist row goes. No new logins; project memberships stay; re-inviting
+    later restores the person to their projects.
+  - *Ausschließen* — additionally removes every membership where the person is a plain member, which
+    ends their content access on their very next request (membership is checked live, see §4).
 - Grant and revoke `is_admin` on an existing user.
-- A `/admin` page, reachable only by admins, that does all three.
+- A `/admin` page, reachable only by admins, that does all of it.
 
 **Out of scope — deliberately**
 
-- **Deleting users, memberships, projects, or lists.** "Revoke" removes exactly one allowlist row.
-  Rationale: `Project.ownerId` is a required FK, so deleting a user breaks any project they own and
-  would drag an owner-handover flow into this slice. See §6 for how removal is actually done.
+- **Deleting users, projects, or lists.** The strongest action is removing memberships; no `User`,
+  `Project`, `List` or `ListItem` row is ever deleted here. Rationale: `Project.ownerId` is a required
+  FK, so deleting a user breaks any project they own.
+- **Owner handover.** `removeMember` refuses to remove an owner membership (403, "Der Owner kann nicht
+  entfernt werden"), and a project without an owner is broken. Projects the excluded person *owns* are
+  therefore skipped and listed by name for the admin to resolve separately. Transferring ownership does
+  not exist anywhere in the product and would be its own capability with its own rules.
 - **REST endpoints.** The allowlist is never polled by a client and never merged offline, so the
   reason the rest of the app has an operations/REST layer (Slices 3 and 7) does not apply here. The
   domain layer stays the seam if an API is ever needed.
@@ -60,6 +69,15 @@ is **not** touched: it is the read gate on the login path, and writing is a diff
 | `inviteEmail(db, { email, invitedBy })` | Normalizes via `normalizeEmail`, idempotent upsert, records `invitedBy` (the column exists since Slice 1 and has never been populated). |
 | `revokeEmail(db, { email, callerId })` | Deletes the allowlist row. Nothing else. |
 | `setAdmin(db, { userId, isAdmin, callerId })` | Sets `User.isAdmin`. |
+| `listProjectAccess(db, userId)` | Read for the confirmation view: `{ projectId, name, role }[]` — every project the person belongs to, with their role, so the admin sees the consequences before acting. |
+| `excludeFromAllProjects(db, { userId })` | One `deleteMany` over memberships with `role: "member"`. Returns `{ removedCount, ownedProjects: { id, name }[] }` — the projects skipped because the person owns them. Idempotent: running it twice removes nothing the second time. |
+
+`excludeFromAllProjects` deletes memberships directly rather than looping over `removeMember`, because
+`removeMember` is project-scoped, does its own lookups, and throws 403 on owner rows — a loop would
+have to catch and classify those errors. Filtering on `role: "member"` in a single query expresses the
+same rule (owners are never ejected) declaratively, and the skipped set is derived from a separate read
+so the admin gets names, not an error count. Memberships have no dependents — lists and items hang off
+the *project* — so no cascade is involved.
 
 **Lockout invariants**, raised as `ApiError` with German messages (the `src/lib/http/errors.ts`
 convention):
@@ -96,9 +114,15 @@ project page, list page and API route reaches it through `requireMembership` / `
 Removing someone on the project's member list therefore takes effect on their very next request —
 shipped in Slice 2, no new code.
 
-**What a live check in `requireUserId` would add** is only this remainder: someone revoked from the
-allowlist but *deliberately left in their projects* (see §2) keeps access to those projects until their
-token expires. That is a self-contradictory intent — if they should be out, remove the membership.
+**What a live check in `requireUserId` would add** is only this remainder: someone who was *deaktiviert*
+rather than *ausgeschlossen* keeps access to the projects they are still a member of until their token
+expires. That is exactly what "deaktivieren" is chosen for — the reversible variant, where the person is
+expected to come back. An admin who wants them gone now picks *ausschließen*, and because membership is
+read live, that takes effect on the person's next request with no token wait and no guard rebuild.
+
+Making the two intents explicit in the UI (§6) is what closes this gap. The one case it does not cover
+is a project the person owns: those memberships survive by design (§2), so an owner keeps access to
+their own projects until the token expires or the admin resolves the ownership.
 
 So the guard rebuild is out of scope. Sessions keep the Auth.js JWT strategy unchanged.
 
@@ -153,9 +177,32 @@ invariants in §3 are enforced in the domain layer, not in the form.
 **Block "E-Mail einladen"** — one field and a button calling `inviteEmail`. Errors come back as German
 messages, like `Nutzer nicht gefunden` in Slice 2.
 
-**Honest wording.** The revoke button is labelled "Zugang entziehen", not "Nutzer entfernen", and the
-page states that existing sessions run until they expire and that project access ends via the project's
-member list. When revoking, the page shows which projects that person is still a member of.
+**Revoking is a two-step flow**, because the admin has to state their intent. The button in the table
+links to `/admin?revoke=<email>`; that same Server Component then renders a confirmation panel instead
+of jumping straight to a mutation. A URL parameter rather than a dialog keeps the page free of client
+components, matching how the rest of the app is built.
+
+If no `User` exists for that email yet — the person was invited but never signed in — there can be no
+memberships. The panel then skips the project section and the exclusion button entirely and offers only
+the plain revoke; the two intents are indistinguishable in that case.
+
+Otherwise the panel shows the result of `listProjectAccess`: every project the person belongs to and
+their role there. It offers two actions:
+
+- **"Nur Zugang entziehen"** — `revokeEmail` alone. Labelled as the reversible choice: no new logins,
+  memberships stay, re-inviting later puts the person back where they were. A running session keeps
+  working until it expires.
+- **"Zugang entziehen und aus allen Projekten entfernen"** — `revokeEmail` + `excludeFromAllProjects`.
+  Labelled as immediate: access to those projects ends on the person's next request.
+
+If `excludeFromAllProjects` reports skipped `ownedProjects`, the page names them afterwards with a note
+that the person still owns them and keeps access there — to be resolved by deleting the project or by
+another owner taking it over. Silently leaving those out would be the one genuinely surprising outcome
+of this flow.
+
+**Honest wording throughout.** The button is "Zugang entziehen", never "Nutzer entfernen" — nothing is
+deleted but an allowlist row and, on request, memberships. The panel states plainly that existing
+sessions run until they expire.
 
 **Entry point.** The home page currently renders a dead `Admin: ja/nein` line (`src/app/page.tsx`).
 It is replaced by a "Verwaltung" link rendered only for admins. The session flag is good enough to
@@ -177,19 +224,31 @@ All visible strings are German; code and comments are English.
   non-UUID → 404.
 - `listAccessEntries`: an email with a user is joined; an email without one comes back as `user: null`;
   `googleSub` appears nowhere in the result.
+- `listProjectAccess`: returns owner and member rows with the project name; empty array for a user with
+  no memberships; empty for an unknown or non-UUID id (never a 500).
+- `excludeFromAllProjects`: member memberships are gone and `getRole` returns null for them afterwards;
+  an owner membership survives and comes back in `ownedProjects` with its name; other users'
+  memberships in the same projects are untouched; a second run removes nothing and reports
+  `removedCount: 0`.
 - `requireAdmin`: admin passes; non-admin → 403; no session → 401; and the decisive one — token flag
   `true` while the database says `false` → 403, proving the flag is read from the database.
 
-Baseline is 168 tests across 18 files; this slice should land around +20.
+Baseline is 168 tests across 18 files; this slice should land around +25.
 
 ---
 
 ## 8. Risks and open items
 
 - **The one behavioral asymmetry to communicate to the owner:** revoking an allowlist entry does not
-  end a running session. The UI states it (§6) and the break-glass procedure (§4) covers the urgent
-  case. If it ever feels too loose in practice, shortening the JWT `maxAge` from the Auth.js default of
-  30 days is a one-line change in `src/auth.ts` that needs no architecture.
+  end a running session. Choosing *ausschließen* (§6) ends project access immediately anyway, so this
+  only bites for the reversible *deaktivieren* path and for projects the person owns. The UI states it
+  (§6) and the break-glass procedure (§4) covers the urgent case. If it ever feels too loose in
+  practice, shortening the JWT `maxAge` from the Auth.js default of 30 days is a one-line change in
+  `src/auth.ts` that needs no architecture.
+- **Exclusion is not reversible by re-inviting.** Once memberships are deleted, re-adding the email
+  brings the person back with no projects; the owners have to invite them again. That is the intended
+  difference between the two paths, but it must be unmistakable in the UI wording — an admin who picks
+  the wrong button cannot undo it from this page.
 - **`invitedBy` becomes meaningful for the first time.** It is nullable and null for seeded rows; the UI
   must not assume it is set.
 - Admins are global, not per project. Nothing in this slice changes the Owner/Member model.
