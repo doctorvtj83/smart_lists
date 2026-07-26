@@ -8,7 +8,7 @@ The slice goal was met: online multi-user editing is now live at the implementat
 
 Automated verification passed with **16 test files / 135 tests** (9 new in Slice 7: 3 for `computeCursor`, 6 for `getListDelta`), plus successful lint and production build runs. The build emitted the repository's existing multiple-lockfile/Turbopack-root and `middleware` deprecation warnings.
 
-**Manual two-session browser verification was not run in this agent environment.** Google OAuth and two allowlisted interactive sessions were unavailable, so propagation of add/check/edit/remove/rename actions within approximately two seconds remains pending human verification and is not claimed as passed.
+**Manual two-session browser verification (Task 4, Step 5) completed 2026-07-26 (human).** All six checks passed with two allowlisted members on the same open list: add, check, edit, remove, and complete/rename propagated to the observing session within ~2s without a manual reload; returning from a background tab picked up the pending change on the next visible poll.
 
 ---
 

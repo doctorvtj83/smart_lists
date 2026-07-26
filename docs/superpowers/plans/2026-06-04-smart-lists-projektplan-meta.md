@@ -121,6 +121,14 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Commit(s):** <hash(es)>
 > ```
 
+### 2026-07-26 — Slice 7: Polling / Sync — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 4 Step 5 two-session browser verification from 2026-07-20.
+- **Tested:** Manual E2E with two allowlisted members on the same open list (Session A mutates, Session B observes). Verified within ~2s without a manual reload in B: (1) add entry → appears in B; (2) check entry → checkbox/strike-through updates in B; (3) edit field (re-add / category or `/ops`) → change appears in B; (4) remove entry → disappears in B (id-set deletion detection); (5) rename or complete list → B reflects new name / status; (6) B tab backgrounded, change in A, return to B → change shows on the next visible poll (`document.hidden` skip does not lose updates).
+- **Deviations from the plan:** None for the verification itself.
+- **Follow-up decisions for later slices:** Unchanged from the Slice 7 Done entry.
+- **Inherited open items:** None for Slice 7 manual verification. Slice 8 (PWA polish) plan still to be created per maintenance guide step 3. Slice 5 remains next to build (after its plan reconciliation against Slice 6 project-page edits).
+- **Commit(s):** (documentation-only update; no new code commits)
+
 ### 2026-07-24 — Slice 6: Completion + Archive — Manual browser verification complete
 - **Delivered:** (no code changes) Closed the open Task 4 Step 7 browser verification from 2026-07-20.
 - **Tested:** Manual E2E while logged in as an allowlisted member. Verified: (1) open list → "Liste abschließen" visible, no auto-suggest while unchecked; (2) check every entry → auto-suggest prompt appears; (3) complete → "✓ Abgeschlossen am <date>" + "Wieder öffnen", entries still render; (4) project page → list under "Archiv" with date, gone from "Listen"; (5) reopen → active again under "Listen", out of "Archiv".
@@ -131,13 +139,13 @@ When you have finished a slice, **before** the final commit do the following:
 
 ### 2026-07-20 — Slice 7: Polling / Sync — Done
 - **Delivered:** `getListDelta` + `computeCursor` (cursor = max ListItem.updatedAt in epoch-ms; changed bodies via strict `> since`; full id set for tombstone-less deletion detection; always-full list metadata); `GET /api/lists/:id/delta?since=` member-level endpoint; `ListSyncPoller` client component (~2s interval, `document.hidden` skip, `router.refresh()` on change); mounted on the list page with a render-time baseline.
-- **Tested:** `npm test` passed (16 files, 135 tests — 9 new in Slice 7); `npm run lint` + `npm run build` passed. The build retained the known multiple-lockfile/Turbopack-root and `middleware` deprecation warnings. Manual two-session browser check (add/check/edit/remove/rename propagate within ~2s): **NOT run in this agent environment** because Google OAuth and two allowlisted interactive sessions were unavailable; pending human verification.
-- **Deviations from the plan:** The manual two-session browser verification could not be performed in this environment. The code otherwise followed the plan.
+- **Tested:** `npm test` passed (16 files, 135 tests — 9 new in Slice 7); `npm run lint` + `npm run build` passed. The build retained the known multiple-lockfile/Turbopack-root and `middleware` deprecation warnings. Manual two-session browser check (add/check/edit/remove/rename propagate within ~2s): completed 2026-07-26 (see entry above).
+- **Deviations from the plan:** none (manual verification was deferred from the agent run and closed later).
 - **Follow-up decisions for later slices:**
   - Last-writer-wins is enforced SERVER-SIDE in applyOperation; the poller only makes remote writes visible. A client-side entry store + optimistic UI + offline queue is Phase 2 and would consume this same delta endpoint (Slice 8 may start it).
   - The cursor is millisecond-precision with a strict `>` filter (never switch to `>=` — refresh loop). Rare same-ms field updates may defer until the next change; adds/deletes are always caught by the id-set diff (accepted MVP limitation, §8).
   - `ListSyncPoller` is the project's first client component; further client-side interactivity builds on this pattern.
-- **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3. Manual two-session browser verification of Slice 7 remains pending. Minor non-blocking review notes: empty `?since=` becomes cursor `0`; overlapping polls and the cancelled-before-JSON race remain possible.
+- **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3. Manual two-session browser verification closed 2026-07-26. Minor non-blocking review notes: empty `?since=` becomes cursor `0`; overlapping polls and the cancelled-before-JSON race remain possible.
 - **Commit(s):** 1996bd5, cc74c57, 21b1415, b99ee4a, plus the docs commit carrying this entry
 
 
