@@ -39,8 +39,30 @@ uses `completedAt DESC NULLS LAST`.
 
 The only implementation deviation was in Task 4's sort-index assertion: it expects `[1, 2]`, not the
 plan's `[0, 1]`, because `applyOperation` starts sort indexes at 1, matching the existing operations
-contract. Earlier minor review notes remain non-blocking: the 404 message assertion gap and missing
-focused tests for `NULLS LAST`, configurable M, and German locale sorting.
+contract.
+
+A follow-up review pass on 2026-07-26 raised seven findings, all of which were fixed on this branch
+(plan: `docs/superpowers/plans/2026-07-26-slice-5-review-fixes.md`), bringing the suite to **168** tests
+in **18** files:
+
+1. **Untested defensive lines** — `NULLS LAST`, the configurable `M` window and the German locale
+   sort are now pinned by characterization tests, as are the favorites 404 *message* and
+   `removeFavorite`'s malformed-id no-op.
+2. **Two disagreeing orderings** — `listFavorites` sorted in Postgres while `computeSuggestions`
+   sorted in JS with `localeCompare(…, "de")`, so umlauts could land differently in the two lists.
+   Both now use the shared `compareArticleNames` (`src/lib/catalog/sort.ts`).
+3. **Over-exposed REST payload** — `listFavorites` returned the raw Prisma row (leaking
+   `normalizedName`, `projectId`, `createdAt`). It now returns the lean `FavoriteArticle`, matching
+   the "don't over-expose" precedent of `MemberUser` and `CatalogSuggestion`.
+4. **Unguarded window size** — a non-positive `suggestionRuleM` would have inverted Prisma's `take`.
+   It is clamped to `Math.max(0, …)`; `N` is left unclamped because `N <= 0` is coherent.
+5. **Half-filled list on failure** — `createPrefilledList` now deletes the list it created if any
+   `add_item` throws, then rethrows the original error.
+6. **Spec wording vs. entity model** — MVP design §4.3 step 3 mentions *Menge* among the values a
+   pre-filled entry inherits from `CatalogItem`, but §3.1 defines only `default_category` and
+   `default_unit`; there has never been a default quantity in the spec or the schema. The entity list
+   is authoritative and `quantity: null` is correct. Recorded here so it is not re-litigated.
+7. **Uncommitted tracking file** — the Slice 5 SDD ledger is committed.
 
 ## 3. Core components built
 
@@ -146,3 +168,10 @@ the `/suggestions` and `/favorites` endpoints built here. Only Slice 8, PWA poli
 The manual browser checks also exposed a pre-existing Next.js hydration overlay on project and list
 pages caused by locale-sensitive date formatting. It did not block any Slice 5 flow and is unrelated
 to the favorites feature itself.
+
+One trade-off deliberately survives the fix pass: `createPrefilledList` compensates rather than
+transacts. `applyOperation`, `createList` and `getOrCreateCatalogItem` all take a `PrismaClient`,
+which an interactive Prisma transaction's client is not assignable to, so making pre-fill atomic
+would mean widening those signatures across the Slice 3 and 4 cores. If a second multi-write
+orchestrator ever appears, that refactor becomes worth doing — until then the compensating delete
+covers the only failure mode that can leave user-visible debris.
