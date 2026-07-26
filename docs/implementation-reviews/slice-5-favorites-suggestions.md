@@ -119,8 +119,10 @@ through both sources is therefore emitted exactly once without relying on names 
 ### Keep the recent-completion window valid
 
 ```ts
+const windowSize = Math.max(0, project.suggestionRuleM);
+// ...
 orderBy: { completedAt: { sort: "desc", nulls: "last" } },
-take: project.suggestionRuleM,
+take: windowSize,
 ```
 
 Postgres places NULL values first for a descending sort unless instructed otherwise. `NULLS LAST`
@@ -131,12 +133,17 @@ completion and clears it when a list is reopened.
 ### Reuse the single entry mutation path
 
 ```ts
-for (const article of suggestions) {
-  await applyOperation(db, list, {
-    op: "add_item",
-    itemId: randomUUID(),
-    name: article.name,
-  });
+try {
+  for (const article of suggestions) {
+    await applyOperation(db, list, {
+      op: "add_item",
+      itemId: randomUUID(),
+      name: article.name,
+    });
+  }
+} catch (error) {
+  await db.list.delete({ where: { id: list.id } }).catch(() => undefined);
+  throw error;
 }
 ```
 
