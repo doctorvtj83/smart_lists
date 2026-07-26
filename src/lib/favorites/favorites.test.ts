@@ -42,12 +42,16 @@ describe("addFavorite", () => {
     const foreign = await getOrCreateCatalogItem(db, { projectId: other.id, name: "Milch" });
     await expect(addFavorite(db, { projectId, catalogItemId: foreign.id })).rejects.toMatchObject({
       status: 404,
+      // A foreign article must be indistinguishable from a non-existent one: the message must NOT
+      // hint that the id exists elsewhere, or the 404 leaks the other project's catalog.
+      message: "Artikel nicht gefunden",
     });
   });
 
   it("rejects a malformed catalog item id with 404 (never reaches the uuid column)", async () => {
     await expect(addFavorite(db, { projectId, catalogItemId: "not-a-uuid" })).rejects.toMatchObject({
       status: 404,
+      message: "Artikel nicht gefunden",
     });
   });
 });
@@ -65,6 +69,15 @@ describe("removeFavorite", () => {
     const item = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
     // Never favorited — removing must not throw.
     await expect(removeFavorite(db, { projectId, catalogItemId: item.id })).resolves.toBeUndefined();
+  });
+
+  it("treats a malformed catalog item id as a silent no-op (no P2023 crash)", async () => {
+    // removeFavorite's isUuid guard exists so a malformed id never reaches the uuid column, where
+    // Prisma would raise P2023 and the route would return a fake 500 instead of an idempotent
+    // success. Remove is idempotent by contract, so "id that cannot exist" must resolve, not throw.
+    await expect(
+      removeFavorite(db, { projectId, catalogItemId: "not-a-uuid" }),
+    ).resolves.toBeUndefined();
   });
 });
 

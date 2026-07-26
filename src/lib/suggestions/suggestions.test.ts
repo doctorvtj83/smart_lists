@@ -27,7 +27,10 @@ afterAll(async () => {
 // UI (deterministic inputs, MVP design §7). Each name resolves to (or creates) the project's catalog
 // item, then gets a list item (entries are created directly — this is test setup, not the app's
 // mutation path).
-async function completedList(names: string[], completedAt: Date) {
+// `completedAt: null` seeds the pathological row the NULLS-LAST ordering exists to defend against —
+// a list marked completed that carries no timestamp. completeList never produces one, but a seed or
+// a future import path could, so the window has to survive it.
+async function completedList(names: string[], completedAt: Date | null) {
   const list = await db.list.create({
     data: { projectId, name: "Erledigt", status: "completed", completedAt },
   });
@@ -118,6 +121,48 @@ describe("computeSuggestions", () => {
     await completedList(["Milch"], new Date("2026-07-01")); // 1 list, now enough with N=1
     const suggestions = await computeSuggestions(db, projectId);
     expect(suggestions.map((s) => s.name)).toEqual(["Milch"]);
+  });
+
+  it("keeps a completed list without completedAt from evicting a real one (NULLS LAST)", async () => {
+    // Pins Slice 5 locked decision #4. Postgres sorts NULLs FIRST on a DESC sort, so without the
+    // explicit `nulls: "last"` the timestamp-less list below would occupy slot 1 of the M=4 window
+    // and push the OLDEST real list out — which would drop Zucker from 2 lists to 1 (< N=2).
+    await completedList(["Zwiebel"], null); // completed, but never stamped
+    await completedList(["Zucker"], new Date("2026-07-01"));
+    await completedList(["Zucker"], new Date("2026-07-02"));
+    await completedList(["Mehl"], new Date("2026-07-03"));
+    await completedList(["Mehl"], new Date("2026-07-04"));
+
+    const suggestions = await computeSuggestions(db, projectId);
+    // Correct (NULLS LAST): window = the four dated lists -> Zucker 2, Mehl 2, both >= N=2.
+    // Broken (NULLS FIRST): window = null-list + the three newest -> Zucker 1 -> only Mehl.
+    expect(suggestions.map((s) => s.name)).toEqual(["Mehl", "Zucker"]);
+  });
+
+  it("respects the project's M window size, not just N", async () => {
+    // The existing N test only varies N. M=1 shrinks the window to the single most recent completed
+    // list, so the older list's article must not be suggested even though N=1 would otherwise take it.
+    await db.project.update({
+      where: { id: projectId },
+      data: { suggestionRuleN: 1, suggestionRuleM: 1 },
+    });
+    await completedList(["Alt"], new Date("2026-07-01"));
+    await completedList(["Neu"], new Date("2026-07-02"));
+
+    const suggestions = await computeSuggestions(db, projectId);
+    expect(suggestions.map((s) => s.name)).toEqual(["Neu"]);
+  });
+
+  it("sorts the result by German locale rules, not by code point", async () => {
+    // localeCompare(…, "de") treats Ä as a diacritic variant of A. A naive code-point sort would put
+    // every umlaut AFTER Z ("Apfel, Zucker, Äpfel"), which reads as broken in a German UI.
+    // normalizeName only lowercases/trims, so "Apfel" and "Äpfel" are two distinct catalog articles.
+    for (const name of ["Zucker", "Äpfel", "Apfel"]) {
+      const item = await getOrCreateCatalogItem(db, { projectId, name });
+      await addFavorite(db, { projectId, catalogItemId: item.id });
+    }
+    const suggestions = await computeSuggestions(db, projectId);
+    expect(suggestions.map((s) => s.name)).toEqual(["Apfel", "Äpfel", "Zucker"]);
   });
 
   it("carries the article name and catalog defaults in the suggestion shape", async () => {
