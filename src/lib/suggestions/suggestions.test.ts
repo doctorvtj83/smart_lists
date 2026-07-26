@@ -283,4 +283,29 @@ describe("createPrefilledList", () => {
     expect(items.map((i) => i.sortIndex)).toEqual([1, 2]); // applyOperation: max(null→0)+1, then max(1)+1
     expect(items.map((i) => i.catalogItem.name)).toEqual(["Apfel", "Brot"]);
   });
+
+  it("leaves no half-filled list behind when an entry fails mid-loop", async () => {
+    // Force a failure PART WAY THROUGH the loop. "Apfel" is valid and sorts first, so it is added
+    // successfully; the second article's name is 201 chars, one over MAX_ITEM_NAME_LENGTH, so
+    // getOrCreateCatalogItem throws ApiError 400 on it. Seeding that row directly via
+    // db.catalogItem.create is what bypasses the very validation we want to trip later — no public
+    // path can create such an article, which is exactly why this is the cheapest failure injection.
+    const apfel = await getOrCreateCatalogItem(db, { projectId, name: "Apfel" });
+    await addFavorite(db, { projectId, catalogItemId: apfel.id });
+
+    const tooLong = "B".repeat(201); // MAX_ITEM_NAME_LENGTH is 200 (src/lib/catalog/catalog.ts)
+    const broken = await db.catalogItem.create({
+      data: { projectId, name: tooLong, normalizedName: tooLong.toLowerCase() },
+    });
+    await addFavorite(db, { projectId, catalogItemId: broken.id });
+
+    await expect(createPrefilledList(db, { projectId, name: "Kaputt" })).rejects.toMatchObject({
+      status: 400,
+    });
+
+    // The compensating delete must have removed the list AND (via the list->items cascade) the
+    // "Apfel" entry that had already been written before the failure.
+    expect(await db.list.findMany({ where: { projectId } })).toHaveLength(0);
+    expect(await db.listItem.findMany({})).toHaveLength(0);
+  });
 });

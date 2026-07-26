@@ -121,12 +121,32 @@ export async function createPrefilledList(
   // stale copy. Sequential (not Promise.all): each add_item derives the next sortIndex from the
   // current max, so the writes must not race each other.
   const suggestions = await computeSuggestions(db, input.projectId);
-  for (const article of suggestions) {
-    await applyOperation(db, list, {
-      op: "add_item",
-      itemId: randomUUID(), // stable entry identity, generated caller-side by convention
-      name: article.name,
-    });
+  try {
+    for (const article of suggestions) {
+      await applyOperation(db, list, {
+        op: "add_item",
+        itemId: randomUUID(), // stable entry identity, generated caller-side by convention
+        name: article.name,
+      });
+    }
+  } catch (error) {
+    // Pattern: COMPENSATING ACTION. If any entry fails, the list created above is a half-filled
+    // artifact the user never asked for — it would show up in "Listen" with an arbitrary subset of
+    // the suggestions and no indication anything went wrong. Delete it, then rethrow the ORIGINAL
+    // error so the transport still maps the real ApiError status (a swallowed error would surface as
+    // a fake success). The list->items cascade (ListItem.list, onDelete: Cascade) removes whatever
+    // entries were already written.
+    //
+    // WHY NOT db.$transaction: applyOperation, createList and getOrCreateCatalogItem all declare
+    // their first parameter as PrismaClient, while an interactive transaction hands back
+    // Omit<PrismaClient, ITXClientDenyList> — not assignable. Widening those signatures across the
+    // Slice 3/4 cores is a much larger change than this failure mode justifies. Revisit if a second
+    // multi-write orchestrator appears.
+    //
+    // .catch(): the cleanup is best-effort. If the delete ALSO fails we still want the caller to see
+    // the original cause, not a confusing secondary error from the rollback path.
+    await db.list.delete({ where: { id: list.id } }).catch(() => undefined);
+    throw error;
   }
   return list;
 }
