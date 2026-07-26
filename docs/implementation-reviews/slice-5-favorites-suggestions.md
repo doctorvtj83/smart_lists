@@ -68,7 +68,7 @@ in **18** files:
 
 - `prisma/schema.prisma` — `Favorite`, the project/article relations, and the compound uniqueness
   rule that makes add idempotency enforceable by the database.
-- `src/lib/favorites/favorites.ts` — `FavoriteWithItem`, `FavoriteRef`, `addFavorite`,
+- `src/lib/favorites/favorites.ts` — `FavoriteArticle` (lean projection), `FavoriteRef`, `addFavorite`,
   `removeFavorite`, and `listFavorites`.
 - `src/lib/suggestions/suggestions.ts` — `SuggestedArticle`, the pure `computeSuggestions` read seam,
   and the `createPrefilledList` orchestrator.
