@@ -623,7 +623,7 @@ Insert `<ListSyncPoller/>` as the first child inside `<main>`:
 Run: `npm run lint && npm run build`
 Expected: PASS — clean build, no type errors.
 
-- [ ] **Step 5: Manual browser verification (two sessions)**
+- [x] **Step 5: Manual browser verification (two sessions)** *(completed 2026-07-26)*
 
 Start the dev server (`npm run dev`). Open the SAME list in two browser sessions logged in as two allowlisted members of the project (e.g. two profiles / a normal + a private window). In session B, keep the list visible; make changes in session A:
 1. **Add** an entry in A → within ~2s it appears in B without a manual reload.

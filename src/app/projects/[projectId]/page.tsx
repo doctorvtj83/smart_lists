@@ -117,6 +117,11 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   return (
     <main style={{ padding: 24 }}>
+      {/* Back-link to the projects overview — same pattern as the list page's "← Zum Projekt".
+          Without this, the only ways back were the browser back button or typing /projects. */}
+      <p>
+        <Link href="/projects">← Zu meinen Projekten</Link>
+      </p>
       {/* Project name as heading; project may be null if deleted concurrently, so use optional chaining. */}
       <h1>{project?.name}</h1>
       <p>Deine Rolle: {role === "owner" ? "Owner" : "Mitglied"}</p>

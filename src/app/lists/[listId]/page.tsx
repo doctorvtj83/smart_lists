@@ -14,7 +14,9 @@ import {
   type ListWithItems,
   reopenList,
 } from "@/lib/lists/lists";
+import { computeCursor } from "@/lib/lists/delta";
 import { applyOperation } from "@/lib/lists/operations";
+import ListSyncPoller from "./ListSyncPoller";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
 type Props = { params: Promise<{ listId: string }> };
@@ -67,6 +69,12 @@ export default async function ListDetailPage({ params }: Props) {
   if (!list) redirect("/projects");
 
   const groups = groupByCategory(list.items);
+
+  // Sync baseline for the poller (Slice 7): the cursor (newest entry updatedAt) and the id set AS
+  // RENDERED. computeCursor is the SAME function the delta endpoint uses, so the client starts from a
+  // cursor consistent with the server's — any change between this render and the first poll is seen.
+  const initialCursor = computeCursor(list.items);
+  const initialItemIds = list.items.map((item) => item.id);
 
   // Completion UI state. `isCompleted` switches the banner between "abschließen" and "wieder öffnen".
   // `suggestComplete` is the auto-suggest trigger: all entries checked on a still-open list — the
@@ -159,6 +167,19 @@ export default async function ListDetailPage({ params }: Props) {
 
   return (
     <main style={{ padding: 24 }}>
+      {/* Slice 7 background sync: renders nothing. Every ~2s it asks the delta endpoint whether the
+          list changed (another member's edit, a deletion, a rename/completion) and, if so, refreshes
+          this server component to show the merged truth. Server-side LWW already resolved conflicts. */}
+      <ListSyncPoller
+        listId={listId}
+        initialCursor={initialCursor}
+        initialItemIds={initialItemIds}
+        initialList={{
+          name: list.name,
+          status: list.status,
+          completedAt: list.completedAt ? list.completedAt.getTime() : null,
+        }}
+      />
       {/* Back-link to the owning project for basic navigation. */}
       <p>
         <Link href={`/projects/${list.projectId}`}>← Zum Projekt</Link>

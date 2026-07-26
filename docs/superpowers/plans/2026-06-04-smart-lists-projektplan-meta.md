@@ -57,7 +57,7 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | [2026-07-08-slice-4-catalog-autocomplete.md](2026-07-08-slice-4-catalog-autocomplete.md) | ✅ Done / verified |
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ⬜ Open — **build next** |
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ✅ Done / verified |
-| 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ⬜ Open |
+| 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
@@ -121,6 +121,14 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Commit(s):** <hash(es)>
 > ```
 
+### 2026-07-26 — Slice 7: Polling / Sync — Manual browser verification complete
+- **Delivered:** (no code changes) Closed the open Task 4 Step 5 two-session browser verification from 2026-07-20.
+- **Tested:** Manual E2E with two allowlisted members on the same open list (Session A mutates, Session B observes). Verified within ~2s without a manual reload in B: (1) add entry → appears in B; (2) check entry → checkbox/strike-through updates in B; (3) edit field (re-add / category or `/ops`) → change appears in B; (4) remove entry → disappears in B (id-set deletion detection); (5) rename or complete list → B reflects new name / status; (6) B tab backgrounded, change in A, return to B → change shows on the next visible poll (`document.hidden` skip does not lose updates).
+- **Deviations from the plan:** None for the verification itself.
+- **Follow-up decisions for later slices:** Unchanged from the Slice 7 Done entry.
+- **Inherited open items:** None for Slice 7 manual verification. Slice 8 (PWA polish) plan still to be created per maintenance guide step 3. Slice 5 remains next to build (after its plan reconciliation against Slice 6 project-page edits).
+- **Commit(s):** (documentation-only update; no new code commits)
+
 ### 2026-07-24 — Slice 6: Completion + Archive — Manual browser verification complete
 - **Delivered:** (no code changes) Closed the open Task 4 Step 7 browser verification from 2026-07-20.
 - **Tested:** Manual E2E while logged in as an allowlisted member. Verified: (1) open list → "Liste abschließen" visible, no auto-suggest while unchecked; (2) check every entry → auto-suggest prompt appears; (3) complete → "✓ Abgeschlossen am <date>" + "Wieder öffnen", entries still render; (4) project page → list under "Archiv" with date, gone from "Listen"; (5) reopen → active again under "Listen", out of "Archiv".
@@ -128,6 +136,18 @@ When you have finished a slice, **before** the final commit do the following:
 - **Follow-up decisions for later slices:** Unchanged from the Slice 6 Done entry.
 - **Inherited open items:** None for Slice 6 manual verification. Slice 5 plan reconciliation against this slice's project-page edits still applies when executing Slice 5.
 - **Commit(s):** (documentation-only update; no new code commits)
+
+### 2026-07-20 — Slice 7: Polling / Sync — Done
+- **Delivered:** `getListDelta` + `computeCursor` (cursor = max ListItem.updatedAt in epoch-ms; changed bodies via strict `> since`; full id set for tombstone-less deletion detection; always-full list metadata); `GET /api/lists/:id/delta?since=` member-level endpoint; `ListSyncPoller` client component (~2s interval, `document.hidden` skip, `router.refresh()` on change); mounted on the list page with a render-time baseline.
+- **Tested:** `npm test` passed (16 files, 135 tests — 9 new in Slice 7); `npm run lint` + `npm run build` passed. The build retained the known multiple-lockfile/Turbopack-root and `middleware` deprecation warnings. Manual two-session browser check (add/check/edit/remove/rename propagate within ~2s): completed 2026-07-26 (see entry above).
+- **Deviations from the plan:** none (manual verification was deferred from the agent run and closed later).
+- **Follow-up decisions for later slices:**
+  - Last-writer-wins is enforced SERVER-SIDE in applyOperation; the poller only makes remote writes visible. A client-side entry store + optimistic UI + offline queue is Phase 2 and would consume this same delta endpoint (Slice 8 may start it).
+  - The cursor is millisecond-precision with a strict `>` filter (never switch to `>=` — refresh loop). Rare same-ms field updates may defer until the next change; adds/deletes are always caught by the id-set diff (accepted MVP limitation, §8).
+  - `ListSyncPoller` is the project's first client component; further client-side interactivity builds on this pattern.
+- **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3. Manual two-session browser verification closed 2026-07-26. Minor non-blocking review notes: empty `?since=` becomes cursor `0`; overlapping polls and the cancelled-before-JSON race remain possible.
+- **Commit(s):** 1996bd5, cc74c57, 21b1415, b99ee4a, plus the docs commit carrying this entry
+
 
 ### 2026-07-20 — Slice 6: Completion + Archive — Done
 - **Delivered:** `completeList` (idempotent, stamps completedAt), `reopenList` (undo, clears it), `allItemsChecked` predicate; `listLists` optional status filter (active by createdAt, archive by completedAt); `POST /api/lists/:id/complete` + `/reopen` endpoints; `?status=` filter on the lists GET; list-page completion UI (manual + auto-suggest prompt + undo) and project-page "Archiv" section.
