@@ -64,6 +64,9 @@ model Project {
   lists        List[]
   catalogItems CatalogItem[]
 
+  // Back-relation added in Slice 5 (Favorites + Suggestions). Favorites are project-shared.
+  favorites Favorite[]
+
   @@map("projects")
 }
 
@@ -116,6 +119,9 @@ model CatalogItem {
 
   createdAt DateTime   @default(now()) @map("created_at")
   listItems ListItem[]
+
+  // Back-relation added in Slice 5: which favorites point at this article (0 or 1 per project).
+  favorites Favorite[]
 
   // One catalog row per article identity per project. Prisma exposes this as the compound
   // selector `projectId_normalizedName` in findUnique/upsert — the race-safe get-or-create key.
@@ -179,4 +185,27 @@ model ListItem {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("list_items")
+}
+
+// A project-shared favorite article (MVP design §3.1, §4.3). Favorites are ALWAYS suggested when a
+// new list is pre-filled. Identity is (project, article) — NOT (user, article): favorites belong to
+// the project, so every member sees and edits the same set. This is the second input (besides the
+// N-of-M statistic over completed lists) to computeSuggestions.
+model Favorite {
+  id        String  @id @default(uuid()) @db.Uuid // stable, client-generatable UUID (offline-prep convention)
+  projectId String  @db.Uuid @map("project_id")
+  // onDelete: Cascade -> deleting a project removes its favorites (project-scoped, like the catalog).
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // The favorited article. onDelete: Cascade keeps referential integrity if a catalog item is ever
+  // removed (only ever via project delete in the MVP — there is no standalone catalog-item deletion).
+  catalogItemId String      @db.Uuid @map("catalog_item_id")
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // One favorite row per article per project — favoriting an already-favorited article is a no-op.
+  // Prisma exposes this as the compound selector `projectId_catalogItemId` in upsert/findUnique.
+  @@unique([projectId, catalogItemId])
+  @@map("favorites")
 }
