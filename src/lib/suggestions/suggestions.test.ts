@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { addFavorite } from "@/lib/favorites/favorites";
-import { computeSuggestions } from "./suggestions";
+import { computeSuggestions, createPrefilledList } from "./suggestions";
 
 const db = new PrismaClient();
 let projectId: string;
@@ -143,5 +143,73 @@ describe("computeSuggestions", () => {
     await addFavorite(db, { projectId: other.id, catalogItemId: foreign.id });
     const suggestions = await computeSuggestions(db, projectId);
     expect(suggestions).toHaveLength(0);
+  });
+});
+
+describe("createPrefilledList", () => {
+  it("creates an active list with the given name", async () => {
+    const list = await createPrefilledList(db, { projectId, name: "Wocheneinkauf" });
+    expect(list.name).toBe("Wocheneinkauf");
+    expect(list.status).toBe("active"); // pre-fill produces a normal, editable active list
+  });
+
+  it("pre-fills one entry per favorite, inheriting the catalog category/unit", async () => {
+    const milch = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
+    await db.catalogItem.update({
+      where: { id: milch.id },
+      data: { defaultCategory: "Kühlregal", defaultUnit: "l" },
+    });
+    await addFavorite(db, { projectId, catalogItemId: milch.id });
+
+    const list = await createPrefilledList(db, { projectId, name: "Wocheneinkauf" });
+    const items = await db.listItem.findMany({
+      where: { listId: list.id },
+      include: { catalogItem: true },
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].catalogItem.name).toBe("Milch");
+    expect(items[0].category).toBe("Kühlregal"); // inherited from the catalog default at add time
+    expect(items[0].unit).toBe("l");
+  });
+
+  it("pre-fills from the N-of-M statistic as well as favorites", async () => {
+    // Milch in 2 of the last completed lists (N=2) -> statistic-suggested even without a favorite.
+    await completedList(["Milch"], new Date("2026-07-01"));
+    await completedList(["Milch"], new Date("2026-07-02"));
+    const list = await createPrefilledList(db, { projectId, name: "Wocheneinkauf" });
+    const items = await db.listItem.findMany({
+      where: { listId: list.id },
+      include: { catalogItem: true },
+    });
+    expect(items.map((i) => i.catalogItem.name)).toEqual(["Milch"]);
+  });
+
+  it("creates an empty list when there is nothing to suggest", async () => {
+    const list = await createPrefilledList(db, { projectId, name: "Leer" });
+    const items = await db.listItem.findMany({ where: { listId: list.id } });
+    expect(items).toHaveLength(0);
+  });
+
+  it("honors a client-supplied list id (offline-prep convention)", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const list = await createPrefilledList(db, { projectId, name: "Mit ID", id });
+    expect(list.id).toBe(id);
+  });
+
+  it("gives the pre-filled entries distinct, ascending sortIndexes", async () => {
+    // Each add_item derives sortIndex from the current max, so the loop must run sequentially. Two
+    // suggestions with the same index would make the list order ambiguous in the UI.
+    for (const name of ["Apfel", "Brot"]) {
+      const item = await getOrCreateCatalogItem(db, { projectId, name });
+      await addFavorite(db, { projectId, catalogItemId: item.id });
+    }
+    const list = await createPrefilledList(db, { projectId, name: "Wocheneinkauf" });
+    const items = await db.listItem.findMany({
+      where: { listId: list.id },
+      orderBy: { sortIndex: "asc" },
+      include: { catalogItem: true },
+    });
+    expect(items.map((i) => i.sortIndex)).toEqual([1, 2]); // applyOperation: max(null→0)+1, then max(1)+1
+    expect(items.map((i) => i.catalogItem.name)).toEqual(["Apfel", "Brot"]);
   });
 });

@@ -1,4 +1,8 @@
 import type { CatalogItem, PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import type { List } from "@prisma/client";
+import { createList, type CreateListInput } from "@/lib/lists/lists";
+import { applyOperation } from "@/lib/lists/operations";
 
 // The lean shape a suggestion carries: the article identity (catalogItemId), the display name, and
 // the catalog defaults. That is exactly what the UI needs to render the suggestion AND what pre-fill
@@ -87,4 +91,31 @@ export async function computeSuggestions(
   // Stable, human-friendly output: alphabetical by article name (localeCompare with "de" so umlauts
   // sort sensibly for the German UI).
   return [...byCatalog.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+// Creates a new list and pre-fills it from the project's suggestion set (MVP design §4.3, step 3).
+// Reuses createList for the list itself (so name/id validation is not duplicated), then adds one
+// entry per suggested article THROUGH applyOperation — the single mutation path (MVP design §4.5),
+// so pre-fill obeys the same contract as every other entry write and stays replayable for Slice 7.
+export async function createPrefilledList(
+  db: PrismaClient,
+  input: CreateListInput,
+): Promise<List> {
+  // Create the (active) list first; createList enforces the name rules and the optional client id.
+  const list = await createList(db, input);
+
+  // Compute the suggestions for the project and add each as an entry. We pass ONLY the name:
+  // add_item resolves it to the existing catalog row and INHERITS its category/unit defaults (the
+  // very values the suggestion carries), so we neither duplicate the inheritance logic nor risk a
+  // stale copy. Sequential (not Promise.all): each add_item derives the next sortIndex from the
+  // current max, so the writes must not race each other.
+  const suggestions = await computeSuggestions(db, input.projectId);
+  for (const article of suggestions) {
+    await applyOperation(db, list, {
+      op: "add_item",
+      itemId: randomUUID(), // stable entry identity, generated caller-side by convention
+      name: article.name,
+    });
+  }
+  return list;
 }
