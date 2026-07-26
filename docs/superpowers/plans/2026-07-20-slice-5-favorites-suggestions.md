@@ -2,30 +2,29 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **⛔ DO NOT EXECUTE THIS PLAN UNTIL SLICE 6 (Completion + Archive) IS BUILT AND VERIFIED.**
-> Slice 5's N-of-M statistic reads *completed* lists, which do not exist until Slice 6 ships. Build
-> [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) first, then return here.
->
-> **↻ AFTER Slice 6 is merged, RE-VERIFY AND UPDATE THIS PLAN before executing** — Slice 6 edits two
-> files this plan also edits, so the exact-match code blocks below may have drifted:
-> - **Task 6, Step 2** replaces the `Promise.all` read block in `src/app/projects/[projectId]/page.tsx`.
->   Slice 6 changes that same block (it splits `listLists(prisma, projectId)` into
->   `listLists(prisma, projectId, "active")` + `"completed"` and renames the destructured vars to
->   `activeLists` / `archivedLists`). Re-derive Task 6's `Promise.all` edit from the **post-Slice-6**
->   file: add `listFavorites(...)` and `searchCatalog(...)` to the existing 4-element array (keeping
->   `activeLists` / `archivedLists`), not to the old 3-element one shown below.
-> - **Task 6, Step 4** inserts the Favoriten/prefill JSX "after the lists `<ul>`". Slice 6 adds an
->   "Archiv" section right after that `<ul>`. Insert the Slice 5 sections **after the Archiv block**
->   (still before the `{isOwner && (` owner-only block) so the anchors are unambiguous.
-> - No other task conflicts: Tasks 1–5 touch files Slice 6 does not.
-> Once this plan is executed, the statistic half of the suggestions is **live** (no longer dormant) —
-> update the review/verification notes accordingly (drop the "statistic dormant" caveat).
+> **✅ Reconciled against post-Slice-7 `main` (`ab81e2f`) on 2026-07-26 — this plan is ready to execute.**
+> The original version of this plan carried a "do not execute until Slice 6 ships" block plus a list of
+> shared-file edits to re-derive. **Slice 5 is now the LAST unbuilt slice before PWA polish:** Slices 6
+> (Completion + Archive, `66e4283`) and 7 (Polling / Sync, `ab81e2f`) are both merged. That block is
+> gone and every code block below was re-read from the **current** files:
+> - `src/app/projects/[projectId]/page.tsx` now destructures `activeLists` / `archivedLists` from a
+>   **four-element** `Promise.all` and renders an "Archiv" section — Task 6 edits that shape. Slice 7
+>   also touched this file, but only to add a `← Zu meinen Projekten` back-link above the `<h1>`; all
+>   four Task 6 anchors are unaffected (re-verified against `ab81e2f`).
+> - `src/lib/lists/lists.ts` now exports `listLists(db, projectId, status?)`, `completeList`,
+>   `reopenList`, `allItemsChecked` — Task 3's statistic reads what `completeList` writes.
+> - The test baseline is **16 files / 135 tests** (Slice 7), not Slice 6's 126 or Slice 4's 118.
+> - Slice 7 added `src/lib/lists/delta.ts`, `GET /api/lists/:id/delta` and the `ListSyncPoller` client
+>   component. This slice needs **no change** to any of them — see locked decision #5.
+> **The N-of-M statistic is LIVE, not dormant.** Completed lists exist in the app now, so the
+> statistic half of `computeSuggestions` is end-to-end verifiable (Task 6, Step 7) and no "dormant"
+> caveat belongs in the review or the meta-plan entry.
 
 **Goal:** Give a project a shared list of favorite articles and a pure read function that suggests articles to pre-fill a new list — the union of the project's favorites and the articles that appear in ≥ N of the last M completed lists (MVP design §4.3).
 
 **Architecture:** One new persisted entity (`Favorite`, unique per project+article) plus two pure functions and one orchestrator on top of the Slice 3/4 catalog and operations. `computeSuggestions` is a **pure read** over favorites + completed lists that returns a deduplicated set of articles — the §7 "Vorschlags-Logik" testable seam. `createPrefilledList` creates a list and then adds one entry per suggested article **through `applyOperation`** (the single mutation path), letting the existing add-time inheritance fill category/unit from the catalog defaults. Favorites get member-level REST endpoints and a project-detail UI section; pre-fill is exposed both as a `prefill` flag on the lists POST and as a "Vorbefüllte Liste anlegen" button.
 
-**Tech Stack:** Next.js (App Router, TypeScript), Prisma ORM against Neon Postgres, Auth.js (NextAuth v5), Vitest. No new dependencies.
+**Tech Stack:** Next.js 16 (App Router, TypeScript), Prisma 6 against Neon Postgres, Auth.js (NextAuth v5), Vitest 4. No new dependencies.
 
 ## Global Constraints
 
@@ -39,16 +38,21 @@ Copied verbatim from CLAUDE.md and the meta project plan. Every task inherits th
 - **DB access through an injectable `PrismaClient`** (first parameter of every core function), so logic stays unit-testable in isolation.
 - **Test-first (TDD)**, small vertical slices, frequent commits.
 - Article-name normalization rule (MVP design §4.4): **lowercase + trim + collapse repeated whitespace** — already implemented as `normalizeName` (`src/lib/catalog/normalize.ts`); reuse it, never reimplement.
-- **Reuse, do not redefine** existing helpers/constants: `getOrCreateCatalogItem` (`src/lib/catalog/catalog.ts`), `createList` / `CreateListInput` (`src/lib/lists/lists.ts`), `applyOperation` (`src/lib/lists/operations.ts`), `requireMembership` (`src/lib/projects/guard.ts`), `requireUserId` (`src/lib/auth/session.ts`), `ApiError` / `toErrorResponse` (`src/lib/http/errors.ts`), `isUuid` (`src/lib/validate.ts`), `searchCatalog` / `CATALOG_DATALIST_LIMIT` (`src/lib/catalog/search.ts`).
-- **Test convention (Slices 1–4):** core functions are unit-tested against the Neon test branch (`new PrismaClient()` + `resetDb(db)` in `beforeEach`); route handlers and pages are thin adapters with **no unit tests** — they are verified by `npm run build` + `npm run lint` + a manual browser pass. Follow this split; do not invent route/page tests.
+- **Reuse, do not redefine** existing helpers/constants: `getOrCreateCatalogItem` (`src/lib/catalog/catalog.ts`), `createList` / `CreateListInput` / `listLists` (`src/lib/lists/lists.ts`), `applyOperation` (`src/lib/lists/operations.ts`), `requireMembership` (`src/lib/projects/guard.ts`), `requireUserId` (`src/lib/auth/session.ts`), `ApiError` / `toErrorResponse` (`src/lib/http/errors.ts`), `isUuid` (`src/lib/validate.ts`), `searchCatalog` / `CATALOG_DATALIST_LIMIT` (`src/lib/catalog/search.ts`).
+- **Test convention (Slices 1–4, 6, 7):** core functions are unit-tested against the Neon test branch (`new PrismaClient()` + `resetDb(db)` in `beforeEach`); route handlers, pages and client components are thin adapters with **no unit tests** — they are verified by `npm run build` + `npm run lint` + a manual browser pass. Follow this split; do not invent route/page tests.
+- **Baseline before this slice:** `npm test` = **16 files, 135 tests**, all green (meta plan, Slice 7 entry).
 
 ---
 
 ## Design decisions locked for this slice
 
-1. **The statistic reads completed lists produced by Slice 6.** `List.status` (`active` | `completed`) and `List.completedAt` already exist in the schema (added in Slice 3 for exactly this reason). Slice 6 (Completion + Archive) is what flips lists to `completed` — and **per this plan's header note it is built first**, so by the time Slice 5 executes the statistic is fully live and end-to-end verifiable (complete some lists → watch articles get suggested). `computeSuggestions` reads `status = "completed"` lists; its unit tests seed completed lists directly, so the function is testable regardless of build order. (If, contrary to the recommendation, Slice 5 were built before Slice 6, the statistic half would simply be dormant until Slice 6 lands — still correct, just favorites-only in the live app, with no schema change or rework needed. Meta plan dependency note: "Slice 5 needs 4 … **and** 6".)
+1. **The statistic is live, because Slice 6 has shipped.** `completeList` (`src/lib/lists/lists.ts`) sets `status = "completed"` + `completedAt = new Date()`, and it is guarded by `where: { status: "active" }` so completing an already-completed list **never re-stamps `completedAt`** — that is exactly what makes "the last M completed lists" a stable window across retries. `reopenList` clears `completedAt`, so a reopened list correctly drops out of the window. `computeSuggestions` therefore reads real app data from day one and is verifiable end-to-end in the browser (Task 6, Step 7, items 6–8). Its unit tests still seed completed lists directly, because the function must stay testable without driving the UI.
 2. **Pre-fill goes through `applyOperation` with the article name only.** For each suggested article, `createPrefilledList` sends `add_item` with just the `name`; `add_item` resolves it to the existing catalog row and **inherits** `defaultCategory` / `defaultUnit` (the same values the suggestion carries). This keeps the single mutation path intact for Slice 7 and reuses the Slice 4 inheritance path instead of duplicating it.
 3. **Favorites are project-shared, keyed by `(projectId, catalogItemId)`.** Not per-user (MVP design §3.1: "Favoriten gehören dem Projekt (geteilt)"). Adding is an idempotent upsert; removing is an idempotent `deleteMany`. A favorite may only point at the project's **own** catalog (guarded), so a member cannot favorite another project's article by guessing an id.
+4. **The "last M" window orders by `completedAt DESC NULLS LAST` explicitly.** Postgres puts NULLs *first* on a `DESC` sort by default. Every list `completeList` produces has a `completedAt`, so this is defensive — but a single NULL row (from a seed or a future import path) would otherwise silently occupy a slot at the *top* of the window and evict a real completed list. Prisma 6 supports `{ sort: "desc", nulls: "last" }` on nullable fields; use it.
+5. **Slice 7 (Polling / Sync) needs no changes, and this slice must not touch it.** Two consequences of routing pre-fill through `applyOperation` (decision #2), both free:
+   - Every pre-filled entry gets a real `ListItem.updatedAt` (Prisma `@updatedAt`), which is exactly what `computeCursor` / `getListDelta` read. A member already sitting on a list sees nothing odd, and a member who opens the new pre-filled list gets a render-time cursor baseline covering all of it. **Do not** bulk-insert pre-fill entries with `createMany` as an "optimization": that would still set `updatedAt`, but it would bypass the catalog get-or-create and the category/unit inheritance, and it would break the single-mutation-path invariant Slice 7 depends on.
+   - The poller (`ListSyncPoller`) is mounted on the **list detail page only**. The project page — where Task 6 puts the Favoriten section — is not polled, so a favorite added by another member appears on the next navigation or refresh, not live. That matches the rest of that page (members, lists, archive are all equally static) and is deliberately out of scope here; live project-level sync is a Phase 2 concern.
 
 ---
 
@@ -67,9 +71,9 @@ Copied verbatim from CLAUDE.md and the meta project plan. Every task inherits th
 | `src/app/api/projects/[projectId]/favorites/[catalogItemId]/route.ts` (create) | `DELETE` a favorite (member-level, idempotent). | 5 |
 | `src/app/api/projects/[projectId]/suggestions/route.ts` (create) | `GET` the suggestion set (member-level). | 5 |
 | `src/app/api/projects/[projectId]/lists/route.ts` (modify) | Accept an optional `prefill` flag on POST → `createPrefilledList`. | 5 |
-| `src/app/projects/[projectId]/page.tsx` (modify) | Favoriten section (add by name + list + remove) and a "Vorbefüllte Liste anlegen" button. | 6 |
+| `src/app/projects/[projectId]/page.tsx` (modify) | "Vorbefüllte Liste anlegen" form in the Listen section + a Favoriten section after the Archiv section. | 6 |
 | `docs/implementation-reviews/slice-5-favorites-suggestions.md` (create) | Per-slice implementation review (Definition of Done). | 7 |
-| `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md` (modify) | Flip Slice 5 status to ✅, add progress-log entry. | 7 |
+| `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md` (modify) | Flip Slice 5 status to ✅, drop the stale build-order note, add a progress-log entry. | 7 |
 
 ---
 
@@ -86,14 +90,29 @@ Copied verbatim from CLAUDE.md and the meta project plan. Every task inherits th
 
 - [ ] **Step 1: Add the `Favorite` model to the schema**
 
-In `prisma/schema.prisma`, add the back-relation to `Project` (inside the `model Project { … }` block, next to the existing `lists`/`catalogItems` back-relations):
+In `prisma/schema.prisma`, add the back-relation to `Project`. The `Project` model currently ends with the Slice 3 back-relations:
+
+```prisma
+  // Back-relations added in Slice 3 (Lists + Entries + minimal Catalog).
+  lists        List[]
+  catalogItems CatalogItem[]
+```
+
+Add directly below those two lines (still inside the `model Project { … }` block, above `@@map("projects")`):
 
 ```prisma
   // Back-relation added in Slice 5 (Favorites + Suggestions). Favorites are project-shared.
   favorites Favorite[]
 ```
 
-Add the back-relation to `CatalogItem` (inside `model CatalogItem { … }`, next to `listItems`):
+Add the back-relation to `CatalogItem`. That model currently has:
+
+```prisma
+  createdAt DateTime   @default(now()) @map("created_at")
+  listItems ListItem[]
+```
+
+Add directly below `listItems`:
 
 ```prisma
   // Back-relation added in Slice 5: which favorites point at this article (0 or 1 per project).
@@ -134,7 +153,7 @@ Expected: a new folder `prisma/migrations/<timestamp>_add_favorites/` with `CREA
 
 - [ ] **Step 3: Extend the test DB reset**
 
-In `src/test/reset-db.ts`, add `"favorites"` to the TRUNCATE list. Replace the raw SQL line:
+In `src/test/reset-db.ts`, add `"favorites"` to the TRUNCATE list. Replace the raw SQL statement:
 
 ```ts
   await db.$executeRawUnsafe(
@@ -407,10 +426,11 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-// Seeds a COMPLETED list containing the given article names. Slice 6 will set completedAt in the
-// app; here we set it directly to exercise the statistic. Each name resolves to (or creates) the
-// project's catalog item, then gets a list item (entries are created directly — this is test setup,
-// not the app's mutation path).
+// Seeds a COMPLETED list containing the given article names. In the app, Slice 6's completeList sets
+// status + completedAt; here we write them directly so the statistic is exercised without driving the
+// UI (deterministic inputs, MVP design §7). Each name resolves to (or creates) the project's catalog
+// item, then gets a list item (entries are created directly — this is test setup, not the app's
+// mutation path).
 async function completedList(names: string[], completedAt: Date) {
   const list = await db.list.create({
     data: { projectId, name: "Erledigt", status: "completed", completedAt },
@@ -482,6 +502,19 @@ describe("computeSuggestions", () => {
     await db.listItem.create({ data: { listId: active.id, catalogItemId: milch.id, sortIndex: 0 } });
     const suggestions = await computeSuggestions(db, projectId);
     expect(suggestions).toHaveLength(0); // active list contributes nothing
+  });
+
+  it("ignores a reopened list: clearing completedAt drops it out of the window", async () => {
+    // Slice 6's reopenList sets status back to active AND clears completedAt. Two completed lists
+    // qualify Milch (N=2); reopening one must push it back below the threshold.
+    await completedList(["Milch"], new Date("2026-07-01"));
+    const second = await completedList(["Milch"], new Date("2026-07-02"));
+    await db.list.update({
+      where: { id: second.id },
+      data: { status: "active", completedAt: null }, // exactly what reopenList writes
+    });
+    const suggestions = await computeSuggestions(db, projectId);
+    expect(suggestions).toHaveLength(0); // only 1 completed list left -> < N=2
   });
 
   it("respects the project's own N/M parameters", async () => {
@@ -578,12 +611,15 @@ export async function computeSuggestions(
   for (const favorite of favorites) add(favorite.catalogItem);
 
   // --- Statistic: articles in >= N of the LAST M completed lists. ---
-  // "Last M" = the M most recently completed lists (completedAt desc). Slice 6 sets completedAt when
-  // a list is completed; until then this query returns nothing, so the statistic is dormant and only
-  // favorites are suggested (a locked, intended property of this slice).
+  // "Last M" = the M most recently completed lists. Slice 6's completeList stamps completedAt (and
+  // never re-stamps it on a repeat call), so this window is stable; reopenList clears completedAt and
+  // flips status back to active, which drops that list out of the window on the next read.
   const recent = await db.list.findMany({
     where: { projectId, status: "completed" },
-    orderBy: { completedAt: "desc" },
+    // nulls: "last" is deliberate — Postgres sorts NULLs FIRST on DESC, so a completed row with no
+    // completedAt (never produced by completeList, but possible via a seed/import) would otherwise
+    // occupy the top of the window and evict a real recent list.
+    orderBy: { completedAt: { sort: "desc", nulls: "last" } },
     take: project.suggestionRuleM, // the window size M
     select: { id: true },
   });
@@ -620,7 +656,7 @@ export async function computeSuggestions(
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/suggestions/suggestions.test.ts`
-Expected: PASS (9 tests).
+Expected: PASS (10 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -644,7 +680,7 @@ git commit -m "feat: computeSuggestions (favorites union N-of-M statistic, pure 
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `src/lib/suggestions/suggestions.test.ts` (add `createPrefilledList` to the existing import from `./suggestions`, then add the block below):
+Append to `src/lib/suggestions/suggestions.test.ts` (add `createPrefilledList` to the existing import from `./suggestions`, then add the block below). It reuses the `completedList` helper defined in Task 3's test file:
 
 ```ts
 describe("createPrefilledList", () => {
@@ -695,6 +731,23 @@ describe("createPrefilledList", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     const list = await createPrefilledList(db, { projectId, name: "Mit ID", id });
     expect(list.id).toBe(id);
+  });
+
+  it("gives the pre-filled entries distinct, ascending sortIndexes", async () => {
+    // Each add_item derives sortIndex from the current max, so the loop must run sequentially. Two
+    // suggestions with the same index would make the list order ambiguous in the UI.
+    for (const name of ["Apfel", "Brot"]) {
+      const item = await getOrCreateCatalogItem(db, { projectId, name });
+      await addFavorite(db, { projectId, catalogItemId: item.id });
+    }
+    const list = await createPrefilledList(db, { projectId, name: "Wocheneinkauf" });
+    const items = await db.listItem.findMany({
+      where: { listId: list.id },
+      orderBy: { sortIndex: "asc" },
+      include: { catalogItem: true },
+    });
+    expect(items.map((i) => i.sortIndex)).toEqual([0, 1]);
+    expect(items.map((i) => i.catalogItem.name)).toEqual(["Apfel", "Brot"]);
   });
 });
 ```
@@ -749,12 +802,12 @@ export async function createPrefilledList(
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/suggestions/suggestions.test.ts`
-Expected: PASS (9 from Task 3 + 5 new = 14 tests).
+Expected: PASS (10 from Task 3 + 6 new = 16 tests).
 
 - [ ] **Step 5: Run the full suite to confirm nothing regressed**
 
 Run: `npm test`
-Expected: PASS — all files green (Slice 4 baseline 118 + Task 2's 8 + Task 3's 9 + Task 4's 5 = 140; confirm the exact number at execution).
+Expected: PASS — all files green. Baseline 135 (16 files) + Task 2's 8 + Task 3's 10 + Task 4's 6 = **159 in 18 files**; confirm the exact number at execution and use the real number in the Task 7 review.
 
 - [ ] **Step 6: Commit**
 
@@ -930,18 +983,48 @@ export async function GET(_request: Request, { params }: Context) {
 
 - [ ] **Step 4: Add the `prefill` flag to the lists POST**
 
-In `src/app/api/projects/[projectId]/lists/route.ts`, add the import next to the existing lists import:
+In `src/app/api/projects/[projectId]/lists/route.ts`, replace the existing single import line:
+
+```ts
+import { createList, listLists } from "@/lib/lists/lists";
+```
+
+with these two lines:
 
 ```ts
 import { createList, listLists } from "@/lib/lists/lists";
 import { createPrefilledList } from "@/lib/suggestions/suggestions";
 ```
 
-(Replace the existing single `import { createList, listLists } from "@/lib/lists/lists";` line with the two lines above.)
-
-Then, in the `POST` handler, replace this block:
+Then update the JSDoc block above `POST` — replace:
 
 ```ts
+/**
+ * POST /api/projects/:projectId/lists
+ * Creates a list. Member-level (per the permission matrix, creating lists is not owner-only).
+ * Request body: { name: string, id?: string } — id is the optional client-generated UUID
+ * (offline-prep convention); createList validates its shape.
+ * Response: 201 List
+ */
+```
+
+with:
+
+```ts
+/**
+ * POST /api/projects/:projectId/lists
+ * Creates a list. Member-level (per the permission matrix, creating lists is not owner-only).
+ * Request body: { name: string, id?: string, prefill?: boolean } — id is the optional
+ * client-generated UUID (offline-prep convention); createList validates its shape. prefill=true
+ * seeds the new list from the project's suggestions (Slice 5, MVP design §4.3).
+ * Response: 201 List
+ */
+```
+
+Finally, in the `POST` handler body, replace this block:
+
+```ts
+    // .catch(() => null): malformed/empty JSON becomes a clean 400, not an unhandled throw.
     const body = (await request.json().catch(() => null)) as
       | { name?: unknown; id?: unknown }
       | null;
@@ -957,6 +1040,7 @@ Then, in the `POST` handler, replace this block:
 with:
 
 ```ts
+    // .catch(() => null): malformed/empty JSON becomes a clean 400, not an unhandled throw.
     const body = (await request.json().catch(() => null)) as
       | { name?: unknown; id?: unknown; prefill?: unknown }
       | null;
@@ -965,7 +1049,8 @@ with:
     // The optional client id is passed through as-is: createList validates the UUID shape (400).
     const id = typeof body?.id === "string" ? body.id : undefined;
     // prefill=true asks the server to seed the new list from the project's suggestions (favorites +
-    // statistic). Anything but a literal true means a plain, empty list.
+    // statistic). Strict === true (not truthiness): only a real boolean opts in, so a stray string
+    // like "false" can never silently pre-fill a list.
     const prefill = body?.prefill === true;
 
     // Same 201 contract either way; createPrefilledList reuses createList internally, then adds the
@@ -990,18 +1075,29 @@ git commit -m "feat: favorites + suggestions REST endpoints and lists prefill fl
 
 ---
 
-### Task 6: Project detail UI — Favoriten section + "Vorbefüllte Liste anlegen"
+### Task 6: Project detail UI — "Vorbefüllte Liste anlegen" + Favoriten section
 
 **Files:**
 - Modify: `src/app/projects/[projectId]/page.tsx`
 
 **Interfaces:**
-- Consumes: `listFavorites`, `addFavorite`, `removeFavorite` from `@/lib/favorites/favorites`; `createPrefilledList` from `@/lib/suggestions/suggestions`; `getOrCreateCatalogItem` from `@/lib/catalog/catalog`; `searchCatalog` + `CATALOG_DATALIST_LIMIT` from `@/lib/catalog/search`. Reuses the existing `requireMembership`, `revalidatePath`, `redirect`, `auth`, `prisma`.
-- Produces: a member-level Favoriten section (add-by-name with a `<datalist>`, list of favorites, per-favorite Entfernen) and a "Vorbefüllte Liste anlegen" form that creates a pre-filled list and navigates to it. No behavior change to the existing owner-only controls. No unit test — page verified by build + manual pass.
+- Consumes: `listFavorites`, `addFavorite`, `removeFavorite` from `@/lib/favorites/favorites`; `createPrefilledList` from `@/lib/suggestions/suggestions`; `getOrCreateCatalogItem` from `@/lib/catalog/catalog`; `searchCatalog` + `CATALOG_DATALIST_LIMIT` from `@/lib/catalog/search`. Reuses the existing `requireMembership`, `revalidatePath`, `redirect`, `auth`, `prisma` (all already imported in this file).
+- Produces: a "Vorbefüllte Liste anlegen" form inside the existing "Listen" section and a member-level "Favoriten" section (add-by-name with a `<datalist>`, list of favorites, per-favorite Entfernen) placed after the Slice 6 "Archiv" block. No behavior change to the existing owner-only controls or to the Archiv section. No unit test — page verified by build + manual pass.
+
+> **Post-Slice-6 anchors (verified 2026-07-26):** this file's parallel read now destructures FOUR
+> values (`project`, `members`, `activeLists`, `archivedLists`) and renders `Archiv` between the
+> active-lists `<ul>` and the `{isOwner && (` block. The steps below match that current shape.
 
 - [ ] **Step 1: Add the imports**
 
-In `src/app/projects/[projectId]/page.tsx`, add below the existing `@/lib` imports (after the `import { createList, listLists } …` line):
+In `src/app/projects/[projectId]/page.tsx`, the import block currently ends with:
+
+```ts
+import Link from "next/link";
+import { createList, listLists } from "@/lib/lists/lists";
+```
+
+Add these four lines directly below it:
 
 ```ts
 import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
@@ -1012,38 +1108,60 @@ import { createPrefilledList } from "@/lib/suggestions/suggestions";
 
 - [ ] **Step 2: Load favorites and catalog suggestions alongside the existing reads**
 
-Replace the existing parallel read block:
+Replace the existing four-element parallel read block:
 
 ```ts
-  const [project, members, lists] = await Promise.all([
+  const [project, members, activeLists, archivedLists] = await Promise.all([
     getProject(prisma, projectId),
     listMembers(prisma, projectId),
-    // Slice 3: the project's lists (newest first) render alongside the members.
-    listLists(prisma, projectId),
+    // Slice 6: split the project's lists into the working set ("Listen") and the archive ("Archiv").
+    // Active = newest-created first; archive = newest-completed first (see listLists).
+    listLists(prisma, projectId, "active"),
+    listLists(prisma, projectId, "completed"),
   ]);
 ```
 
 with:
 
 ```ts
-  const [project, members, lists, favorites, catalogSuggestions] = await Promise.all([
-    getProject(prisma, projectId),
-    listMembers(prisma, projectId),
-    // Slice 3: the project's lists (newest first) render alongside the members.
-    listLists(prisma, projectId),
-    // Slice 5: the project's favorites (alphabetical) and the whole catalog for the favorite
-    // datalist. We pass CATALOG_DATALIST_LIMIT (not the short search default) because a native
-    // <datalist> filters client-side over exactly the options we pre-render — see search.ts.
-    listFavorites(prisma, projectId),
-    searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
-  ]);
+  const [project, members, activeLists, archivedLists, favorites, catalogSuggestions] =
+    await Promise.all([
+      getProject(prisma, projectId),
+      listMembers(prisma, projectId),
+      // Slice 6: split the project's lists into the working set ("Listen") and the archive ("Archiv").
+      // Active = newest-created first; archive = newest-completed first (see listLists).
+      listLists(prisma, projectId, "active"),
+      listLists(prisma, projectId, "completed"),
+      // Slice 5: the project's favorites (alphabetical) and the whole catalog for the favorite
+      // datalist. We pass CATALOG_DATALIST_LIMIT (not searchCatalog's short default) because a native
+      // <datalist> filters client-side over exactly the options we pre-render — same reasoning as the
+      // list detail page; see CATALOG_DATALIST_LIMIT in search.ts.
+      listFavorites(prisma, projectId),
+      searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
+    ]);
 ```
 
 - [ ] **Step 3: Add the three member-level server actions**
 
-Directly after the existing `createListAction` function (just before the `return (` of the component), add:
+Directly after the existing `createListAction` function (it ends with `revalidatePath(\`/projects/${projectId}\`);` followed by `}` and then the component's `return (`), add:
 
 ```ts
+  // Create-prefilled-list action (Slice 5). MEMBER-level, like createListAction. Creates a list
+  // seeded from the project's suggestions (favorites + N-of-M statistic), then navigates to it so the
+  // user immediately sees the pre-filled entries and can remove the unwanted ones (MVP design §4.3,
+  // step 4).
+  async function createPrefilledListAction(formData: FormData) {
+    "use server";
+    const s = await auth();
+    await requireMembership(prisma, projectId, s!.user.id);
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return; // Ignore empty submissions (same convention as the other actions).
+    const list = await createPrefilledList(prisma, { projectId, name });
+    // redirect() throws a special Next.js error internally — it must not be wrapped in try/catch,
+    // and nothing may run after it.
+    redirect(`/lists/${list.id}`);
+  }
+
   // Add-favorite action (Slice 5). MEMBER-level: favorites/catalog upkeep is allowed for every
   // member (permission matrix, MVP design §6). Favoriting by NAME (not id) is friendlier and lets a
   // member favorite an article they have not listed yet — getOrCreateCatalogItem resolves the name
@@ -1053,7 +1171,7 @@ Directly after the existing `createListAction` function (just before the `return
     const s = await auth();
     await requireMembership(prisma, projectId, s!.user.id);
     const name = String(formData.get("name") ?? "").trim();
-    if (!name) return; // Ignore empty submissions (same convention as the other actions).
+    if (!name) return;
     const catalogItem = await getOrCreateCatalogItem(prisma, { projectId, name });
     await addFavorite(prisma, { projectId, catalogItemId: catalogItem.id });
     revalidatePath(`/projects/${projectId}`);
@@ -1070,42 +1188,25 @@ Directly after the existing `createListAction` function (just before the `return
     await removeFavorite(prisma, { projectId, catalogItemId });
     revalidatePath(`/projects/${projectId}`);
   }
-
-  // Create-prefilled-list action (Slice 5). Member-level. Creates a list seeded from the project's
-  // suggestions (favorites + statistic), then navigates to it so the user immediately sees the
-  // pre-filled entries and can remove the unwanted ones (MVP design §4.3, step 4).
-  async function createPrefilledListAction(formData: FormData) {
-    "use server";
-    const s = await auth();
-    await requireMembership(prisma, projectId, s!.user.id);
-    const name = String(formData.get("name") ?? "").trim();
-    if (!name) return;
-    const list = await createPrefilledList(prisma, { projectId, name });
-    // redirect() throws internally — do not wrap it in try/catch.
-    redirect(`/lists/${list.id}`);
-  }
 ```
 
-- [ ] **Step 4: Render the Favoriten section and the prefilled-list form**
+- [ ] **Step 4: Add the prefilled-list form to the Listen section**
 
-In the JSX, the "Listen" section currently ends with the lists `<ul>`:
+In the JSX, the "Listen" section starts with the plain create form:
 
 ```tsx
-      <ul>
-        {lists.map((l) => (
-          <li key={l.id}>
-            <Link href={`/lists/${l.id}`}>{l.name}</Link>
-          </li>
-        ))}
-      </ul>
+      <form action={createListAction}>
+        <input name="name" placeholder="Listenname" aria-label="Listenname" />
+        <button type="submit">Liste anlegen</button>
+      </form>
 ```
 
-Immediately AFTER that `</ul>` (and before the `{isOwner && (` owner-only block), insert:
+Insert the second form directly AFTER that `</form>` (so the two creation controls sit together, above the active-lists `<ul>`):
 
 ```tsx
       {/* Slice 5: create a list already pre-filled from the project's suggestions (favorites +
-          statistic). Separate from the plain "Liste anlegen" form above so the two intents are
-          clearly distinct. Member-level. */}
+          N-of-M statistic). A SEPARATE form from "Liste anlegen" above so the two intents stay
+          explicit — the user chooses empty vs. pre-filled, we never guess. Member-level. */}
       <form action={createPrefilledListAction}>
         <input
           name="name"
@@ -1114,10 +1215,26 @@ Immediately AFTER that `</ul>` (and before the `{isOwner && (` owner-only block)
         />
         <button type="submit">Vorbefüllte Liste anlegen</button>
       </form>
+```
 
-      {/* Slice 5: the project's shared favorites. Every member may add/remove (member-level). Adding
-          is by article name, backed by a <datalist> of the catalog for autocomplete; a brand-new
-          name creates a catalog article and favorites it in one step. */}
+- [ ] **Step 5: Add the Favoriten section after the Archiv block**
+
+The Slice 6 "Archiv" block ends like this, immediately followed by the owner-only block:
+
+```tsx
+      )}
+
+      {/* Owner-only controls: invite, rename, delete. Hidden from plain members. */}
+      {isOwner && (
+```
+
+Insert the Favoriten section BETWEEN them — i.e. after the Archiv block's closing `)}` and before the `{/* Owner-only controls … */}` comment:
+
+```tsx
+      {/* Slice 5: the project's shared favorites — the always-suggested half of the pre-fill set.
+          Every member may add/remove (member-level). Adding is by article name, backed by a
+          <datalist> of the catalog for zero-JS autocomplete (same pattern as the list detail page);
+          a brand-new name creates a catalog article and favorites it in one step. */}
       <h2>Favoriten</h2>
       <datalist id="favorite-suggestions">
         {catalogSuggestions.map((s) => (
@@ -1137,7 +1254,7 @@ Immediately AFTER that `</ul>` (and before the `{isOwner && (` owner-only block)
       <ul>
         {favorites.map((f) => (
           <li key={f.id}>
-            {/* The display name comes from the catalog item (article identity). */}
+            {/* The display name comes from the catalog item (article identity, MVP design §3.1). */}
             {f.catalogItem.name}{" "}
             <form action={removeFavoriteAction} style={{ display: "inline" }}>
               <input type="hidden" name="catalogItemId" value={f.catalogItemId} />
@@ -1148,23 +1265,30 @@ Immediately AFTER that `</ul>` (and before the `{isOwner && (` owner-only block)
       </ul>
 ```
 
-- [ ] **Step 5: Verify lint + build**
+- [ ] **Step 6: Verify lint + build**
 
 Run: `npm run lint && npm run build`
 Expected: PASS — clean build, no type errors.
 
-- [ ] **Step 6: Manual browser verification**
+- [ ] **Step 7: Manual browser verification**
 
 Start the dev server (`npm run dev`) and, logged in as an allowlisted member, on a project detail page:
+
+*Favorites half:*
 1. In "Favoriten", type an article name (e.g. "Bananen") — the `<datalist>` suggests existing catalog names — submit "Als Favorit" → "Bananen" appears in the favorites list.
 2. Add a second favorite (e.g. "Milch"); confirm the list is alphabetical.
-3. Click "Entfernen" on one favorite → it disappears; click it again is impossible (already gone), and re-adding then removing works (idempotent).
-4. In "Vorbefüllte Liste anlegen", enter a name and submit → you land on the new list's detail page and it already contains an entry for each favorite (e.g. "Bananen", "Milch"), each in its inherited category.
-5. Create a plain list with the original "Liste anlegen" form → it is empty (pre-fill only happens via the prefilled form). 
+3. Click "Entfernen" on one favorite → it disappears; re-add it and remove it again (idempotent, no error).
+4. In "Vorbefüllte Liste anlegen", enter a name and submit → you land on the new list's detail page and it already contains one entry per favorite, each in its inherited category.
+5. Create a plain list with "Liste anlegen" → it is empty (pre-fill only happens via the prefilled form).
 
-> Note: because Slice 6 is built first (see the header note), the N-of-M statistic is live — to exercise it, complete two lists that both contain the same article (not a favorite), then create a pre-filled list and confirm that article is pre-filled from the statistic. Record the outcome in the Task 7 review; do not claim success without running these. (If Slice 6 were somehow not yet built, the statistic would be dormant and pre-fill would reflect favorites only — see locked decision #1.)
+*Statistic half — live now that Slice 6 has shipped (do NOT skip this):*
+6. Pick an article that is **not** a favorite (e.g. "Nudeln"). Create a list, add "Nudeln", check the entry, and use Slice 6's "Liste abschließen" to complete it. Repeat with a second list. (N=2, so two completed lists are exactly the threshold.)
+7. Now create another "Vorbefüllte Liste anlegen" → it must contain "Nudeln" **in addition to** the favorites, and each article exactly once even if it is both a favorite and statistic-qualified.
+8. Open one of those two archived lists and click "Liste wieder öffnen" (Slice 6 reopen) → create a pre-filled list again → "Nudeln" must be **gone** (only 1 completed list remains, below N=2). This confirms the window really tracks `completedAt`.
 
-- [ ] **Step 7: Commit**
+Record the outcome in the Task 7 review; do not claim success without running these.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add "src/app/projects/[projectId]/page.tsx"
@@ -1184,36 +1308,56 @@ git commit -m "feat: Favoriten section + prefilled-list button on the project pa
 - [ ] **Step 1: Re-run the full verification and capture the real numbers**
 
 Run: `npm test && npm run lint && npm run build`
-Expected: all PASS. Note the exact test count for the review (Slice 4 baseline 118; this slice adds 8 + 9 + 5 = 22 new → expect ~140).
+Expected: all PASS. Note the exact test count for the review (baseline 135 in 16 files; this slice adds 8 + 10 + 6 = 24 new → expect ~159 in 18 files). The build is expected to keep the two known warnings recorded in the Slice 7 log (multiple-lockfile/Turbopack-root and the `middleware` deprecation) — they are pre-existing, not caused by this slice.
 
 - [ ] **Step 2: Write the implementation review**
 
 Create `docs/implementation-reviews/slice-5-favorites-suggestions.md` covering the five required sections (English):
 
-1. **What was achieved** — project-shared favorites plus the pure suggestion read function (favorites ∪ N-of-M statistic) and list pre-fill; state that the slice goal was met, and note the locked caveat that the statistic stays dormant until Slice 6 provides completed lists (favorites-only pre-fill for now).
-2. **Steps taken** — one line per task (Favorite model + migration, favorites core, computeSuggestions, createPrefilledList, REST endpoints, project-page UI, docs), noting the three locked decisions.
-3. **Core components built** — `Favorite` model; `addFavorite`/`removeFavorite`/`listFavorites` + `FavoriteWithItem`/`FavoriteRef`; `computeSuggestions` + `SuggestedArticle`; `createPrefilledList`; the favorites/suggestions routes + the lists `prefill` flag; the Favoriten UI.
-4. **Most important lines of code** — quote and explain (a) the distinct-lists `Set` count `entry.listIds.size >= project.suggestionRuleN` in `computeSuggestions` (why a Set, why per-list); (b) the `byCatalog` map dedup that unions favorites and statistic once; (c) the `createPrefilledList` loop passing only `name` through `applyOperation` (why: reuse inheritance + keep the single mutation path); (d) the `findFirst({ id, projectId })` project-scope guard in `addFavorite` (why cross-project favoriting must be blocked).
-5. **Architecture contribution** — Slice 5 assembles the "Vorschlags-Logik" layer (MVP design §5) and the last read/write seams before completion/sync: it depends on Slice 4's catalog and consumes Slice 6's completed lists once they exist; the future PWA client will call the `/suggestions` and `/favorites` endpoints built here.
+1. **What was achieved** — project-shared favorites plus the pure suggestion read function (favorites ∪ N-of-M statistic over completed lists) and list pre-fill; state that the slice goal was fully met. Because Slice 6 shipped first, the statistic is **live** and was verified end-to-end in the browser (Task 6, Step 7, items 6–8) — no "dormant" caveat.
+2. **Steps taken** — one line per task (Favorite model + migration, favorites core, `computeSuggestions`, `createPrefilledList`, REST endpoints, project-page UI, docs), noting the four locked decisions.
+3. **Core components built** — `Favorite` model; `addFavorite`/`removeFavorite`/`listFavorites` + `FavoriteWithItem`/`FavoriteRef`; `computeSuggestions` + `SuggestedArticle`; `createPrefilledList`; the favorites/suggestions routes + the lists `prefill` flag; the Favoriten UI + prefilled-list form.
+4. **Most important lines of code** — quote and explain (a) the distinct-lists `Set` count `entry.listIds.size >= project.suggestionRuleN` in `computeSuggestions` (why a Set, why per-list); (b) the `byCatalog` map dedup that unions favorites and statistic exactly once; (c) the `orderBy: { completedAt: { sort: "desc", nulls: "last" } }` window (why NULLS LAST matters on a Postgres DESC sort, and how it pairs with Slice 6's never-re-stamped `completedAt`); (d) the `createPrefilledList` loop passing only `name` through `applyOperation` (why: reuse Slice 4's inheritance + keep the single mutation path); (e) the `findFirst({ id, projectId })` project-scope guard in `addFavorite` (why cross-project favoriting must be blocked).
+5. **Architecture contribution** — Slice 5 assembles the "Vorschlags-Logik" layer (MVP design §5) and closes the loop that Slices 3, 4 and 6 opened: entries feed the catalog (4), completing lists feeds the statistic (6), and the statistic feeds the next list's pre-fill (5). With Slice 7 already merged, this **completes the MVP's functional surface** — every §9 build-order item except PWA polish now exists. Note that pre-fill needed no sync work at all: because it goes through `applyOperation`, Slice 7's delta picks the entries up as ordinary changes. Only Slice 8 (PWA polish) remains, and the future PWA client consumes the `/suggestions` and `/favorites` endpoints built here.
 
 - [ ] **Step 3: Update the meta project plan**
 
 In `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md`:
 
-- In the "8 slices" status table, change the Slice 5 row: set **Plan** to `[2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md)` and **Status** to `✅ Done / verified` (drop the `⬜ Open`).
-- Add a new progress-log entry at the TOP of the "Progress log" section (newest first), following the template in the file:
+**(a)** In the "8 slices" status table, change the Slice 5 row's **Status** cell from `⬜ Open — **build next**` to `✅ Done / verified`. Leave the Plan link as it is (it already points at this file).
+
+**(b)** Delete the now-obsolete build-order note that sits directly below the status legend (both slices are done, so it only misleads a fresh agent):
 
 ```markdown
-### 2026-07-20 — Slice 5: Favorites + Suggestions — Done
-- **Delivered:** `Favorite` model + `add_favorites` migration (project-shared, unique per project+article); favorites core (`addFavorite`/`removeFavorite`/`listFavorites`, idempotent, project-scoped); `computeSuggestions` pure read (favorites ∪ articles in ≥ N of the last M completed lists, deduped, sorted); `createPrefilledList` (creates a list, seeds it via `applyOperation`); member-level REST endpoints (`GET`/`POST /favorites`, `DELETE /favorites/:catalogItemId`, `GET /suggestions`, `prefill` flag on lists POST); Favoriten section + "Vorbefüllte Liste anlegen" on the project page.
-- **Tested:** `npm test` passed (N files, ~140 tests — 22 new in Slice 5); `npm run lint` + `npm run build` passed cleanly. Manual browser check of favorites + prefill: <fill in>.
+> **Build-order note (2026-07-20):** Slice **6 is built before Slice 5**. Slice 5's N-of-M statistic
+> reads *completed* lists, which only exist once Slice 6 ships — the real dependency arrow runs 6 → 5,
+> not by slice number. Both plans exist; the Slice 5 plan carries a header block requiring Slice 6
+> first and listing the two shared-file edits to reconcile afterward.
+```
+
+Replace it with:
+
+```markdown
+> **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
+> Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
+> dependency arrow runs 6 → 5, not by slice number; Slice 7 was pulled forward while Slice 5's plan
+> was being reconciled. Slices 1–7 are done; **Slice 8 (PWA polish) is next and still needs a plan.**
+```
+
+**(c)** Add a new progress-log entry at the TOP of the "Progress log" section (newest first — above the existing `### 2026-07-26 — Slice 7: Polling / Sync — Manual browser verification complete` entry), following the template in the file:
+
+```markdown
+### 2026-07-26 — Slice 5: Favorites + Suggestions — Done
+- **Delivered:** `Favorite` model + `add_favorites` migration (project-shared, unique per project+article); favorites core (`addFavorite`/`removeFavorite`/`listFavorites`, idempotent, project-scoped); `computeSuggestions` pure read (favorites ∪ articles in ≥ N of the last M completed lists, deduped, sorted, `completedAt DESC NULLS LAST` window); `createPrefilledList` (creates a list, seeds it via `applyOperation`); member-level REST endpoints (`GET`/`POST /favorites`, `DELETE /favorites/:catalogItemId`, `GET /suggestions`, `prefill` flag on lists POST); "Vorbefüllte Liste anlegen" form + Favoriten section on the project page.
+- **Tested:** `npm test` passed (<N> files, <N> tests — 24 new in Slice 5); `npm run lint` + `npm run build` passed (with the two pre-existing warnings noted in the Slice 7 entry). Manual browser check of favorites, pre-fill, the live statistic (complete 2 lists → article suggested) and the reopen case (article drops out): <fill in>.
 - **Deviations from the plan:** <fill in, or "none">.
 - **Follow-up decisions for later slices:**
-  - The statistic half of `computeSuggestions` is dormant until Slice 6 sets `List.completedAt`; Slice 6 needs no change to this function — completing lists automatically feeds the window.
-  - Pre-fill goes through `applyOperation` (single mutation path) and inherits catalog category/unit — Slice 7 sync sees pre-fill entries as ordinary `add_item` results.
+  - The statistic is live (Slice 6 shipped first). `completeList` never re-stamps `completedAt` and `reopenList` clears it, so the "last M completed" window is stable and reversible — do not change that guard without revisiting `computeSuggestions`.
+  - Pre-fill goes through `applyOperation` (single mutation path) and inherits catalog category/unit — Slice 7's delta sees pre-fill entries as ordinary `add_item` results with a normal `updatedAt`, no special case needed. Never replace that loop with a bulk `createMany`.
+  - The project page is NOT polled (`ListSyncPoller` is list-page only), so favorites do not live-update between members. Deliberate: if Phase 2 wants project-level sync, extend the delta seam rather than special-casing favorites.
   - Favorites are project-shared and keyed by `(projectId, catalogItemId)`; `addFavorite` blocks cross-project ids (404).
   - `computeSuggestions` (`src/lib/suggestions/suggestions.ts`) and the `/suggestions` endpoint are the read seam the future PWA client consumes.
-- **Inherited open items:** Slice 6 plan (`docs/superpowers/plans/YYYY-MM-DD-slice-6-completion-archive.md`) to be created per maintenance guide step 3.
+- **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3 — it is the only remaining slice. Slice 7's minor non-blocking review notes (empty `?since=` → cursor 0; overlapping polls; cancelled-before-JSON race) stay open and are untouched by this slice.
 - **Commit(s):** <hashes>
 ```
 
@@ -1226,7 +1370,7 @@ git commit -m "docs: Slice 5 implementation review + meta-plan progress log"
 
 ---
 
-## Self-Review (performed while writing this plan)
+## Self-Review (performed while rewriting this plan on 2026-07-26)
 
 **1. Spec coverage** (MVP design §3.1 Favorite, §4.3 pre-fill, §5 Vorschlags-Logik, §7 seam; build-order item 5 "Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill"):
 - `Favorite` entity, unique per (project, article), project-shared → Task 1. ✅
@@ -1234,11 +1378,20 @@ git commit -m "docs: Slice 5 implementation review + meta-plan progress log"
 - Suggestion = favorites ∪ (articles in ≥ N of last M completed lists), pure read, per-project N/M → Task 3 (`computeSuggestions`), tested against §7's deterministic-inputs seam. ✅
 - Pre-fill a new list from the suggestion set, entries carry catalog defaults, via the operations model → Task 4 (`createPrefilledList`) + Task 5 (`prefill` flag) + Task 6 (button). ✅
 - Member-level permission for favorites/catalog upkeep (matrix §6) → guarded in every endpoint (Task 5) and action (Task 6). ✅
-- Slice-6 dependency (statistic needs completed lists) → handled: schema fields already exist; tests seed completed lists; documented as locked decision #1. ✅
+- Slice-6 interaction (statistic reads completed lists; reopen must un-count) → covered by locked decisions #1/#4, a dedicated reopen unit test (Task 3) and manual steps 6–8 (Task 6). ✅
 
-**2. Placeholder scan:** No TBD/TODO/"add appropriate…". Every code step contains full code; every test step full tests. The only intentional fill-ins are the review's factual test count, manual-check outcome, deviations, and commit hashes in Task 7 — none of which can be known before execution.
+**2. Post-Slice-6 / post-Slice-7 reconciliation** (the reason for this rewrite) — every exact-match block was re-read from current `main` (`ab81e2f`) and machine-checked to appear **verbatim and exactly once** in its target file:
+- `src/app/projects/[projectId]/page.tsx`: the `Promise.all` block quoted in Task 6 Step 2 is the current four-element `activeLists`/`archivedLists` version; the insertion anchors in Steps 4 and 5 are the current create-list form and the Archiv-block/owner-block boundary. ✅
+- `src/app/api/projects/[projectId]/lists/route.ts`: the POST body block quoted in Task 5 Step 4 matches the current file (which now also has the Slice 6 `?status` filter in GET — untouched by this slice). ✅
+- `src/test/reset-db.ts`, `prisma/schema.prisma`: quoted blocks match current content (Slices 6 and 7 added no tables and no reset entries). ✅
+- Slice 7's own edits were checked for collisions: it touched `src/app/projects/[projectId]/page.tsx` only to add a back-link above the `<h1>` (clear of all four Task 6 anchors), plus files this slice never opens (`src/lib/lists/delta.ts`, `src/app/api/lists/[listId]/delta/route.ts`, `src/app/lists/[listId]/ListSyncPoller.tsx`, `src/app/lists/[listId]/page.tsx`). No conflict. ✅
+- Test baseline corrected from Slice 4's 118 → Slice 7's 135 (16 files). ✅
+- Task 7's meta-plan instructions updated for the post-Slice-7 file: the Slice 7 row is already ✅, the new log entry goes above the two existing Slice 7 entries, and the "next slice" is now **8 (PWA polish)**, not 7. ✅
+- All "statistic is dormant" language removed from the goal, locked decisions, manual verification, review outline and progress-log template. ✅
 
-**3. Type consistency:** `FavoriteRef { projectId, catalogItemId }` is defined in Task 2 and passed identically to `addFavorite`/`removeFavorite` in Tasks 2, 5, 6. `FavoriteWithItem` (Task 2) is the return of `listFavorites`, rendered via `f.catalogItem.name`/`f.catalogItemId` in Task 6. `SuggestedArticle { catalogItemId, name, defaultCategory, defaultUnit }` is defined in Task 3 and returned by `computeSuggestions` (Tasks 3, 5) and consumed by `createPrefilledList` via `article.name` (Task 4). `createPrefilledList(db, CreateListInput): Promise<List>` (Task 4) is called with the same signature in Task 5 (`{ projectId, name, id }`) and Task 6 (`{ projectId, name }`). `CreateListInput` is the existing exported type from `src/lib/lists/lists.ts`. `db.favorite` and the compound selector `projectId_catalogItemId` match the `@@unique([projectId, catalogItemId])` added in Task 1. Existing helpers (`getOrCreateCatalogItem`, `applyOperation`, `createList`, `requireMembership`, `requireUserId`, `toErrorResponse`, `searchCatalog`, `CATALOG_DATALIST_LIMIT`) are used exactly as they exist in Slices 2–4.
+**3. Placeholder scan:** No TBD/TODO/"add appropriate…". Every code step contains full code; every test step full tests. The only intentional fill-ins are the review's factual test count, manual-check outcome, deviations, and commit hashes in Task 7 — none of which can be known before execution.
+
+**4. Type consistency:** `FavoriteRef { projectId, catalogItemId }` is defined in Task 2 and passed identically to `addFavorite`/`removeFavorite` in Tasks 2, 5, 6. `FavoriteWithItem` (Task 2) is the return of `listFavorites`, rendered via `f.catalogItem.name`/`f.catalogItemId` in Task 6. `SuggestedArticle { catalogItemId, name, defaultCategory, defaultUnit }` is defined in Task 3, returned by `computeSuggestions` (Tasks 3, 5) and consumed by `createPrefilledList` via `article.name` (Task 4). `createPrefilledList(db, CreateListInput): Promise<List>` (Task 4) is called with the same signature in Task 5 (`{ projectId, name, id }`) and Task 6 (`{ projectId, name }`). `CreateListInput` is the existing exported type from `src/lib/lists/lists.ts`. `db.favorite` and the compound selector `projectId_catalogItemId` match the `@@unique([projectId, catalogItemId])` added in Task 1. `AddItemOperation` is used with exactly its declared fields (`op`, `itemId`, `name`). Existing helpers (`getOrCreateCatalogItem`, `applyOperation`, `createList`, `listLists`, `requireMembership`, `requireUserId`, `toErrorResponse`, `searchCatalog`, `CATALOG_DATALIST_LIMIT`) are used exactly as they exist in Slices 2–4 and 6.
 
 ---
 
