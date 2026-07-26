@@ -7,6 +7,10 @@ import { addMember, listMembers, removeMember } from "@/lib/projects/membership"
 import { requireMembership, requireOwner } from "@/lib/projects/guard";
 import Link from "next/link";
 import { createList, listLists } from "@/lib/lists/lists";
+import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
+import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
+import { addFavorite, listFavorites, removeFavorite } from "@/lib/favorites/favorites";
+import { createPrefilledList } from "@/lib/suggestions/suggestions";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
 // This type reflects the new async params API introduced in Next.js 15/16.
@@ -35,14 +39,21 @@ export default async function ProjectDetailPage({ params }: Props) {
   // If we reach here, role is guaranteed to be "owner" | "member".
   // The two reads are independent, so run them in parallel (Promise.all) instead of sequentially —
   // one DB round-trip of latency instead of two.
-  const [project, members, activeLists, archivedLists] = await Promise.all([
-    getProject(prisma, projectId),
-    listMembers(prisma, projectId),
-    // Slice 6: split the project's lists into the working set ("Listen") and the archive ("Archiv").
-    // Active = newest-created first; archive = newest-completed first (see listLists).
-    listLists(prisma, projectId, "active"),
-    listLists(prisma, projectId, "completed"),
-  ]);
+  const [project, members, activeLists, archivedLists, favorites, catalogSuggestions] =
+    await Promise.all([
+      getProject(prisma, projectId),
+      listMembers(prisma, projectId),
+      // Slice 6: split the project's lists into the working set ("Listen") and the archive ("Archiv").
+      // Active = newest-created first; archive = newest-completed first (see listLists).
+      listLists(prisma, projectId, "active"),
+      listLists(prisma, projectId, "completed"),
+      // Slice 5: the project's favorites (alphabetical) and the whole catalog for the favorite
+      // datalist. We pass CATALOG_DATALIST_LIMIT (not searchCatalog's short default) because a native
+      // <datalist> filters client-side over exactly the options we pre-render — same reasoning as the
+      // list detail page; see CATALOG_DATALIST_LIMIT in search.ts.
+      listFavorites(prisma, projectId),
+      searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
+    ]);
 
   // Convenience flag used to conditionally render owner-only UI sections.
   const isOwner = role === "owner";
@@ -115,6 +126,49 @@ export default async function ProjectDetailPage({ params }: Props) {
     revalidatePath(`/projects/${projectId}`);
   }
 
+  // Create-prefilled-list action (Slice 5). MEMBER-level, like createListAction. Creates a list
+  // seeded from the project's suggestions (favorites + N-of-M statistic), then navigates to it so the
+  // user immediately sees the pre-filled entries and can remove the unwanted ones (MVP design §4.3,
+  // step 4).
+  async function createPrefilledListAction(formData: FormData) {
+    "use server";
+    const s = await auth();
+    await requireMembership(prisma, projectId, s!.user.id);
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return; // Ignore empty submissions (same convention as the other actions).
+    const list = await createPrefilledList(prisma, { projectId, name });
+    // redirect() throws a special Next.js error internally — it must not be wrapped in try/catch,
+    // and nothing may run after it.
+    redirect(`/lists/${list.id}`);
+  }
+
+  // Add-favorite action (Slice 5). MEMBER-level: favorites/catalog upkeep is allowed for every
+  // member (permission matrix, MVP design §6). Favoriting by NAME (not id) is friendlier and lets a
+  // member favorite an article they have not listed yet — getOrCreateCatalogItem resolves the name
+  // to the project's catalog row (creating it on first use), then addFavorite pins it.
+  async function addFavoriteAction(formData: FormData) {
+    "use server";
+    const s = await auth();
+    await requireMembership(prisma, projectId, s!.user.id);
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return;
+    const catalogItem = await getOrCreateCatalogItem(prisma, { projectId, name });
+    await addFavorite(prisma, { projectId, catalogItemId: catalogItem.id });
+    revalidatePath(`/projects/${projectId}`);
+  }
+
+  // Remove-favorite action (Slice 5). Member-level; idempotent (removeFavorite tolerates a missing
+  // row). The hidden field carries the catalog item id of the favorite to drop.
+  async function removeFavoriteAction(formData: FormData) {
+    "use server";
+    const s = await auth();
+    await requireMembership(prisma, projectId, s!.user.id);
+    const catalogItemId = String(formData.get("catalogItemId") ?? "");
+    if (!catalogItemId) return;
+    await removeFavorite(prisma, { projectId, catalogItemId });
+    revalidatePath(`/projects/${projectId}`);
+  }
+
   return (
     <main style={{ padding: 24 }}>
       {/* Back-link to the projects overview — same pattern as the list page's "← Zum Projekt".
@@ -150,6 +204,17 @@ export default async function ProjectDetailPage({ params }: Props) {
         <input name="name" placeholder="Listenname" aria-label="Listenname" />
         <button type="submit">Liste anlegen</button>
       </form>
+      {/* Slice 5: create a list already pre-filled from the project's suggestions (favorites +
+          N-of-M statistic). A SEPARATE form from "Liste anlegen" above so the two intents stay
+          explicit — the user chooses empty vs. pre-filled, we never guess. Member-level. */}
+      <form action={createPrefilledListAction}>
+        <input
+          name="name"
+          placeholder="Listenname (vorbefüllt)"
+          aria-label="Vorbefüllte Liste anlegen"
+        />
+        <button type="submit">Vorbefüllte Liste anlegen</button>
+      </form>
       <ul>
         {activeLists.map((l) => (
           <li key={l.id}>
@@ -174,6 +239,39 @@ export default async function ProjectDetailPage({ params }: Props) {
           </ul>
         </>
       )}
+
+      {/* Slice 5: the project's shared favorites — the always-suggested half of the pre-fill set.
+          Every member may add/remove (member-level). Adding is by article name, backed by a
+          <datalist> of the catalog for zero-JS autocomplete (same pattern as the list detail page);
+          a brand-new name creates a catalog article and favorites it in one step. */}
+      <h2>Favoriten</h2>
+      <datalist id="favorite-suggestions">
+        {catalogSuggestions.map((s) => (
+          // Only the value is needed — the browser inserts it into the input on selection.
+          <option key={s.id} value={s.name} />
+        ))}
+      </datalist>
+      <form action={addFavoriteAction}>
+        <input
+          name="name"
+          placeholder="Artikel"
+          aria-label="Favorit hinzufügen"
+          list="favorite-suggestions"
+        />
+        <button type="submit">Als Favorit</button>
+      </form>
+      <ul>
+        {favorites.map((f) => (
+          <li key={f.id}>
+            {/* The display name comes from the catalog item (article identity, MVP design §3.1). */}
+            {f.catalogItem.name}{" "}
+            <form action={removeFavoriteAction} style={{ display: "inline" }}>
+              <input type="hidden" name="catalogItemId" value={f.catalogItemId} />
+              <button type="submit">Entfernen</button>
+            </form>
+          </li>
+        ))}
+      </ul>
 
       {/* Owner-only controls: invite, rename, delete. Hidden from plain members. */}
       {isOwner && (
