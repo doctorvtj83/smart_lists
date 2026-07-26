@@ -1,6 +1,6 @@
 # Smart Lists — Meta Project Plan (MVP, Approach A)
 
-> **For agentic workers:** This is the **umbrella plan** over all 8 vertical slices of the MVP.
+> **For agentic workers:** This is the **umbrella plan** over all 9 vertical slices of the MVP.
 > It is **not** executed step-by-step — it coordinates the individual slice plans and tracks progress.
 > Each slice has (or will get) its own executable plan under `docs/superpowers/plans/`.
 >
@@ -45,9 +45,10 @@ All slice plans build on it.
 
 ---
 
-## The 8 slices (build order)
+## The 9 slices (build order)
 
-Order from MVP design §9. Each slice is working, tested software on its own.
+Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26 (see the note under the table).
+Each slice is working, tested software on its own.
 
 | # | Slice | Delivers | Plan | Status |
 |---|---|---|---|---|
@@ -59,21 +60,33 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ✅ Done / verified |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
+| 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, live (non-JWT) permission check | _to be created_ | ⬜ Open — **build next** |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
 > **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
 > Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
 > dependency arrow runs 6 → 5, not by slice number; Slice 7 was pulled forward while Slice 5's plan
-> was being reconciled. Slices 1–7 are done; **Slice 8 (PWA polish) is next and still needs a plan.**
+> was being reconciled. Slices 1–7 are done.
+
+> **Slice 9 note (2026-07-26):** Slice 9 is **not** from MVP design §9 — it was added because no slice
+> ever covered the "Allowlist pflegen — nur `is_admin`" row of the permission matrix (MVP design §6).
+> Slice 1 shipped only the *read* side of that gate (`isEmailAllowed` + the seed script); there is no way
+> to invite or revoke anyone from inside the app, and `is_admin` can only be set by editing the database.
+> It is numbered 9 so the §9 numbering of slices 1–8 stays intact, but it is **built before Slice 8**
+> (owner's decision, 2026-07-26): letting more people in is worth more right now than PWA polish, and
+> Slice 8 has no plan yet, so nothing gets invalidated by going first.
+>
+> **Slice 9 is next and still needs a plan; Slice 8 (PWA polish) follows it.**
 
 ### Dependencies between slices
 
 ```
 1 Auth ──> 2 Projects/Membership ──> 3 Lists/Entries ──> 4 Catalog ──> 5 Favorites/Suggestions
-                                          │                                    ^
-                                          ├──> 6 Completion/Archive ───────────┘
-                                          └──> 7 Polling/Sync
+  │                                       │                                    ^
+  │                                       ├──> 6 Completion/Archive ───────────┘
+  │                                       └──> 7 Polling/Sync
+  └──> 9 Admin area (allowlist + admin rights)
 8 PWA polish: throughout, final polish at the end.
 ```
 
@@ -82,6 +95,10 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 - Slice 4 needs 3 (catalog hangs off ListItems / input).
 - Slice 5 needs 4 (suggestions read the catalog) **and** 6 (the statistic needs completed lists).
 - Slices 6 + 7 hang off 3.
+- Slice 9 needs only 1 (it writes the allowlist that Slice 1 reads). It has no dependency on 2–7, but it
+  **changes a file they all sit on**: the session guard (`src/lib/auth/session.ts`) starts resolving the
+  caller against the database instead of trusting the JWT, so revoking access takes effect immediately
+  rather than at next login. Every existing route inherits that check through `requireUserId`.
 
 ---
 
