@@ -56,13 +56,21 @@ export async function computeSuggestions(
   // "Last M" = the M most recently completed lists. Slice 6's completeList stamps completedAt (and
   // never re-stamps it on a repeat call), so this window is stable; reopenList clears completedAt and
   // flips status back to active, which drops that list out of the window on the next read.
+  // Clamp M to >= 0 before it reaches Prisma. A NEGATIVE `take` does not mean "none" in Prisma — it
+  // means "the LAST n rows of the ordering", which would silently invert the window and make the
+  // statistic read the OLDEST completed lists. Nothing sets N/M today (no endpoint, no UI; the schema
+  // defaults are 2/4), so this is defense for whenever per-project tuning is exposed.
+  // N is deliberately NOT clamped: N <= 0 is a coherent configuration meaning "every article in the
+  // window qualifies", whereas there is no coherent reading of a negative window size.
+  const windowSize = Math.max(0, project.suggestionRuleM);
+
   const recent = await db.list.findMany({
     where: { projectId, status: "completed" },
     // nulls: "last" is deliberate — Postgres sorts NULLs FIRST on DESC, so a completed row with no
     // completedAt (never produced by completeList, but possible via a seed/import) would otherwise
     // occupy the top of the window and evict a real recent list.
     orderBy: { completedAt: { sort: "desc", nulls: "last" } },
-    take: project.suggestionRuleM, // the window size M
+    take: windowSize, // the window size M, clamped to a non-negative count
     select: { id: true },
   });
   const recentIds = recent.map((list) => list.id);

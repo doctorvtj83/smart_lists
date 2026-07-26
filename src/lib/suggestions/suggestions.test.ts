@@ -153,6 +153,32 @@ describe("computeSuggestions", () => {
     expect(suggestions.map((s) => s.name)).toEqual(["Neu"]);
   });
 
+  it("treats a non-positive M as an empty window instead of inverting it", async () => {
+    // Prisma reads a NEGATIVE `take` as "the LAST n rows", so an unclamped take: -1 would silently
+    // flip the window and return the OLDEST completed list instead of none. N=1 makes the difference
+    // observable: unclamped -> ["Alt"] (the oldest list), clamped -> [] (no window, no statistic).
+    await db.project.update({
+      where: { id: projectId },
+      data: { suggestionRuleN: 1, suggestionRuleM: -1 },
+    });
+    await completedList(["Alt"], new Date("2026-07-01"));
+    await completedList(["Neu"], new Date("2026-07-02"));
+
+    const suggestions = await computeSuggestions(db, projectId);
+    expect(suggestions).toHaveLength(0);
+  });
+
+  it("still returns favorites when M is non-positive (only the statistic goes silent)", async () => {
+    // The clamp must disable the STATISTIC half only. Favorites are unconditional (MVP design §4.3:
+    // "Favoriten: alle Favorite des Projekts"), so they survive any window configuration.
+    await db.project.update({ where: { id: projectId }, data: { suggestionRuleM: 0 } });
+    const milch = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
+    await addFavorite(db, { projectId, catalogItemId: milch.id });
+
+    const suggestions = await computeSuggestions(db, projectId);
+    expect(suggestions.map((s) => s.name)).toEqual(["Milch"]);
+  });
+
   it("sorts the result by German locale rules, not by code point", async () => {
     // localeCompare(…, "de") treats Ä as a diacritic variant of A. A naive code-point sort would put
     // every umlaut AFTER Z ("Apfel, Zucker, Äpfel"), which reads as broken in a German UI.
