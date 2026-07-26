@@ -1,11 +1,22 @@
-import type { CatalogItem, Favorite, PrismaClient } from "@prisma/client";
+import type { Favorite, PrismaClient } from "@prisma/client";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
 
-// The read shape the UI/REST list renders: a favorite plus its catalog item — the favorite row only
-// stores ids, so it is useless for display without the article's name/defaults (article identity,
-// MVP design §3.1).
-export type FavoriteWithItem = Favorite & { catalogItem: CatalogItem };
+// The read shape the UI/REST list renders. The favorite row only stores ids, so it is useless for
+// display without the article's name/defaults (article identity, MVP design §3.1) — but the raw
+// Prisma row is the wrong thing to hand out: it also carries normalizedName (an internal identity
+// key), projectId and createdAt, none of which a client needs. Projecting here follows the same
+// "don't over-expose" precedent as Slice 2's MemberUser and Slice 4's CatalogSuggestion.
+// The fields are field-for-field identical to SuggestedArticle ON PURPOSE: favorites are a SUBSET of
+// the suggestion set, so both reads hand the UI the same article shape. The two types stay separate
+// (rather than one importing the other) because that would point the favorites core at the
+// suggestions core, inverting the real dependency — suggestions read favorites, never the reverse.
+export interface FavoriteArticle {
+  catalogItemId: string;
+  name: string;
+  defaultCategory: string | null;
+  defaultUnit: string | null;
+}
 
 // A favorite is identified by (project, article). Both ids together are the input to add/remove —
 // grouping them in one type keeps the two call sites (and the REST adapters) consistent.
@@ -49,17 +60,26 @@ export async function removeFavorite(db: PrismaClient, input: FavoriteRef): Prom
   await db.favorite.deleteMany({ where: { projectId, catalogItemId } });
 }
 
-// All favorites of a project, each with its catalog item, alphabetical by article name for a stable
-// UI. Permission is checked by the caller (requireMembership).
+// All favorites of a project as lean article rows, alphabetical by article name for a stable UI.
+// Permission is checked by the caller (requireMembership).
 export async function listFavorites(
   db: PrismaClient,
   projectId: string,
-): Promise<FavoriteWithItem[]> {
-  return db.favorite.findMany({
+): Promise<FavoriteArticle[]> {
+  const favorites = await db.favorite.findMany({
     where: { projectId }, // project-scoped: favorites are per-project shared memory
     include: { catalogItem: true }, // the article's name/defaults are needed to render/suggest
     // Order by the RELATED catalog item's name (Prisma supports relation ordering) — human-friendly
     // and deterministic without storing a separate sort column on the favorite.
     orderBy: { catalogItem: { name: "asc" } },
   });
+
+  // Map to the lean article shape (drop internal columns before they cross a boundary) — same
+  // mapping step searchCatalog performs for CatalogSuggestion.
+  return favorites.map((favorite) => ({
+    catalogItemId: favorite.catalogItemId,
+    name: favorite.catalogItem.name,
+    defaultCategory: favorite.catalogItem.defaultCategory,
+    defaultUnit: favorite.catalogItem.defaultUnit,
+  }));
 }

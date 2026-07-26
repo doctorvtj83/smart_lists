@@ -82,13 +82,35 @@ describe("removeFavorite", () => {
 });
 
 describe("listFavorites", () => {
-  it("returns favorites with their catalog item, ordered alphabetically by article name", async () => {
+  it("returns the lean article shape, ordered alphabetically by article name", async () => {
     const brot = await getOrCreateCatalogItem(db, { projectId, name: "Brot" });
     const apfel = await getOrCreateCatalogItem(db, { projectId, name: "Apfel" });
     await addFavorite(db, { projectId, catalogItemId: brot.id });
     await addFavorite(db, { projectId, catalogItemId: apfel.id });
     const favorites = await listFavorites(db, projectId);
-    expect(favorites.map((f) => f.catalogItem.name)).toEqual(["Apfel", "Brot"]);
+    expect(favorites.map((f) => f.name)).toEqual(["Apfel", "Brot"]);
+  });
+
+  it("exposes exactly the four article fields — no internal columns cross the boundary", async () => {
+    // This read is served straight to the REST client by GET /api/projects/:id/favorites, so the
+    // projection IS the wire contract. Asserting the whole object (toEqual, not toMatchObject) is
+    // what makes a re-leak of normalizedName/createdAt/projectId fail the suite.
+    const milch = await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
+    await db.catalogItem.update({
+      where: { id: milch.id },
+      data: { defaultCategory: "Kühlregal", defaultUnit: "l" },
+    });
+    await addFavorite(db, { projectId, catalogItemId: milch.id });
+
+    const favorites = await listFavorites(db, projectId);
+    expect(favorites).toEqual([
+      {
+        catalogItemId: milch.id,
+        name: "Milch",
+        defaultCategory: "Kühlregal",
+        defaultUnit: "l",
+      },
+    ]);
   });
 
   it("never returns favorites from another project", async () => {

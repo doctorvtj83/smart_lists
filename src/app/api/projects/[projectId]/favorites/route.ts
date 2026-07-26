@@ -20,7 +20,7 @@ type Context = { params: Promise<{ projectId: string }> };
 /**
  * GET /api/projects/:projectId/favorites
  * The project's favorites (with their catalog item), alphabetical by article name. Member-level.
- * Response: 200 FavoriteWithItem[]
+ * Response: 200 FavoriteArticle[] — the lean article projection, not the raw favorite row.
  */
 export async function GET(_request: Request, { params }: Context) {
   try {

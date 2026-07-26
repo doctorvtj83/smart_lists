@@ -262,9 +262,10 @@ export default async function ProjectDetailPage({ params }: Props) {
       </form>
       <ul>
         {favorites.map((f) => (
-          <li key={f.id}>
-            {/* The display name comes from the catalog item (article identity, MVP design §3.1). */}
-            {f.catalogItem.name}{" "}
+          <li key={f.catalogItemId}>
+            {/* The display name comes from the catalog item (article identity, MVP design §3.1),
+                already flattened onto the lean FavoriteArticle shape by listFavorites. */}
+            {f.name}{" "}
             <form action={removeFavoriteAction} style={{ display: "inline" }}>
               <input type="hidden" name="catalogItemId" value={f.catalogItemId} />
               <button type="submit">Entfernen</button>
