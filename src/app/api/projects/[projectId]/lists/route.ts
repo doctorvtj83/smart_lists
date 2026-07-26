@@ -13,6 +13,7 @@ import { requireUserId } from "@/lib/auth/session";
 import { ApiError, toErrorResponse } from "@/lib/http/errors";
 import { requireMembership } from "@/lib/projects/guard";
 import { createList, listLists } from "@/lib/lists/lists";
+import { createPrefilledList } from "@/lib/suggestions/suggestions";
 
 // Next.js 16 App Router: a dynamic route's `params` is a Promise and MUST be awaited.
 type Context = { params: Promise<{ projectId: string }> };
@@ -47,8 +48,9 @@ export async function GET(request: Request, { params }: Context) {
 /**
  * POST /api/projects/:projectId/lists
  * Creates a list. Member-level (per the permission matrix, creating lists is not owner-only).
- * Request body: { name: string, id?: string } — id is the optional client-generated UUID
- * (offline-prep convention); createList validates its shape.
+ * Request body: { name: string, id?: string, prefill?: boolean } — id is the optional
+ * client-generated UUID (offline-prep convention); createList validates its shape. prefill=true
+ * seeds the new list from the project's suggestions (Slice 5, MVP design §4.3).
  * Response: 201 List
  */
 export async function POST(request: Request, { params }: Context) {
@@ -59,14 +61,22 @@ export async function POST(request: Request, { params }: Context) {
 
     // .catch(() => null): malformed/empty JSON becomes a clean 400, not an unhandled throw.
     const body = (await request.json().catch(() => null)) as
-      | { name?: unknown; id?: unknown }
+      | { name?: unknown; id?: unknown; prefill?: unknown }
       | null;
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     if (!name) throw new ApiError(400, "Name darf nicht leer sein");
     // The optional client id is passed through as-is: createList validates the UUID shape (400).
     const id = typeof body?.id === "string" ? body.id : undefined;
+    // prefill=true asks the server to seed the new list from the project's suggestions (favorites +
+    // statistic). Strict === true (not truthiness): only a real boolean opts in, so a stray string
+    // like "false" can never silently pre-fill a list.
+    const prefill = body?.prefill === true;
 
-    const list = await createList(prisma, { projectId, name, id });
+    // Same 201 contract either way; createPrefilledList reuses createList internally, then adds the
+    // suggested entries through applyOperation (the single mutation path).
+    const list = prefill
+      ? await createPrefilledList(prisma, { projectId, name, id })
+      : await createList(prisma, { projectId, name, id });
     return NextResponse.json(list, { status: 201 });
   } catch (error) {
     return toErrorResponse(error);
