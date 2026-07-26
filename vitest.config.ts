@@ -13,5 +13,9 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     // DB tests mutate shared tables, so files must run serially to stay isolated.
     fileParallelism: false,
+    // Agent worktrees live under .worktrees/ (gitignored). Vitest still walks them
+    // by default and would double-run the suite against a second Prisma client —
+    // which races the shared Neon test DB and reports phantom failures on main.
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.worktrees/**"],
   },
 });
