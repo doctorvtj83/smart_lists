@@ -55,17 +55,17 @@ Order from MVP design §9. Each slice is working, tested software on its own.
 | 2 | **Projects + Membership** | Projects CRUD, roles (Owner/Member), invite/remove members, permission guard | [2026-06-28-slice-2-projects-membership.md](2026-06-28-slice-2-projects-membership.md) | ✅ Done / verified |
 | 3 | **Lists + Entries (operations)** | Lists CRUD, ListItems, entry-level operations, category/quantity/unit/checked | [2026-07-05-slice-3-lists-entries.md](2026-07-05-slice-3-lists-entries.md) | ✅ Done / verified |
 | 4 | **Catalog + Autocomplete** | Per-project CatalogItem, `normalized_name`, autocomplete, category flow-back | [2026-07-08-slice-4-catalog-autocomplete.md](2026-07-08-slice-4-catalog-autocomplete.md) | ✅ Done / verified |
-| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ⬜ Open — **build next** |
+| 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ✅ Done / verified |
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ✅ Done / verified |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
-> **Build-order note (2026-07-20):** Slice **6 is built before Slice 5**. Slice 5's N-of-M statistic
-> reads *completed* lists, which only exist once Slice 6 ships — the real dependency arrow runs 6 → 5,
-> not by slice number. Both plans exist; the Slice 5 plan carries a header block requiring Slice 6
-> first and listing the two shared-file edits to reconcile afterward.
+> **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
+> Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
+> dependency arrow runs 6 → 5, not by slice number; Slice 7 was pulled forward while Slice 5's plan
+> was being reconciled. Slices 1–7 are done; **Slice 8 (PWA polish) is next and still needs a plan.**
 
 ### Dependencies between slices
 
@@ -120,6 +120,19 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-26 — Slice 5: Favorites + Suggestions — Done
+- **Delivered:** `Favorite` model + `add_favorites` migration (project-shared, unique per project+article); favorites core (`addFavorite`/`removeFavorite`/`listFavorites`, idempotent, project-scoped); `computeSuggestions` pure read (favorites ∪ articles in ≥ N of the last M completed lists, deduped, sorted, `completedAt DESC NULLS LAST` window); `createPrefilledList` (creates a list, seeds it via `applyOperation`); member-level REST endpoints (`GET`/`POST /favorites`, `DELETE /favorites/:catalogItemId`, `GET /suggestions`, `prefill` flag on lists POST); "Vorbefüllte Liste anlegen" form + Favoriten section on the project page.
+- **Tested:** `npm test` passed (18 files, 159 tests — 24 new in Slice 5); `npm run lint` + `npm run build` passed (with the two pre-existing warnings noted in the Slice 7 entry). Manual browser check: all 8 Step 7 checks passed. In project Einkauf, Bananen/Milch were favorited; a pre-filled list got the favorites while a plain list stayed empty; completing 2 lists with Nudeln made the next pre-fill include Nudeln plus the favorites once each; reopening one completed list made Nudeln drop from the next pre-fill.
+- **Deviations from the plan:** Task 4's sortIndex assertion used `[1, 2]`, not the plan's `[0, 1]`, because `applyOperation` starts at 1 (matching the existing operations contract). Minor earlier review notes remain non-blocking: a 404 message assertion gap and focused `NULLS LAST`, configurable-M, and German-locale-sort test gaps. A pre-existing Next.js hydration overlay from locale date formatting appeared on project/list pages but did not block Slice 5 flows and is unrelated to favorites.
+- **Follow-up decisions for later slices:**
+  - The statistic is live (Slice 6 shipped first). `completeList` never re-stamps `completedAt` and `reopenList` clears it, so the "last M completed" window is stable and reversible — do not change that guard without revisiting `computeSuggestions`.
+  - Pre-fill goes through `applyOperation` (single mutation path) and inherits catalog category/unit — Slice 7's delta sees pre-fill entries as ordinary `add_item` results with a normal `updatedAt`, no special case needed. Never replace that loop with a bulk `createMany`.
+  - The project page is NOT polled (`ListSyncPoller` is list-page only), so favorites do not live-update between members. Deliberate: if Phase 2 wants project-level sync, extend the delta seam rather than special-casing favorites.
+  - Favorites are project-shared and keyed by `(projectId, catalogItemId)`; `addFavorite` blocks cross-project ids (404).
+  - `computeSuggestions` (`src/lib/suggestions/suggestions.ts`) and the `/suggestions` endpoint are the read seam the future PWA client consumes.
+- **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3 — it is the only remaining slice. Slice 7's minor non-blocking review notes (empty `?since=` → cursor 0; overlapping polls; cancelled-before-JSON race) stay open and are untouched by this slice.
+- **Commit(s):** cc4ebd2, 9b869b8, a993cb6, 47064f0, 8971c10, 7169c42, plus the docs commit carrying this entry
 
 ### 2026-07-26 — Slice 7: Polling / Sync — Manual browser verification complete
 - **Delivered:** (no code changes) Closed the open Task 4 Step 5 two-session browser verification from 2026-07-20.
