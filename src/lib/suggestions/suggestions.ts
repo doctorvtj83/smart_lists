@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { List } from "@prisma/client";
 import { createList, type CreateListInput } from "@/lib/lists/lists";
 import { applyOperation } from "@/lib/lists/operations";
+import { compareArticleNames } from "@/lib/catalog/sort";
 
 // The lean shape a suggestion carries: the article identity (catalogItemId), the display name, and
 // the catalog defaults. That is exactly what the UI needs to render the suggestion AND what pre-fill
@@ -88,9 +89,11 @@ export async function computeSuggestions(
     if (entry.listIds.size >= project.suggestionRuleN) add(entry.catalogItem);
   }
 
-  // Stable, human-friendly output: alphabetical by article name (localeCompare with "de" so umlauts
-  // sort sensibly for the German UI).
-  return [...byCatalog.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+  // Stable, human-friendly output: alphabetical by article name under the shared rule
+  // (compareArticleNames — German locale, so umlauts sort sensibly for the German UI). Sharing the
+  // comparator with listFavorites is what guarantees the Favoriten section and a pre-filled list
+  // present the same articles in the same order.
+  return [...byCatalog.values()].sort((a, b) => compareArticleNames(a.name, b.name));
 }
 
 // Creates a new list and pre-fills it from the project's suggestion set (MVP design §4.3, step 3).

@@ -1,4 +1,5 @@
 import type { Favorite, PrismaClient } from "@prisma/client";
+import { compareArticleNames } from "@/lib/catalog/sort";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
 
@@ -69,17 +70,20 @@ export async function listFavorites(
   const favorites = await db.favorite.findMany({
     where: { projectId }, // project-scoped: favorites are per-project shared memory
     include: { catalogItem: true }, // the article's name/defaults are needed to render/suggest
-    // Order by the RELATED catalog item's name (Prisma supports relation ordering) — human-friendly
-    // and deterministic without storing a separate sort column on the favorite.
-    orderBy: { catalogItem: { name: "asc" } },
+    // NOTE: no `orderBy` here on purpose. Ordering happens in JS below via compareArticleNames, so
+    // this list and computeSuggestions cannot drift apart under a different database collation.
   });
 
   // Map to the lean article shape (drop internal columns before they cross a boundary) — same
-  // mapping step searchCatalog performs for CatalogSuggestion.
-  return favorites.map((favorite) => ({
-    catalogItemId: favorite.catalogItemId,
-    name: favorite.catalogItem.name,
-    defaultCategory: favorite.catalogItem.defaultCategory,
-    defaultUnit: favorite.catalogItem.defaultUnit,
-  }));
+  // mapping step searchCatalog performs for CatalogSuggestion — then sort with the shared rule.
+  // Sorting AFTER the projection (not before) keeps the comparator working on plain names, which is
+  // exactly the contract compareArticleNames declares.
+  return favorites
+    .map((favorite) => ({
+      catalogItemId: favorite.catalogItemId,
+      name: favorite.catalogItem.name,
+      defaultCategory: favorite.catalogItem.defaultCategory,
+      defaultUnit: favorite.catalogItem.defaultUnit,
+    }))
+    .sort((a, b) => compareArticleNames(a.name, b.name));
 }

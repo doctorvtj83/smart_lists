@@ -113,6 +113,18 @@ describe("listFavorites", () => {
     ]);
   });
 
+  it("orders by German locale rules, matching computeSuggestions exactly", async () => {
+    // Both reads render article lists to the same German user, so they must agree. Postgres' column
+    // collation and JS localeCompare(…, "de") do NOT: this test fails while listFavorites sorts in
+    // the DB, and passes once both go through compareArticleNames.
+    for (const name of ["Zucker", "Äpfel", "Apfel"]) {
+      const item = await getOrCreateCatalogItem(db, { projectId, name });
+      await addFavorite(db, { projectId, catalogItemId: item.id });
+    }
+    const favorites = await listFavorites(db, projectId);
+    expect(favorites.map((f) => f.name)).toEqual(["Apfel", "Äpfel", "Zucker"]);
+  });
+
   it("never returns favorites from another project", async () => {
     const otherUser = await db.user.create({ data: { googleSub: "g-o", email: "o@example.com" } });
     const other = await db.project.create({ data: { name: "Ferien", ownerId: otherUser.id } });
