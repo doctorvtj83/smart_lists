@@ -1,6 +1,6 @@
 # Smart Lists — Meta Project Plan (MVP, Approach A)
 
-> **For agentic workers:** This is the **umbrella plan** over all 9 vertical slices of the MVP.
+> **For agentic workers:** This is the **umbrella plan** over all 12 vertical slices of the MVP.
 > It is **not** executed step-by-step — it coordinates the individual slice plans and tracks progress.
 > Each slice has (or will get) its own executable plan under `docs/superpowers/plans/`.
 >
@@ -45,10 +45,10 @@ All slice plans build on it.
 
 ---
 
-## The 9 slices (build order)
+## The slices (build order)
 
-Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26 (see the note under the table).
-Each slice is working, tested software on its own.
+Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 10–12 on 2026-08-01
+(see the notes under the table). Each slice is working, tested software on its own.
 
 | # | Slice | Delivers | Plan | Status |
 |---|---|---|---|---|
@@ -61,6 +61,9 @@ Each slice is working, tested software on its own.
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
+| 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage) + `/projects/[id]/katalog` screen | _to be created_ | ⬜ Open |
+| 11 | **App structure + navigation** | Project drawer; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename replacing the rename form | _to be created_ | ⬜ Open |
+| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; quiet sync signal | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
@@ -77,7 +80,38 @@ Each slice is working, tested software on its own.
 > (owner's decision, 2026-07-26): letting more people in is worth more right now than PWA polish, and
 > Slice 8 has no plan yet, so nothing gets invalidated by going first.
 >
-> **Slice 9 is done / verified.** Slice 8 (PWA polish) is the next open slice (plan still to be created).
+> **Slice 9 is done / verified.**
+
+> **Slices 10–12 note (2026-08-01):** These come from the
+> [UI design brief](../../design/2026-08-01-ui-design-brief.md) and the structure review held while
+> writing it. They are **not** from MVP design §9 — writing the brief forced the question of what the
+> app's screens actually are, and the answer changed the structure:
+>
+> - The project screen stacked six unrelated concerns. Members, favorites, archive and the (previously
+>   invisible) catalog become their own screens behind a Todoist-style project drawer (**Slice 11**).
+> - The catalog is made **visible and editable** — rename an article, change its default category/unit,
+>   delete it. This is the only genuinely new capability in the rework; everything else is existing
+>   functionality relocated. Deleting is guarded: an article used by any list (active or archived)
+>   cannot be deleted, because the N-of-M suggestion statistic reads past lists per article
+>   (**Slice 10**). This supersedes the MVP design's "no catalog screen" decision.
+> - The list screen's four-field add form is replaced by a **trailing empty row** (Apple Erinnerungen /
+>   Todoist) plus **category filter chips**; typing in a filtered category auto-assigns that category.
+>   Menge/Einheit move into an entry detail sheet. The permanent sync indicator goes away (**Slice 12**).
+>   Both the trailing row and the chips need the list body to become a client component — that is the
+>   real cost driver of this slice; the chips themselves are nearly free, since `groupByCategory` in
+>   `src/app/lists/[listId]/page.tsx` already computes exactly the chip set on every render.
+>
+> **Deferred on purpose:** parsing quantity/unit out of the typed text ("Milch 1,5 l"). Recorded here as
+> a candidate follow-up so an uncertain heuristic does not block Slice 12's entry model.
+>
+> **Recommended order: 10 → 11 → 12 → 8.** PWA polish (Slice 8) should come *after* the rework — polishing
+> screens that are about to be split or re-interacted is wasted work, and Slice 8 still has no plan, so
+> nothing is invalidated by moving it. Slice 10 goes first because it is backend-heavy and TDD-able
+> (catalog operations), which gives Slice 11 a finished screen to hang in the drawer. **Slice 10 is the
+> next open slice** (plan still to be created).
+>
+> The visual language from the mockups is applied per screen as slices 10–12 touch them; Slice 8 remains
+> the final polish pass, not the styling slice.
 
 ### Dependencies between slices
 
@@ -87,7 +121,13 @@ Each slice is working, tested software on its own.
   │                                       ├──> 6 Completion/Archive ───────────┘
   │                                       └──> 7 Polling/Sync
   └──> 9 Admin area (allowlist + admin rights)
-8 PWA polish: throughout, final polish at the end.
+
+UI rework (2026-08-01):
+4 Catalog ──> 10 Catalog management ──┐
+2 Projects ───────────────────────────┴──> 11 App structure + navigation
+3 Lists/Entries + 7 Polling ─────────────> 12 List interaction rework
+
+8 PWA polish: final polish at the end, AFTER 10–12.
 ```
 
 - Slice 2 needs 1 (auth identity for membership checks).
@@ -100,6 +140,12 @@ Each slice is working, tested software on its own.
   unnecessary. `requireUserId` still trusts the JWT; the new `requireAdmin` reads `isAdmin` live from the
   database but is used **only** by `/admin`. Cutting someone off from project content was already
   immediate before this slice, because membership is read fresh on every request (`getRole`, Slice 2).
+- Slice 10 needs 4 (it edits the catalog Slice 4 built) and must not break Slice 5's statistic — hence
+  the delete guard against list usage.
+- Slice 11 needs 2 (membership screen), 5 (favorites screen), 6 (archive screen) and 10 (catalog screen);
+  it is the slice that assembles them into one navigation shell.
+- Slice 12 needs 3 (entry operations it drives from the trailing row) and 7 (the poller it makes quiet).
+  It is independent of 10 and 11 and could be built in parallel.
 
 ---
 
@@ -138,6 +184,20 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-01 — UI design brief + structure review → slices 10–12 added
+- **Delivered:** [docs/design/2026-08-01-ui-design-brief.md](../../design/2026-08-01-ui-design-brief.md) — the input document for generating UI mockups. Reviewing it with the owner turned into a structure decision, so the brief now describes the app *after* a rework and marks every screen `[gebaut]` or `[neu]`. Screen count 7 → 11.
+- **Tested:** n/a (documentation only; no code touched).
+- **Decisions taken (owner, 2026-08-01):**
+  - **Catalog becomes visible and editable** — rename (with `normalizedName` collision check), edit default category/unit, delete **only** when the article appears in no list, active or archived. Supersedes the MVP design's "catalog has no screen" decision and removes "catalog management screen" from the brief's out-of-scope list.
+  - **Project screen is split** — archive, favorites, members and catalog become their own routes behind a Todoist-style project drawer. Renaming a project becomes inline on the project screen; the rename form disappears.
+  - **List entry model changes** — the four-field add form is replaced by a trailing empty row (name only). Menge/Einheit/Kategorie move to an entry detail sheet, which keeps the existing catalog flow-back.
+  - **Categories become filter chips**, not navigation: derived from the entries, alphabetical with "Ohne Kategorie" last, the active chip survives becoming empty, and typing in a filtered category auto-assigns it.
+  - **No permanent sync indicator** — only a brief signal at the moment content actually changed.
+  - **Quantity/unit text parsing ("Milch 1,5 l") deferred** — deliberately kept out of Slice 12 so an uncertain heuristic cannot block the entry model. Candidate follow-up, not scheduled.
+- **Follow-up decisions for later slices:** Recommended build order **10 → 11 → 12 → 8**; Slice 8 (PWA polish) moves behind the rework because polishing screens about to be split is wasted work, and it has no plan yet, so nothing is invalidated. Slices 11 and 12 both need client components — the list body in particular, which is server-rendered today. The chips themselves are cheap: `groupByCategory` in `src/app/lists/[listId]/page.tsx` already builds exactly that set on every render, including every ~2 s poll re-render.
+- **Inherited open items:** Plans for slices 10, 11, 12 and 8 all still to be created. Slice 7's minor non-blocking review notes (empty `?since=` → cursor 0; overlapping polls; cancelled-before-JSON race) remain open, as does the hydration overlay from locale-sensitive date formatting on the project/list pages.
+- **Commit(s):** _pending_
 
 ### 2026-07-26 — Slice 9: Admin area (allowlist + admin rights) — Done
 - **Delivered:** `src/lib/admin/admin.ts` (`listAccessEntries`, `inviteEmail`, `revokeEmail`, `setAdmin`, `listProjectAccess`, `excludeFromAllProjects`) with the lockout invariants (no self-revoke, no self-demotion, never the last admin); `requireAdmin(db)` in `src/lib/auth/session.ts` reading `isAdmin` live from the DB; the `/admin` Server Component (access table, invite form, two-step revoke with two explicit intents, owned-projects notice); "Verwaltung" link on the home page replacing the dead `Admin: ja/nein` line.
