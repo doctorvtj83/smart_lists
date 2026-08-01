@@ -315,7 +315,7 @@ When you have finished a slice, **before** the final commit do the following:
   useful for tests, and it keeps Slice 16 open without speculative work. Slice 12's own scope is now
   purely the interaction rework; it inherits Slice 7's sync untouched.
 - **Inherited open items:** unchanged from the entry below; Slice 13 is still next.
-- **Commit(s):** (this entry's docs commit)
+- **Commit(s):** `712d552`
 
 ### 2026-08-01 — UI design handoff landed → slices 13–15 added, build order reshuffled
 - **Delivered:** The finished high-fidelity design bundle, committed to
@@ -354,7 +354,7 @@ When you have finished a slice, **before** the final commit do the following:
   overlapping polls; cancelled-before-JSON race) remain open, as does the hydration overlay from
   locale-sensitive date formatting on the project/list pages — the latter is worth fixing while Slice 14
   and 12 touch those screens anyway.
-- **Commit(s):** (this entry's docs commit)
+- **Commit(s):** `e6718d9`
 
 ### 2026-08-01 — UI design brief + structure review → slices 10–12 added
 - **Delivered:** [docs/design/2026-08-01-ui-design-brief.md](../../design/2026-08-01-ui-design-brief.md) — the input document for generating UI mockups. Reviewing it with the owner turned into a structure decision, so the brief now describes the app *after* a rework and marks every screen `[gebaut]` or `[neu]`. Screen count 7 → 11.
