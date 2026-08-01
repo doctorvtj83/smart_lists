@@ -149,7 +149,7 @@ When you have finished a slice, **before** the final commit do the following:
   - Owner memberships are never removed (`Project.ownerId` is a required FK). Ownership handover does not exist in the product; if it is ever needed it is its own capability with its own rules.
   - `session.test.ts` introduces the project's first `vi.mock` (of `@/auth`), scoped to that file only.
 - **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3.
-- **Commit(s):** fdaa7e7, fe1636a, 4f49ae6, d341521, 5200336, 317636e, b73b667
+- **Commit(s):** fdaa7e7, fe1636a, 4f49ae6, d341521, 5200336, 317636e, b8b7468
 
 ### 2026-07-26 — Slice 5: Review fixes — Done
 - **Delivered:** All seven findings from the Slice 5 code review, fixed on the same branch (plan: [2026-07-26-slice-5-review-fixes.md](2026-07-26-slice-5-review-fixes.md)). (1) Characterization tests pinning `NULLS LAST`, the configurable `M` window, the German locale sort, the favorites 404 message and `removeFavorite`'s malformed-id no-op. (2) New `compareArticleNames` (`src/lib/catalog/sort.ts`) shared by `listFavorites` and `computeSuggestions`. (3) `listFavorites` returns the lean `FavoriteArticle` instead of the raw Prisma row. (4) `suggestionRuleM` clamped to `Math.max(0, …)`. (5) `createPrefilledList` deletes its list if an entry fails. (6) The §4.3-vs-§3.1 "Menge" wording gap documented. (7) The Slice 5 SDD ledger committed.
