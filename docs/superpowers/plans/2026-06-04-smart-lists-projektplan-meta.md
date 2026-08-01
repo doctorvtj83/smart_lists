@@ -60,7 +60,7 @@ Each slice is working, tested software on its own.
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ✅ Done / verified |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
-| 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, live (non-JWT) permission check | _to be created_ | ⬜ Open — **build next** |
+| 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
@@ -77,7 +77,7 @@ Each slice is working, tested software on its own.
 > (owner's decision, 2026-07-26): letting more people in is worth more right now than PWA polish, and
 > Slice 8 has no plan yet, so nothing gets invalidated by going first.
 >
-> **Slice 9 is next and still needs a plan; Slice 8 (PWA polish) follows it.**
+> **Slice 9 is done / verified.** Slice 8 (PWA polish) is the next open slice (plan still to be created).
 
 ### Dependencies between slices
 
@@ -95,10 +95,11 @@ Each slice is working, tested software on its own.
 - Slice 4 needs 3 (catalog hangs off ListItems / input).
 - Slice 5 needs 4 (suggestions read the catalog) **and** 6 (the statistic needs completed lists).
 - Slices 6 + 7 hang off 3.
-- Slice 9 needs only 1 (it writes the allowlist that Slice 1 reads). It has no dependency on 2–7, but it
-  **changes a file they all sit on**: the session guard (`src/lib/auth/session.ts`) starts resolving the
-  caller against the database instead of trusting the JWT, so revoking access takes effect immediately
-  rather than at next login. Every existing route inherits that check through `requireUserId`.
+- Slice 9 needs only 1 (it writes the allowlist that Slice 1 reads). It has **no** dependency on 2–7 and
+  changes **no** shared code path: the design's §4 analysis showed the planned session-guard rewrite was
+  unnecessary. `requireUserId` still trusts the JWT; the new `requireAdmin` reads `isAdmin` live from the
+  database but is used **only** by `/admin`. Cutting someone off from project content was already
+  immediate before this slice, because membership is read fresh on every request (`getRole`, Slice 2).
 
 ---
 
@@ -137,6 +138,18 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-07-26 — Slice 9: Admin area (allowlist + admin rights) — Done
+- **Delivered:** `src/lib/admin/admin.ts` (`listAccessEntries`, `inviteEmail`, `revokeEmail`, `setAdmin`, `listProjectAccess`, `excludeFromAllProjects`) with the lockout invariants (no self-revoke, no self-demotion, never the last admin); `requireAdmin(db)` in `src/lib/auth/session.ts` reading `isAdmin` live from the DB; the `/admin` Server Component (access table, invite form, two-step revoke with two explicit intents, owned-projects notice); "Verwaltung" link on the home page replacing the dead `Admin: ja/nein` line.
+- **Tested:** `npm test` passed (20 files, 203 tests — 35 new in Slice 9 vs plan estimate of ~30); `npm run lint` + `npm run build` clean (pre-existing `.remember/` lint warning and middleware-deprecation notice unchanged). Manual browser pass per plan Task 5 Step 4: largely passed (invite, revoke, setAdmin, exclude member, owned-projects Hinweis, non-admin redirect). Home "Verwaltung" link visibility needs a fresh OAuth JWT after seeding `isAdmin` in DB (expected: home uses session flag for visibility; `/admin` is guarded live). Checklist item 8 verified via DB demotion rather than a second private-window account.
+- **Deviations from the plan:** Plan expected ~30 new tests / 198 total; actual is 203 in 20 files (`admin.test.ts` 30 + `session.test.ts` 5; Task 1 added a duplicate-email lockout regression beyond the brief's 12, and brief arithmetic was slightly low). `revokeEmail` lockouts were hardened beyond the plan's `findFirst`-only approach (human chose reviewer fix): self-revoke compares the caller's email; last-admin counts all admins bound to the email.
+- **Follow-up decisions for later slices:**
+  - NO REST endpoints for the allowlist (never polled, never merged offline). The domain layer is the seam if an API is ever needed.
+  - `requireUserId` still trusts the JWT — deliberately. Only `/admin` pays for a live DB check. A plain revoke does not end a running session; *ausschließen* ends project access on the next request because membership is read live. Break-glass for the urgent case: rotate `AUTH_SECRET` and redeploy.
+  - Owner memberships are never removed (`Project.ownerId` is a required FK). Ownership handover does not exist in the product; if it is ever needed it is its own capability with its own rules.
+  - `session.test.ts` introduces the project's first `vi.mock` (of `@/auth`), scoped to that file only.
+- **Inherited open items:** Slice 8 (PWA polish) plan to be created per maintenance guide step 3.
+- **Commit(s):** fdaa7e7, fe1636a, 4f49ae6, d341521, 5200336, 317636e, b73b667
 
 ### 2026-07-26 — Slice 5: Review fixes — Done
 - **Delivered:** All seven findings from the Slice 5 code review, fixed on the same branch (plan: [2026-07-26-slice-5-review-fixes.md](2026-07-26-slice-5-review-fixes.md)). (1) Characterization tests pinning `NULLS LAST`, the configurable `M` window, the German locale sort, the favorites 404 message and `removeFavorite`'s malformed-id no-op. (2) New `compareArticleNames` (`src/lib/catalog/sort.ts`) shared by `listFavorites` and `computeSuggestions`. (3) `listFavorites` returns the lean `FavoriteArticle` instead of the raw Prisma row. (4) `suggestionRuleM` clamped to `Math.max(0, …)`. (5) `createPrefilledList` deletes its list if an entry fails. (6) The §4.3-vs-§3.1 "Menge" wording gap documented. (7) The Slice 5 SDD ledger committed.
