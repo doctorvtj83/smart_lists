@@ -1,4 +1,4 @@
-import type { AllowlistEntry, PrismaClient } from "@prisma/client";
+import type { AllowlistEntry, PrismaClient, Role } from "@prisma/client";
 import { normalizeEmail } from "@/lib/auth/normalize";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
@@ -208,4 +208,82 @@ export async function setAdmin(db: PrismaClient, input: SetAdminInput): Promise<
   // Returns void rather than the updated User: the full row carries googleSub, and no caller needs
   // it — the page re-reads through listAccessEntries, which has the safe projection.
   await db.user.update({ where: { id: user.id }, data: { isAdmin: input.isAdmin } });
+}
+
+// One project the person belongs to, flattened for display: the confirmation panel needs the name
+// and the role, nothing else.
+export interface ProjectAccess {
+  projectId: string;
+  name: string;
+  role: Role;
+}
+
+// Everything the person can reach, so the admin sees the CONSEQUENCES before acting rather than
+// discovering them afterwards. Read-only — this function never changes anything.
+export async function listProjectAccess(
+  db: PrismaClient,
+  userId: string,
+): Promise<ProjectAccess[]> {
+  // The id comes from a URL parameter, so a malformed value must yield an empty panel, not a P2023
+  // crash. "No memberships" is the honest answer for an id that cannot exist (same call as getRole's).
+  if (!isUuid(userId)) return [];
+
+  const memberships = await db.membership.findMany({
+    where: { userId },
+    // Narrow select: we need the project's name, not its suggestion parameters or owner id.
+    select: { role: true, project: { select: { id: true, name: true } } },
+    // By project name: the panel is a human-read list, so alphabetical beats join order.
+    orderBy: { project: { name: "asc" } },
+  });
+
+  return memberships.map((m) => ({
+    projectId: m.project.id,
+    name: m.project.name,
+    role: m.role,
+  }));
+}
+
+// What an exclusion actually did: how many memberships were removed, and which projects were
+// skipped because the person owns them. The skipped set is returned with NAMES (not just a count)
+// because silently leaving those out would be the one genuinely surprising outcome of this flow.
+export interface ExcludeResult {
+  removedCount: number;
+  ownedProjects: { id: string; name: string }[];
+}
+
+// The "ausschließen" half of a revocation: ends the person's access to project CONTENT.
+//
+// Why this is immediate while a login revocation is not: membership is read fresh from the database
+// on every request (getRole -> requireMembership/requireListAccess, Slice 2), so the person loses
+// access on their very next request — no token wait, no guard rebuild (design §4).
+//
+// Why a single deleteMany instead of looping over removeMember: removeMember is project-scoped,
+// does its own lookups, and throws 403 on owner rows — a loop would have to catch and classify
+// those errors. `role: "member"` says the same thing declaratively (owners are never ejected), and
+// memberships have no dependents (lists and items hang off the PROJECT), so no cascade is involved.
+export async function excludeFromAllProjects(
+  db: PrismaClient,
+  input: { userId: string },
+): Promise<ExcludeResult> {
+  // Same reasoning as above: an id that cannot exist means there is nothing to remove.
+  if (!isUuid(input.userId)) return { removedCount: 0, ownedProjects: [] };
+
+  // Read the owner rows FIRST — they survive the delete either way, but reading before writing keeps
+  // the reported set unambiguous even if something else changes memberships concurrently.
+  const owned = await db.membership.findMany({
+    where: { userId: input.userId, role: "owner" },
+    select: { project: { select: { id: true, name: true } } },
+    orderBy: { project: { name: "asc" } },
+  });
+
+  const removed = await db.membership.deleteMany({
+    where: { userId: input.userId, role: "member" },
+  });
+
+  // Idempotent by construction: running this twice deletes nothing the second time and reports
+  // removedCount: 0, because deleteMany over an empty match set is not an error.
+  return {
+    removedCount: removed.count,
+    ownedProjects: owned.map((m) => ({ id: m.project.id, name: m.project.name })),
+  };
 }

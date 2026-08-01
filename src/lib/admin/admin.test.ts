@@ -3,7 +3,15 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
-import { inviteEmail, listAccessEntries, revokeEmail, setAdmin } from "./admin";
+import { getRole } from "@/lib/projects/guard";
+import {
+  excludeFromAllProjects,
+  inviteEmail,
+  listAccessEntries,
+  listProjectAccess,
+  revokeEmail,
+  setAdmin,
+} from "./admin";
 
 // One shared client for the file (the pattern every core test in Slices 1–7 uses). resetDb gives
 // every test a clean DB; the beforeEach then rebuilds the ONE fixture every admin test needs:
@@ -239,5 +247,98 @@ describe("setAdmin", () => {
     await expect(
       setAdmin(db, { userId: "not-a-uuid", isAdmin: true, callerId: adminId }),
     ).rejects.toMatchObject({ status: 404, message: "Nutzer nicht gefunden" });
+  });
+});
+
+// Fixture for the two project-scoped reads: a guest who OWNS one project and is a plain MEMBER of
+// two others — the exact shape the exclusion has to treat asymmetrically.
+async function seedGuestWithProjects() {
+  const guest = await db.user.create({
+    data: { googleSub: "g-guest", email: "gast@example.com" },
+  });
+  const owned = await db.project.create({ data: { name: "Gasts Projekt", ownerId: guest.id } });
+  await db.membership.create({ data: { projectId: owned.id, userId: guest.id, role: "owner" } });
+
+  const haushalt = await db.project.create({ data: { name: "Haushalt", ownerId: adminId } });
+  const ferien = await db.project.create({ data: { name: "Ferien", ownerId: adminId } });
+  for (const project of [haushalt, ferien]) {
+    await db.membership.create({ data: { projectId: project.id, userId: adminId, role: "owner" } });
+    await db.membership.create({ data: { projectId: project.id, userId: guest.id, role: "member" } });
+  }
+  return { guest, owned, haushalt, ferien };
+}
+
+describe("listProjectAccess", () => {
+  it("returns every project with the person's role and the project name", async () => {
+    const { guest, owned, haushalt, ferien } = await seedGuestWithProjects();
+    const access = await listProjectAccess(db, guest.id);
+    // Sorted by name so the confirmation panel reads predictably.
+    expect(access).toEqual([
+      { projectId: ferien.id, name: "Ferien", role: "member" },
+      { projectId: owned.id, name: "Gasts Projekt", role: "owner" },
+      { projectId: haushalt.id, name: "Haushalt", role: "member" },
+    ]);
+  });
+
+  it("returns an empty array for a user without memberships", async () => {
+    const lonely = await db.user.create({
+      data: { googleSub: "g-lonely", email: "lonely@example.com" },
+    });
+    expect(await listProjectAccess(db, lonely.id)).toEqual([]);
+  });
+
+  it("returns an empty array for an unknown or malformed id (never a 500)", async () => {
+    // This read is driven by a URL parameter, so a crafted id must produce an empty panel, not a crash.
+    expect(await listProjectAccess(db, randomUUID())).toEqual([]);
+    expect(await listProjectAccess(db, "not-a-uuid")).toEqual([]);
+  });
+});
+
+describe("excludeFromAllProjects", () => {
+  it("removes every MEMBER membership and reports how many", async () => {
+    const { guest, haushalt, ferien } = await seedGuestWithProjects();
+    const result = await excludeFromAllProjects(db, { userId: guest.id });
+    expect(result.removedCount).toBe(2);
+    // getRole is the function every permission check in the app goes through, and it reads live —
+    // so a null here IS the proof that content access ended on the person's next request.
+    expect(await getRole(db, haushalt.id, guest.id)).toBeNull();
+    expect(await getRole(db, ferien.id, guest.id)).toBeNull();
+  });
+
+  it("keeps owner memberships and names the skipped projects", async () => {
+    const { guest, owned } = await seedGuestWithProjects();
+    const result = await excludeFromAllProjects(db, { userId: guest.id });
+    // Project.ownerId is a required FK and there is no ownership handover in the product, so an
+    // owner is never ejected — the admin is told instead (design §2/§6).
+    expect(result.ownedProjects).toEqual([{ id: owned.id, name: "Gasts Projekt" }]);
+    expect(await getRole(db, owned.id, guest.id)).toBe("owner");
+  });
+
+  it("leaves other users' memberships in the same projects untouched", async () => {
+    const { guest, haushalt } = await seedGuestWithProjects();
+    await excludeFromAllProjects(db, { userId: guest.id });
+    expect(await getRole(db, haushalt.id, adminId)).toBe("owner");
+  });
+
+  it("deletes no project and no user", async () => {
+    const { guest } = await seedGuestWithProjects();
+    await excludeFromAllProjects(db, { userId: guest.id });
+    expect(await db.user.findUnique({ where: { id: guest.id } })).not.toBeNull();
+    expect(await db.project.count()).toBe(3);
+  });
+
+  it("is idempotent: a second run removes nothing and still reports the owned projects", async () => {
+    const { guest, owned } = await seedGuestWithProjects();
+    await excludeFromAllProjects(db, { userId: guest.id });
+    const second = await excludeFromAllProjects(db, { userId: guest.id });
+    expect(second.removedCount).toBe(0);
+    expect(second.ownedProjects).toEqual([{ id: owned.id, name: "Gasts Projekt" }]);
+  });
+
+  it("treats a malformed id as a no-op (no P2023 crash)", async () => {
+    expect(await excludeFromAllProjects(db, { userId: "not-a-uuid" })).toEqual({
+      removedCount: 0,
+      ownedProjects: [],
+    });
   });
 });
