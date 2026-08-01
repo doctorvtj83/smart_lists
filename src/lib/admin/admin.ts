@@ -25,17 +25,6 @@ async function countAdmins(db: PrismaClient): Promise<number> {
   return db.user.count({ where: { isAdmin: true } });
 }
 
-// Resolves the app user behind an allowlist email, or null if that person has never logged in.
-// User.email is not unique (googleSub is the identity), so findFirst — and orderBy createdAt makes
-// the pick deterministic if two accounts ever share an email: the oldest wins. That is exactly the
-// rule addMember uses (membership.ts), so both places bind an email to the same account.
-async function findUserByEmail(db: PrismaClient, normalizedEmail: string) {
-  return db.user.findFirst({
-    where: { email: normalizedEmail },
-    orderBy: { createdAt: "asc" },
-  });
-}
-
 // The user fields the admin page may see. Deliberately NOT the full User: googleSub (the OAuth
 // identity) must never leave the server — the same least-exposure rule as MemberUser in
 // membership.ts. Enforced at the data-access layer so every transport inherits it.
@@ -73,7 +62,8 @@ export async function listAccessEntries(db: PrismaClient): Promise<AccessEntry[]
 
   const byEmail = new Map<string, AccessEntryUser>();
   for (const user of users) {
-    // First wins = oldest account wins, matching findUserByEmail's deterministic rule above.
+    // First wins = oldest account wins, preserving the deterministic display rule used by
+    // membership.ts without making that one displayed account authoritative for lockout checks.
     if (!byEmail.has(user.email)) {
       byEmail.set(user.email, {
         id: user.id,
@@ -146,22 +136,30 @@ export async function revokeEmail(db: PrismaClient, input: RevokeEmailInput): Pr
   const entry = await db.allowlistEntry.findUnique({ where: { email } });
   if (!entry) throw new ApiError(404, "E-Mail steht nicht auf der Zugangsliste");
 
-  // The person behind the email — may be null (invited, never signed in), in which case neither
-  // lockout invariant can apply: no user means no caller identity and no admin flag.
-  const user = await findUserByEmail(db, email);
+  // Load the acting account by its stable identity instead of resolving the target email to one
+  // arbitrary User row. User.email is intentionally non-unique, so an oldest-account lookup could
+  // otherwise hide a newer caller who shares the same allowlist identity.
+  const caller = await db.user.findUnique({
+    where: { id: input.callerId },
+    select: { email: true },
+  });
 
-  if (user) {
-    // Invariant 1: nobody locks themselves out. Compared by user id, not by email string, so it
-    // holds even if the caller's account and the allowlist row ever drift apart.
-    if (user.id === input.callerId) {
-      throw new ApiError(403, "Du kannst dir den Zugang nicht selbst entziehen.");
-    }
-    // Invariant 2: at least one admin must remain. This does NOT follow from invariant 1 — it also
-    // covers "admin A revokes admin B while B revokes A". See locked decision 7 on the read-committed
-    // race, which is accepted for a closed app with a handful of admins.
-    if (user.isAdmin && (await countAdmins(db)) <= 1) {
-      throw new ApiError(403, "Der letzte Admin kann nicht entfernt werden.");
-    }
+  // Invariant 1: nobody may revoke the allowlist identity their own account uses. Normalize the
+  // caller's stored email defensively so this comparison remains correct even for legacy rows.
+  if (caller && normalizeEmail(caller.email) === email) {
+    throw new ApiError(403, "Du kannst dir den Zugang nicht selbst entziehen.");
+  }
+
+  // One allowlist row gates every account sharing its email. Count ALL admins bound to the target,
+  // not merely the oldest account, then ensure at least one admin remains outside that identity.
+  const [adminCount, adminsBoundToEmail] = await Promise.all([
+    countAdmins(db),
+    db.user.count({ where: { email, isAdmin: true } }),
+  ]);
+  // Invariant 2 is independent from self-revocation: another user must also be unable to remove an
+  // email that is the login gate for every remaining admin account.
+  if (adminsBoundToEmail > 0 && adminCount <= adminsBoundToEmail) {
+    throw new ApiError(403, "Der letzte Admin kann nicht entfernt werden.");
   }
 
   // Delete by the row's own id (already loaded), so the delete cannot hit a different row than the

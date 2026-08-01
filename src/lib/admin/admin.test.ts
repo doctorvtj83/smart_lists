@@ -100,6 +100,31 @@ describe("revokeEmail", () => {
     });
   });
 
+  it("refuses self-revocation when the caller is a newer account sharing the email", async () => {
+    // Turn the oldest matching account into a non-admin, then create the real acting admin as the
+    // newer duplicate. This reproduces both historical bypasses: an oldest-only lookup sees
+    // neither the caller's identity nor the only admin bound to the allowlist email.
+    await db.user.update({ where: { id: adminId }, data: { isAdmin: false } });
+    const newerAdmin = await db.user.create({
+      data: {
+        googleSub: "g-newer-admin",
+        email: "admin@example.com",
+        displayName: "Newer Admin",
+        isAdmin: true,
+      },
+    });
+
+    await expect(
+      revokeEmail(db, { email: "ADMIN@example.com", callerId: newerAdmin.id }),
+    ).rejects.toMatchObject({
+      status: 403,
+      message: "Du kannst dir den Zugang nicht selbst entziehen.",
+    });
+    // The failed operation must leave the login gate open; checking persistence makes the test
+    // prove the invariant's externally visible effect instead of only matching an exception.
+    expect(await isEmailAllowed(db, "admin@example.com")).toBe(true);
+  });
+
   it("refuses to revoke the last remaining admin with 403", async () => {
     // Caller is somebody else, so the self-check cannot be what fires here. Without this rule the
     // app would end up with no one able to maintain the allowlist and no way back except SQL.
