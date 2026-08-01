@@ -1,6 +1,6 @@
 # Smart Lists — Meta Project Plan (MVP, Approach A)
 
-> **For agentic workers:** This is the **umbrella plan** over all 15 vertical slices of the MVP.
+> **For agentic workers:** This is the **umbrella plan** over all 16 vertical slices of the MVP.
 > It is **not** executed step-by-step — it coordinates the individual slice plans and tracks progress.
 > Each slice has (or will get) its own executable plan under `docs/superpowers/plans/`.
 >
@@ -54,7 +54,7 @@ All slice plans build on it.
 ## The slices (build order)
 
 Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 10–12 on 2026-08-01 with
-the design brief, slices 13–15 later the same day when the finished UI handoff landed (see the notes
+the design brief, slices 13–16 later the same day when the finished UI handoff landed (see the notes
 under the table). Each slice is working, tested software on its own.
 
 | # | Slice | Delivers | Plan | Status |
@@ -70,14 +70,15 @@ under the table). Each slice is working, tested software on its own.
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
 | 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | _to be created_ | ⬜ Open |
 | 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | _to be created_ | ⬜ Open |
-| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**; quiet sync signal (**per-row flash**) | _to be created_ | ⬜ Open |
+| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | _to be created_ | ⬜ Open |
 | 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | _to be created_ | ⬜ Open |
 | 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | _to be created_ | ⬜ Open |
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | _to be created_ | ⬜ Open |
+| 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
-**Build order for what is left: 13 → 14 → 10 → 11 → 12 → 15 → 8.**
+**Build order for what is left: 13 → 14 → 10 → 11 → 12 → 15 → 8**, then 16 only if real use asks for it.
 
 > **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
 > Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
@@ -108,7 +109,8 @@ under the table). Each slice is working, tested software on its own.
 >   (**Slice 10**). This supersedes the MVP design's "no catalog screen" decision.
 > - The list screen's four-field add form is replaced by a **trailing empty row** (Apple Erinnerungen /
 >   Todoist) plus **category filter chips**; typing in a filtered category auto-assigns that category.
->   Menge/Einheit move into an entry detail sheet. The permanent sync indicator goes away (**Slice 12**).
+>   Menge/Einheit move into an entry detail sheet (**Slice 12**). The "permanent sync indicator goes
+>   away" item turned out to be a no-op — there has never been one; see the Slice 16 note.
 >   Both the trailing row and the chips need the list body to become a client component — that is the
 >   real cost driver of this slice; the chips themselves are nearly free, since `groupByCategory` in
 >   `src/app/lists/[listId]/page.tsx` already computes exactly the chip set on every render.
@@ -160,14 +162,47 @@ under the table). Each slice is working, tested software on its own.
 > ("Liste mit 7 Einträgen anlegen"). That sheet is more than Slice 5's boolean `prefill` flag: it reads
 > `GET /suggestions` first and then creates the list from the surviving selection.
 >
-> **Watch out in Slice 12:** the design replaces the permanent sync indicator with a **per-row flash**
-> (`#eef2fc → transparent`, 1.4 s) on the rows that actually changed remotely. Today `ListSyncPoller`
-> only calls `router.refresh()` and knows nothing about *which* entries changed. The delta endpoint
-> already returns changed bodies plus the full id set, so the data is there — but consuming it means the
-> list body holds client state instead of being re-rendered by the server. That, not the chips, is the
-> real cost of Slice 12.
->
 > **Slice 13 is the next open slice** (plan still to be created).
+
+> **Slice 16 note (2026-08-01) — why the flash is optional and last.** The design replaces the permanent
+> sync indicator with a **per-row flash** (`#eef2fc → transparent`, 1.4 s) on rows a *remote* member
+> changed. Two findings moved it out of Slice 12 into its own optional slice at the very end:
+>
+> - **The "no permanent indicator" half is already true.** `ListSyncPoller` renders `null` and the list
+>   page shows no sync UI at all. Nothing to remove.
+> - **Cross-device sync does not need any of this.** Slice 7 shipped it and it was verified in a
+>   two-session browser test (2026-07-26): add / check / edit / remove / rename / complete all propagate
+>   in ~2 s. That works *because* `changed → router.refresh()` never asks which row changed — it just
+>   re-pulls server truth. The flash is the only requirement in the whole product that needs per-row
+>   identity **on the client**, and it changes no data, fixes no bug and unblocks nothing. It buys
+>   attention routing (40 items re-render silently; the highlight says where to look) — genuinely nice in
+>   a shared shopping list, and genuinely optional.
+>
+> **The implementation question it forces is "who owns a row on the client?"** — not "where does the data
+> come from". The data is already on the wire: `delta.items` carries the changed bodies with ids, and the
+> id-set diff gives adds/deletes. Two credible answers, to be chosen **after** Slice 12 has settled the
+> list screen's client/server split:
+>
+> - **Path A — client entry store.** Entries move into client state; the poller merges the delta
+>   (`mergeDelta(current, delta) → { items, flashedIds }`, a lovely pure function to TDD) instead of
+>   calling `router.refresh()`. Flagging a changed row is then trivial. But it introduces a second source
+>   of truth next to the DB — this is the "client-side entry store + optimistic UI" the Slice 7 log
+>   assigns to **Phase 2**. `DeltaItem.updatedAt` is already exposed for exactly that future.
+> - **Path B — flash context, rows stay server-rendered.** A `FlashProvider` (client state) holds the
+>   recently-changed ids; each `<li>` gets a thin client wrapper that only sets `className`. This works
+>   because `router.refresh()` **preserves client component state**, so the provider survives while the
+>   server supplies fresh content. No merge logic, no second source of truth, no Phase 2. Seam: the flash
+>   starts a few hundred ms before the refreshed content lands — invisible at 1.4 s.
+>
+> Path B is the cheaper default; take Path A only if Slice 12 pulls the list body client-side anyway.
+> **Two problems appear on either path:** (1) your *own* writes come back in your own next delta, so a
+> naive implementation flashes the row you just tapped — the write path has to tell the poller "I caused
+> id X"; (2) a CSS animation only replays on a class *transition*, so a row changing twice inside 1.4 s
+> needs the class re-applied or the element re-keyed. One thing already handled: the render-time baseline
+> cursor means the first poll never reports rows you are already looking at — no flash storm on load.
+>
+> **Cheap insurance while building Slice 12:** put `data-item-id` on each entry row. Useful for tests
+> anyway, and it keeps this door open without building anything speculative.
 
 ### Dependencies between slices
 
@@ -184,10 +219,11 @@ UI rework + design (2026-08-01):
         ├──> 4 Catalog ──> 10 Catalog management ──┐
         ├──> 2 Projects ───────────────────────────┴──> 11 App structure + navigation
         └──> 3 Lists/Entries + 7 Polling ─────────────> 12 List interaction rework ──> 15 Qty parsing
+                                                              └──> 16 Row flash (optional, last)
 
 8 PWA polish: final polish at the end, AFTER 10–15.
 
-Build order for what is left:  13 → 14 → 10 → 11 → 12 → 15 → 8
+Build order for what is left:  13 → 14 → 10 → 11 → 12 → 15 → 8   ·   16 only if real use asks for it
 ```
 
 - Slice 2 needs 1 (auth identity for membership checks).
@@ -214,6 +250,10 @@ Build order for what is left:  13 → 14 → 10 → 11 → 12 → 15 → 8
   2, 3 and 6 (open lists in the user's projects, with checked/total counts).
 - Slice 15 needs 12 (it wires the parser into the trailing row that slice builds). It is the last
   functional slice and can slip past 8 without blocking anything.
+- Slice 16 needs 12 **settled**, not merely done: its cost depends entirely on how much of the list body
+  Slice 12 moved to the client. It blocks nothing and nothing waits on it — the app is fully
+  collaborative without it. Deliberately scheduled after Slice 8 so the decision is "do we still want
+  this after using it for a while?" rather than "how much would it cost?".
 
 ---
 
@@ -252,6 +292,30 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-01 (later) — Per-row flash split out of Slice 12 into optional Slice 16
+- **Delivered:** Roadmap correction only. The per-row remote-change flash left Slice 12 and became
+  **Slice 16**, optional and scheduled *after* Slice 8. Supersedes the "swipe-to-delete and the per-row
+  remote flash → Slice 12" line in the entry below, and the "Watch out in Slice 12" note it produced.
+- **Tested:** n/a (documentation only).
+- **Why (owner decision, after walking through `ListSyncPoller` and `getListDelta`):** cross-device sync
+  is finished and verified — `changed → router.refresh()` propagates everything in ~2 s precisely
+  *because* it never asks which row changed. The flash is the only requirement in the product that needs
+  per-row identity on the client, it changes no data and unblocks nothing, and the app is fully
+  collaborative without it. Its cost is also unknowable until Slice 12 settles the list screen's
+  client/server split. So it waits until the app is installable (Slice 8) and real two-person use can
+  answer whether the signal is actually missed.
+- **Correction carried into the plan:** the earlier note claimed the flash "means the list body holds
+  client state". That overstated it — **Path B** (a flash context plus thin per-row client wrappers,
+  relying on `router.refresh()` preserving client state) delivers it with the rows still server-rendered.
+  Path A (client entry store) is Phase 2 and only justified if Slice 12 moves the body client-side anyway.
+  Both paths are now written up in the Slice 16 note, along with the two traps either one hits
+  (own-writes flashing your own row; CSS animations not replaying without a class transition).
+- **Follow-up decisions for later slices:** Slice 12 should put `data-item-id` on each entry row — cheap,
+  useful for tests, and it keeps Slice 16 open without speculative work. Slice 12's own scope is now
+  purely the interaction rework; it inherits Slice 7's sync untouched.
+- **Inherited open items:** unchanged from the entry below; Slice 13 is still next.
+- **Commit(s):** (this entry's docs commit)
 
 ### 2026-08-01 — UI design handoff landed → slices 13–15 added, build order reshuffled
 - **Delivered:** The finished high-fidelity design bundle, committed to
