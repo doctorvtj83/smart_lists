@@ -1,5 +1,7 @@
+import type { PrismaClient } from "@prisma/client";
 import { auth } from "@/auth";
 import { ApiError } from "@/lib/http/errors";
+import { isUuid } from "@/lib/validate";
 
 /**
  * Resolves the signed-in user's id for use in API route handlers.
@@ -30,6 +32,49 @@ export async function requireUserId(): Promise<string> {
   // Throw immediately if there's no user id — callers must not proceed without identity.
   // 401 means "you must authenticate first" (different from 403 which means "authenticated but forbidden").
   if (!userId) throw new ApiError(401, "Nicht angemeldet");
+
+  return userId;
+}
+
+/**
+ * Resolves the signed-in user's id and asserts they are an admin — the guard for /admin.
+ *
+ * The load-bearing detail: the admin flag is read from the DATABASE, not from the session token.
+ * Sessions are JWTs (auth.ts, strategy: "jwt") that live up to 30 days, so a token issued while the
+ * person was an admin still claims isAdmin: true after their rights were revoked. Reading the flag
+ * live means a demotion takes effect on the very next request (design §5).
+ *
+ * That extra query costs nothing app-wide, because this guard is used ONLY by the admin page —
+ * requireUserId above is unchanged, so no existing route pays for it. This is the deliberate scoping
+ * from the design's §4: the allowlist is the LOGIN gate, while content access is decided by
+ * membership, which requireMembership already reads live on every request.
+ *
+ * Pattern: layered guards, like requireOwner building on requireMembership (guard.ts) — it delegates
+ * identity resolution to requireUserId and only adds the admin check, so the 401 behavior is
+ * inherited rather than duplicated.
+ *
+ * @param db - The Prisma client (injected for testability, as everywhere in this codebase)
+ * @returns The signed-in admin's database id
+ * @throws ApiError(401) if there is no session (from requireUserId)
+ * @throws ApiError(403) if the caller is not an admin according to the database
+ */
+export async function requireAdmin(db: PrismaClient): Promise<string> {
+  const userId = await requireUserId();
+
+  // A token could in principle carry a malformed id; it must never reach the uuid column, where
+  // Prisma would raise P2023 and turn a denied request into a fake 500 (see validate.ts).
+  if (!isUuid(userId)) throw new ApiError(403, "Kein Zugriff");
+
+  // Narrow select: this guard needs one boolean, and loading the full row would pull googleSub into
+  // memory for no reason (least exposure, same rule as the read projections in the domain layer).
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { isAdmin: true },
+  });
+
+  // `!user?.isAdmin` covers both "the user was deleted" and "not an admin" with the same answer —
+  // the page must not distinguish those cases for the caller.
+  if (!user?.isAdmin) throw new ApiError(403, "Kein Zugriff");
 
   return userId;
 }
