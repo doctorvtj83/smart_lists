@@ -1,6 +1,7 @@
 import type { AllowlistEntry, PrismaClient } from "@prisma/client";
 import { normalizeEmail } from "@/lib/auth/normalize";
 import { ApiError } from "@/lib/http/errors";
+import { isUuid } from "@/lib/validate";
 // Reuse, do not redefine: 254 is the RFC 5321 practical maximum and is already the app's one
 // email-length rule (Slice 2). A second copy here would be a second thing to keep in sync.
 import { MAX_EMAIL_LENGTH } from "@/lib/projects/membership";
@@ -165,4 +166,46 @@ export async function revokeEmail(db: PrismaClient, input: RevokeEmailInput): Pr
   // Delete by the row's own id (already loaded), so the delete cannot hit a different row than the
   // one the invariants were checked against.
   await db.allowlistEntry.delete({ where: { id: entry.id } });
+}
+
+export interface SetAdminInput {
+  userId: string;
+  // The target state, not a toggle: the UI sends what it wants to be true, so a double-submit or a
+  // stale page cannot flip the flag to the opposite of what the admin saw and clicked.
+  isAdmin: boolean;
+  callerId: string;
+}
+
+// Grants or revokes global admin rights.
+//
+// Why this takes effect immediately even though sessions are JWTs: the only thing the flag controls
+// is access to /admin, and that page's guard (requireAdmin) reads isAdmin from the DATABASE, not
+// from the token (design §4/§5). Nothing else in the app reads isAdmin.
+export async function setAdmin(db: PrismaClient, input: SetAdminInput): Promise<void> {
+  // Shape check before the query: a malformed id can never match a uuid column, and Prisma would
+  // raise P2023 -> fake 500. Treat it as "not found", the Slice 2 convention.
+  if (!isUuid(input.userId)) throw new ApiError(404, "Nutzer nicht gefunden");
+
+  const user = await db.user.findUnique({ where: { id: input.userId } });
+  // Admin rights attach to a USER, so the person must have logged in at least once (JIT
+  // provisioning, Slice 1). There is nothing to flag on a merely invited email.
+  if (!user) throw new ApiError(404, "Nutzer nicht gefunden");
+
+  // Both invariants only concern REMOVING rights; granting can never lock anybody out.
+  if (!input.isAdmin) {
+    // Invariant 1: nobody demotes themselves (checked first so the caller gets the message that
+    // explains their own action, not the generic last-admin one).
+    if (user.id === input.callerId) {
+      throw new ApiError(403, "Du kannst dir die Adminrechte nicht selbst entziehen.");
+    }
+    // Invariant 2: the last admin stays. Guarded by `user.isAdmin` so demoting a non-admin (a
+    // no-op) never trips it. See locked decision 7 for the accepted read-committed race.
+    if (user.isAdmin && (await countAdmins(db)) <= 1) {
+      throw new ApiError(403, "Der letzte Admin kann nicht entfernt werden.");
+    }
+  }
+
+  // Returns void rather than the updated User: the full row carries googleSub, and no caller needs
+  // it — the page re-reads through listAccessEntries, which has the safe projection.
+  await db.user.update({ where: { id: user.id }, data: { isAdmin: input.isAdmin } });
 }

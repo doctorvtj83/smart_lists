@@ -1,8 +1,9 @@
 import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
-import { inviteEmail, listAccessEntries, revokeEmail } from "./admin";
+import { inviteEmail, listAccessEntries, revokeEmail, setAdmin } from "./admin";
 
 // One shared client for the file (the pattern every core test in Slices 1–7 uses). resetDb gives
 // every test a clean DB; the beforeEach then rebuilds the ONE fixture every admin test needs:
@@ -180,5 +181,63 @@ describe("listAccessEntries", () => {
     // makes a future `user: true` (instead of a narrow select) fail this test.
     const entries = await listAccessEntries(db);
     expect(JSON.stringify(entries)).not.toContain("g-admin");
+  });
+});
+
+describe("setAdmin", () => {
+  it("grants admin rights to an existing user", async () => {
+    const user = await db.user.create({
+      data: { googleSub: "g-new", email: "new@example.com" },
+    });
+    await setAdmin(db, { userId: user.id, isAdmin: true, callerId: adminId });
+    const updated = await db.user.findUnique({ where: { id: user.id } });
+    expect(updated?.isAdmin).toBe(true);
+  });
+
+  it("revokes admin rights while another admin remains", async () => {
+    const other = await db.user.create({
+      data: { googleSub: "g-two", email: "two@example.com", isAdmin: true },
+    });
+    await setAdmin(db, { userId: other.id, isAdmin: false, callerId: adminId });
+    const updated = await db.user.findUnique({ where: { id: other.id } });
+    expect(updated?.isAdmin).toBe(false);
+  });
+
+  it("refuses self-demotion with 403", async () => {
+    await expect(
+      setAdmin(db, { userId: adminId, isAdmin: false, callerId: adminId }),
+    ).rejects.toMatchObject({
+      status: 403,
+      message: "Du kannst dir die Adminrechte nicht selbst entziehen.",
+    });
+  });
+
+  it("refuses to demote the last remaining admin with 403", async () => {
+    // Caller is a different person, so this can only be the last-admin rule firing.
+    const other = await db.user.create({
+      data: { googleSub: "g-other", email: "other@example.com" },
+    });
+    await expect(
+      setAdmin(db, { userId: adminId, isAdmin: false, callerId: other.id }),
+    ).rejects.toMatchObject({
+      status: 403,
+      message: "Der letzte Admin kann nicht entfernt werden.",
+    });
+  });
+
+  it("rejects an unknown userId with 404", async () => {
+    // The flag lives on User, not on the allowlist email: rights only attach to somebody who has
+    // actually signed in at least once (design §3).
+    await expect(
+      setAdmin(db, { userId: randomUUID(), isAdmin: true, callerId: adminId }),
+    ).rejects.toMatchObject({ status: 404, message: "Nutzer nicht gefunden" });
+  });
+
+  it("rejects a non-UUID userId with 404 (never reaches the uuid column)", async () => {
+    // Without the isUuid guard Postgres rejects the value and Prisma raises P2023, which the error
+    // mapper would report as a fake 500 (see validate.ts).
+    await expect(
+      setAdmin(db, { userId: "not-a-uuid", isAdmin: true, callerId: adminId }),
+    ).rejects.toMatchObject({ status: 404, message: "Nutzer nicht gefunden" });
   });
 });
