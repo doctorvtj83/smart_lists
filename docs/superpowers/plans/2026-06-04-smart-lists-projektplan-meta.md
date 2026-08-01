@@ -1,6 +1,6 @@
 # Smart Lists — Meta Project Plan (MVP, Approach A)
 
-> **For agentic workers:** This is the **umbrella plan** over all 12 vertical slices of the MVP.
+> **For agentic workers:** This is the **umbrella plan** over all 15 vertical slices of the MVP.
 > It is **not** executed step-by-step — it coordinates the individual slice plans and tracks progress.
 > Each slice has (or will get) its own executable plan under `docs/superpowers/plans/`.
 >
@@ -12,6 +12,12 @@
 **Goal:** A collaborative list PWA MVP (Approach A) per the
 [MVP design](../specs/2026-06-02-smart-lists-mvp-design.md) and
 [Vision PRD](../specs/2026-06-02-smart-lists-vision-prd.md).
+
+**Visual target:** the [UI design handoff](../../design/2026-08-01-ui-handoff/README.md) (high-fidelity,
+all 11 screens) plus the [UI design brief](../../design/2026-08-01-ui-design-brief.md) it was produced
+from. The handoff's HTML files are the **binding source for all measurements and colors**; its README
+carries the token table. It is a design reference, not production code — rebuild it in the existing
+Next.js codebase, never paste its markup.
 
 **Language:** Per [CLAUDE.md](../../../CLAUDE.md), implementation docs, code, and code comments are written
 in **English** (project default as of 2026-06-04). **In-app user-facing strings stay German** (the product
@@ -47,8 +53,9 @@ All slice plans build on it.
 
 ## The slices (build order)
 
-Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 10–12 on 2026-08-01
-(see the notes under the table). Each slice is working, tested software on its own.
+Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 10–12 on 2026-08-01 with
+the design brief, slices 13–15 later the same day when the finished UI handoff landed (see the notes
+under the table). Each slice is working, tested software on its own.
 
 | # | Slice | Delivers | Plan | Status |
 |---|---|---|---|---|
@@ -61,11 +68,16 @@ Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 1
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
-| 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage) + `/projects/[id]/katalog` screen | _to be created_ | ⬜ Open |
-| 11 | **App structure + navigation** | Project drawer; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename replacing the rename form | _to be created_ | ⬜ Open |
-| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; quiet sync signal | _to be created_ | ⬜ Open |
+| 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | _to be created_ | ⬜ Open |
+| 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | _to be created_ | ⬜ Open |
+| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**; quiet sync signal (**per-row flash**) | _to be created_ | ⬜ Open |
+| 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | _to be created_ | ⬜ Open |
+| 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | _to be created_ | ⬜ Open |
+| 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
+
+**Build order for what is left: 13 → 14 → 10 → 11 → 12 → 15 → 8.**
 
 > **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
 > Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
@@ -101,17 +113,61 @@ Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 1
 >   real cost driver of this slice; the chips themselves are nearly free, since `groupByCategory` in
 >   `src/app/lists/[listId]/page.tsx` already computes exactly the chip set on every render.
 >
-> **Deferred on purpose:** parsing quantity/unit out of the typed text ("Milch 1,5 l"). Recorded here as
-> a candidate follow-up so an uncertain heuristic does not block Slice 12's entry model.
+> **Deferred at the time:** parsing quantity/unit out of the typed text ("Milch 1,5 l") — now scheduled
+> as **Slice 15**, after Slice 12 (see the handoff note below).
 >
-> **Recommended order: 10 → 11 → 12 → 8.** PWA polish (Slice 8) should come *after* the rework — polishing
-> screens that are about to be split or re-interacted is wasted work, and Slice 8 still has no plan, so
-> nothing is invalidated by moving it. Slice 10 goes first because it is backend-heavy and TDD-able
-> (catalog operations), which gives Slice 11 a finished screen to hang in the drawer. **Slice 10 is the
-> next open slice** (plan still to be created).
+> **Order within the rework: 10 → 11 → 12.** PWA polish (Slice 8) comes *after* it — polishing screens
+> that are about to be split or re-interacted is wasted work, and Slice 8 still has no plan, so nothing
+> is invalidated by moving it. Slice 10 goes first because it is backend-heavy and TDD-able (catalog
+> operations), which gives Slice 11 a finished screen to hang in the drawer.
 >
-> The visual language from the mockups is applied per screen as slices 10–12 touch them; Slice 8 remains
-> the final polish pass, not the styling slice.
+> ⚠️ The original plan to apply the visual language "per screen as slices 10–12 touch them" was
+> **superseded** by the handoff note below: slices 13 + 14 now come first.
+
+> **UI handoff note (2026-08-01):** The finished high-fidelity design landed in
+> [docs/design/2026-08-01-ui-handoff/](../../design/2026-08-01-ui-handoff/) (README with the token
+> table, two `.dc.html` reference prototypes, 12 screenshots). It covers all 11 screens of the brief —
+> including the five that slices 10–12 never touch — and it specifies three things **beyond** the brief.
+> Owner decisions, 2026-08-01:
+>
+> - **Styling gets its own foundation.** Nothing in `src/` is styled today (one `globals.css`, one
+>   `page.module.css`). Every later screen needs the same primitives — bottom sheet, chips, cards/rows,
+>   empty state, inline edit, destructive confirm, inline error — so they are built **once** in
+>   **Slice 13** instead of three times inside slices 10–12. Styling approach: **CSS Modules** (already
+>   the established pattern in the codebase and what the handoff README assumes). Icons: the design
+>   deliberately ships placeholder squares — pick one set in Slice 13 (Lucide, stroke ~1.75) and use it
+>   everywhere. Font: Figtree 400–800.
+> - **Slice 14 restyles the already-built screens** the rework never reaches: Login, Zugang verweigert,
+>   Home, Projekte, Verwaltung. It goes before 10–12 on purpose: those are the simplest screens, so they
+>   prove out the Slice 13 tokens and primitives cheaply — except Verwaltung's two-way revoke sheet,
+>   which is the first real customer of the sheet primitive and the most consequence-heavy screen in the
+>   app. It also carries the one **new capability** the design added here: the Home **"Weitermachen"
+>   card** (the user's most recently touched open list across all projects, with "5 von 8 offen" and a
+>   progress bar). That needs a new cross-project read function with its own tests — the design brief
+>   only invited it as a proposal ("feel free to propose"); the owner accepted it.
+> - **Quantity parsing becomes Slice 15**, after 12. The design specifies it in the trailing row
+>   ("1,5 l Milch", "3 Joghurt" → Menge/Einheit), while brief §8 and the note above deferred it. Slice 12
+>   therefore builds the trailing row **name-only**, exactly as the brief describes, and the parser
+>   follows as a small pure-function-plus-wiring slice. Keeps an uncertain heuristic out of the slice
+>   that already carries the server→client conversion of the list body. Rule that must survive: the
+>   **catalog only ever receives the article name**, never the parsed quantity.
+>
+> Two smaller design additions were absorbed into existing slices rather than scheduled separately:
+> **Slice 10** gains "Neuen Artikel anlegen…" (creating a catalog article directly, not only as a
+> by-product of typing an entry) plus the search field and the inline edit panel; **Slice 11** gains the
+> project-switcher dropdown in the drawer, the desktop sidebar (≥ ~900px), and the new-list bottom sheet
+> whose pre-fill preview chips can be de-selected individually with a live count
+> ("Liste mit 7 Einträgen anlegen"). That sheet is more than Slice 5's boolean `prefill` flag: it reads
+> `GET /suggestions` first and then creates the list from the surviving selection.
+>
+> **Watch out in Slice 12:** the design replaces the permanent sync indicator with a **per-row flash**
+> (`#eef2fc → transparent`, 1.4 s) on the rows that actually changed remotely. Today `ListSyncPoller`
+> only calls `router.refresh()` and knows nothing about *which* entries changed. The delta endpoint
+> already returns changed bodies plus the full id set, so the data is there — but consuming it means the
+> list body holds client state instead of being re-rendered by the server. That, not the chips, is the
+> real cost of Slice 12.
+>
+> **Slice 13 is the next open slice** (plan still to be created).
 
 ### Dependencies between slices
 
@@ -122,12 +178,16 @@ Slices 1–8 come from MVP design §9. Slice 9 was added on 2026-07-26, slices 1
   │                                       └──> 7 Polling/Sync
   └──> 9 Admin area (allowlist + admin rights)
 
-UI rework (2026-08-01):
-4 Catalog ──> 10 Catalog management ──┐
-2 Projects ───────────────────────────┴──> 11 App structure + navigation
-3 Lists/Entries + 7 Polling ─────────────> 12 List interaction rework
+UI rework + design (2026-08-01):
+13 Design foundation ──> 14 Restyle built screens
+        │                       (Login, Fehler, Home + Weitermachen, Projekte, Verwaltung)
+        ├──> 4 Catalog ──> 10 Catalog management ──┐
+        ├──> 2 Projects ───────────────────────────┴──> 11 App structure + navigation
+        └──> 3 Lists/Entries + 7 Polling ─────────────> 12 List interaction rework ──> 15 Qty parsing
 
-8 PWA polish: final polish at the end, AFTER 10–12.
+8 PWA polish: final polish at the end, AFTER 10–15.
+
+Build order for what is left:  13 → 14 → 10 → 11 → 12 → 15 → 8
 ```
 
 - Slice 2 needs 1 (auth identity for membership checks).
@@ -146,6 +206,14 @@ UI rework (2026-08-01):
   it is the slice that assembles them into one navigation shell.
 - Slice 12 needs 3 (entry operations it drives from the trailing row) and 7 (the poller it makes quiet).
   It is independent of 10 and 11 and could be built in parallel.
+- Slice 13 needs nothing but the handoff — it is pure presentation (tokens + primitives, no domain
+  logic). Slices 10, 11, 12 and 14 all consume it; it is a hard prerequisite for each of them, because
+  every one of those screens uses at least the sheet, the chips or the empty-state pattern.
+- Slice 14 needs 13, and needs 1 (Login/Fehler), 2 (Projekte) and 9 (Verwaltung) for the screens it
+  restyles — all done. Its one new capability, the Home "Weitermachen" card, additionally reads across
+  2, 3 and 6 (open lists in the user's projects, with checked/total counts).
+- Slice 15 needs 12 (it wires the parser into the trailing row that slice builds). It is the last
+  functional slice and can slip past 8 without blocking anything.
 
 ---
 
@@ -184,6 +252,45 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-01 — UI design handoff landed → slices 13–15 added, build order reshuffled
+- **Delivered:** The finished high-fidelity design bundle, committed to
+  [docs/design/2026-08-01-ui-handoff/](../../design/2026-08-01-ui-handoff/): `README.md` (token table,
+  all 11 screens, navigation, motion values, empty-state pattern, PWA notes), `Smart Lists
+  Prototyp.dc.html` (interactive — binding for behavior and motion), `Smart Lists Optionen.dc.html`
+  (static — all screens, desktop 4a/4b, empty states 5a–5g), `support.js` (the prototypes' runtime) and
+  `screenshots/` (12 PNGs). Meta plan updated: slices **13 (design foundation)**, **14 (restyle the
+  built screens)** and **15 (quantity parsing)** added; scope of 10–12 extended with the design's
+  additions; dependency graph and build order rewritten.
+- **Tested:** n/a (documentation + design assets only; no code touched).
+- **Decisions taken (owner, 2026-08-01):**
+  - **Build order for the remainder is 13 → 14 → 10 → 11 → 12 → 15 → 8.** Styling stops being a
+    per-slice afterthought: the primitives are built once in Slice 13 and proven on the simple existing
+    screens in Slice 14 before the structural slices consume them.
+  - **CSS Modules** stays the styling approach; **Figtree** the font; **one icon set** chosen in Slice
+    13 (the design ships deliberate placeholder squares) and used everywhere after that.
+  - **Home gets the "Weitermachen" card** (most recently touched open list across all the user's
+    projects + "5 von 8 offen" + progress bar) — a new cross-project read function, built with tests in
+    Slice 14.
+  - **Quantity parsing is scheduled, not cancelled**, as Slice 15 after 12. Slice 12 builds the trailing
+    row name-only per brief §8; the parser lands separately so an uncertain heuristic never sits inside
+    the slice that converts the list body to a client component.
+  - Absorbed without new slices: catalog article **creation** + search + inline edit panel → Slice 10;
+    project switcher, desktop sidebar, and the **de-selectable pre-fill preview sheet** → Slice 11;
+    swipe-to-delete and the per-row remote flash → Slice 12.
+- **Follow-up decisions for later slices:** The handoff's inline styles are the binding source for
+  measurements and colors — the README table is a summary, not the authority. The HTML is a reference
+  prototype: rebuild it in React, never paste it. The per-row flash in Slice 12 requires the poller to
+  know *which* entries changed (`ListSyncPoller` only calls `router.refresh()` today) — the delta
+  endpoint already carries changed bodies and the full id set, but consuming it moves the list body to
+  client state. The pre-fill sheet needs `GET /suggestions` *before* list creation, which Slice 5's
+  boolean `prefill` flag does not cover.
+- **Inherited open items:** Plans for slices 13, 14, 10, 11, 12, 15 and 8 all still to be created —
+  **Slice 13 is next**. Slice 7's minor non-blocking review notes (empty `?since=` → cursor 0;
+  overlapping polls; cancelled-before-JSON race) remain open, as does the hydration overlay from
+  locale-sensitive date formatting on the project/list pages — the latter is worth fixing while Slice 14
+  and 12 touch those screens anyway.
+- **Commit(s):** (this entry's docs commit)
 
 ### 2026-08-01 — UI design brief + structure review → slices 10–12 added
 - **Delivered:** [docs/design/2026-08-01-ui-design-brief.md](../../design/2026-08-01-ui-design-brief.md) — the input document for generating UI mockups. Reviewing it with the owner turned into a structure decision, so the brief now describes the app *after* a rework and marks every screen `[gebaut]` or `[neu]`. Screen count 7 → 11.

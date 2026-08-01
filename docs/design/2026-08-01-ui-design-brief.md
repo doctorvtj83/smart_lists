@@ -14,6 +14,12 @@ under `src/app/`.
 > category filter chips. Every screen below is marked **[gebaut]** (exists today, mockups restyle it)
 > or **[neu]** (does not exist yet; mockups define it and the roadmap builds it). The functionality is
 > the same either way — nothing here is a new feature except the editable catalog.
+>
+> **Status (2026-08-01, later the same day):** this brief has been answered. The resulting design lives
+> in [2026-08-01-ui-handoff/](2026-08-01-ui-handoff/README.md) and is the binding visual reference from
+> here on. The design went beyond the brief in three places — the Home "Weitermachen" card (§6.3 invited
+> it), catalog article creation, and quantity parsing (§8 deferred it, now scheduled as Slice 15). All
+> three were accepted; see the meta plan's "UI handoff note".
 
 ---
 
@@ -341,6 +347,8 @@ for them.
 - **Parsing quantity/unit out of the typed entry text** ("2 Dosen Tomaten"). Explicitly deferred to a
   later roadmap step so an uncertain heuristic does not block the inline entry model. Design the
   trailing row as name-only.
+  *(Outcome: the delivered design specifies it anyway. Resolved 2026-08-01 by keeping Slice 12's row
+  name-only as written here and scheduling the parser as its own **Slice 15** afterwards.)*
 - Categories as a managed entity (renaming a category everywhere, category colors/icons, a category
   admin screen). A category is free text on an entry; the chips are derived from that.
 - Deleting users; user/project dashboards for admins beyond the allowlist table.

@@ -32,6 +32,8 @@ Read these before doing design or implementation work — they are the source of
 
 - [docs/superpowers/specs/2026-06-02-smart-lists-vision-prd.md](docs/superpowers/specs/2026-06-02-smart-lists-vision-prd.md) — the full product vision (the target picture, independent of MVP cut).
 - [docs/superpowers/specs/2026-06-02-smart-lists-mvp-design.md](docs/superpowers/specs/2026-06-02-smart-lists-mvp-design.md) — the "Approach A" lean MVP: domain model, key flows, permission matrix, test seams. This is the basis for the implementation plan.
+- [docs/design/2026-08-01-ui-handoff/README.md](docs/design/2026-08-01-ui-handoff/README.md) — the binding **UI design** (tokens, all 11 screens, motion, empty states). The `.dc.html` files next to it are reference prototypes: their inline styles are the authority for measurements and colors. Rebuild them in React — never paste the markup.
+- [docs/design/2026-08-01-ui-design-brief.md](docs/design/2026-08-01-ui-design-brief.md) — the brief that design answers; useful for the *why* behind a screen.
 - [docs/drafts/](docs/drafts/) — original brainstorming notes (superseded; historical context only).
 
 ## What the product is

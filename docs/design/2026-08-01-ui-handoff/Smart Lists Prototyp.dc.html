@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>body{margin:0;background:#e6e7e3;font-family:'Figtree',system-ui,sans-serif}a{color:#3e63c4}a:hover{color:#2f4a94}input{font-family:'Figtree',system-ui,sans-serif;outline:none}@keyframes slflash{0%{background:#eef2fc}100%{background:transparent}}@keyframes sldrawer{from{transform:translateX(-100%)}}@keyframes slfade{from{opacity:0}}@keyframes slsheet{from{transform:translateY(46px);opacity:0}}@keyframes slpop{0%{transform:scale(.55)}60%{transform:scale(1.18)}100%{transform:scale(1)}}@keyframes slbanner{from{transform:translateY(-8px);opacity:0}}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:26px 12px;box-sizing:border-box">
+<div style="width:390px;height:800px;background:#fcfcfb;border-radius:26px;box-shadow:0 20px 60px rgba(35,35,34,.2);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<div style="flex:none;display:flex;align-items:center;padding:12px 24px 4px">
+  <span style="font-size:13px;font-weight:700;color:#232322">9:41</span>
+  <span style="flex:1"></span>
+  <span style="display:flex;align-items:flex-end;gap:2px;margin-right:7px"><span style="width:3px;height:4px;border-radius:1px;background:#232322"></span><span style="width:3px;height:6px;border-radius:1px;background:#232322"></span><span style="width:3px;height:8px;border-radius:1px;background:#232322"></span><span style="width:3px;height:10px;border-radius:1px;background:#c6c6bf"></span></span>
+  <span style="width:23px;height:11px;border-radius:3.5px;border:1.5px solid #a3a39b;padding:1.5px;box-sizing:border-box;display:flex"><span style="width:70%;height:100%;border-radius:1.5px;background:#232322"></span></span>
+</div>
+<div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column">
+
+<!-- ============ LOGIN ============ -->
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+  <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;box-sizing:border-box">
+    <div style="width:64px;height:64px;border-radius:18px;background:#3e63c4;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(62,99,196,.25)">
+      <span style="color:#fff;font-size:30px;font-weight:800">✓</span>
+    </div>
+    <div style="font-size:24px;font-weight:800;color:#232322;margin-top:18px;letter-spacing:-.01em">Smart Lists</div>
+    <div style="font-size:13px;font-weight:600;color:#a3a39b;margin-top:2px;letter-spacing:.06em">ANMELDUNG</div>
+    <div style="font-size:14px;color:#5a5a55;text-align:center;line-height:1.5;margin-top:22px">Der Zugang ist geschlossen. Melde dich mit einem freigeschalteten Google-Konto an.</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:26px;background:#fff;border:1.5px solid #dcdcd7;border-radius:12px;padding:13px 0;cursor:pointer" onClick="{{ doLogin }}">
+      <span style="width:20px;height:20px;border-radius:50%;background:conic-gradient(#4285f4 0 25%,#34a853 25% 50%,#fbbc05 50% 75%,#ea4335 75% 100%)"></span>
+      <span style="font-size:15px;font-weight:700;color:#232322">Mit Google anmelden</span>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ VERWALTUNG ============ -->
+<sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #ececea;flex:none">
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer" onClick="{{ openDrawer }}">☰</span>
+      <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Verwaltung</span>
+      <span style="font-size:10.5px;font-weight:700;color:#2f4a94;background:#eef2fc;border-radius:99px;padding:3px 8px">ADMIN</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b">ZUGANG</div>
+      <div style="background:#fff;border:1px solid #ececea;border-radius:12px;overflow:hidden">
+        <sc-for list="{{ allowRows }}" as="u" hint-placeholder-count="3">
+          <div style="padding:12px 14px;border-bottom:1px solid #f1f1ee">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;font-size:14px;font-weight:600;color:#232322;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ u.email }}</span>
+              <sc-if value="{{ u.grantable }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;color:#3e63c4;cursor:pointer;white-space:nowrap" onClick="{{ u.grant }}">{{ u.grantLabel }}</span></sc-if>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+              <span style="flex:1;font-size:12px;color:#a3a39b;min-width:0">{{ u.status }} · {{ u.adminLabel }}</span>
+              <sc-if value="{{ u.revocable }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;color:#bf4a41;cursor:pointer;white-space:nowrap" onClick="{{ u.revoke }}">Zugang entziehen</span></sc-if>
+            </div>
+            <sc-if value="{{ u.neverNote }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#a3a39b;margin-top:2px">Admin erst nach dem ersten Login möglich</div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:4px">E-MAIL EINLADEN</div>
+      <div style="display:flex;gap:8px">
+        <input value="{{ adminInvite }}" onChange="{{ setAdminInvite }}" onKeyDown="{{ adminInviteKey }}" placeholder="E-Mail-Adresse" style="flex:1;font-size:14px;color:#232322;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff;min-width:0">
+        <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;cursor:pointer" onClick="{{ doAdminInvite }}">Einladen</span>
+      </div>
+      <div style="font-size:12px;color:#a3a39b;line-height:1.45">Es wird keine Einladungs-E-Mail versendet — sag der Person selbst Bescheid.</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ LISTE ============ -->
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #ececea;flex:none">
+      <span style="font-size:15px;color:#3e63c4;font-weight:700;cursor:pointer" onClick="{{ goProject }}">←</span>
+      <span style="flex:1;font-size:18px;font-weight:700;color:#232322;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ listName }}</span>
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer;padding:0 4px" onClick="{{ toggleMenu }}">⋮</span>
+    </div>
+    <sc-if value="{{ listActive }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:18px;padding:11px 16px 0;border-bottom:1px solid #ececea;overflow-x:auto;flex:none">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+          <span style="{{ c.style }}" onClick="{{ c.pick }}">{{ c.name }}</span>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ allChecked }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:12px 16px 0;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#eef2fc;border-radius:10px;flex:none;animation:slbanner .28s ease-out">
+        <span style="font-size:15px">✓</span>
+        <span style="flex:1;font-size:13.5px;color:#2f4a94;line-height:1.35">Alle Einträge sind abgehakt.</span>
+        <span style="font-size:13px;font-weight:700;color:#3e63c4;white-space:nowrap;cursor:pointer" onClick="{{ completeList }}">Abschließen</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ listCompleted }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:12px 16px 0;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#eef1ea;border-radius:10px;flex:none;animation:slbanner .28s ease-out">
+        <span style="width:20px;height:20px;border-radius:50%;background:#6d8a5e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">✓</span>
+        <span style="flex:1;font-size:13px;color:#4c5c43">Abgeschlossen am {{ completedAt }}</span>
+        <span style="font-size:13px;font-weight:700;color:#3e63c4;white-space:nowrap;cursor:pointer" onClick="{{ reopenList }}">Wieder öffnen</span>
+      </div>
+    </sc-if>
+    <div style="flex:1;overflow-y:auto;padding:6px 16px 24px">
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+        <div>
+          <sc-if value="{{ g.title }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:12px 0 4px;text-transform:uppercase">{{ g.title }}</div>
+          </sc-if>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+            <div style="{{ it.wrapStyle }}">
+              <div style="{{ it.delStyle }}">Löschen</div>
+              <div style="{{ it.rowStyle }}" onClick="{{ it.open }}" onPointerDown="{{ it.pDown }}" onPointerMove="{{ it.pMove }}" onPointerUp="{{ it.pUp }}" onPointerLeave="{{ it.pUp }}">
+                <span style="{{ it.checkStyle }}" onClick="{{ it.toggle }}">{{ it.checkMark }}</span>
+                <span style="{{ it.nameStyle }}">{{ it.name }}</span>
+                <span style="font-size:13px;color:#a3a39b;flex:none">{{ it.qtyLabel }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <sc-if value="{{ chipEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:60px 28px 20px">
+          <div style="font-size:14px;font-weight:700;color:#5a5a55">Nichts mehr in „{{ chipName }}"</div>
+          <div style="font-size:13px;color:#a3a39b;line-height:1.5;margin-top:4px">Du bleibst hier — oder zurück zu „Alle".</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ listActive }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px">
+            <span style="width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:#3e63c4;font-size:19px;font-weight:600;flex:none">＋</span>
+            <input value="{{ addText }}" onChange="{{ setAddText }}" onKeyDown="{{ addKey }}" placeholder="{{ addPlaceholder }}" style="flex:1;font-size:15.5px;color:#232322;border:none;background:transparent;padding:4px 0">
+          </div>
+          <sc-if value="{{ hasSuggestions }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:30px;right:0;bottom:100%;margin-bottom:4px;background:#fff;border:1px solid #ececea;border-radius:10px;box-shadow:0 8px 24px rgba(35,35,34,.12);overflow:hidden;z-index:5">
+              <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="2">
+                <div style="font-size:14px;color:#232322;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f6f6f4" onClick="{{ s.pick }}">{{ s.label }}<span style="font-size:11.5px;color:#a3a39b"> {{ s.sub }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ PROJEKT ============ -->
+<sc-if value="{{ isProject }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;flex:none">
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer" onClick="{{ openDrawer }}">☰</span>
+      <span style="font-size:18px;font-weight:700;color:#232322;border-bottom:1.5px dashed #c6c6bf;padding-bottom:1px">{{ projName }}</span>
+      <span style="flex:1"></span>
+      <span style="font-size:11.5px;color:#a3a39b">Deine Rolle: {{ role }}</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:8px 16px 24px;display:flex;flex-direction:column;gap:10px">
+      <div style="background:#3e63c4;border-radius:14px;padding:15px 16px;color:#fff;box-shadow:0 4px 14px rgba(62,99,196,.22);cursor:pointer" onClick="{{ openNewList }}">
+        <div style="font-size:15px;font-weight:800">Vorbefüllte Liste anlegen</div>
+        <div style="font-size:12.5px;opacity:.9;margin-top:2px">Startet mit Favoriten + häufigen Artikeln</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input value="{{ emptyName }}" onChange="{{ setEmptyName }}" onKeyDown="{{ emptyKey }}" placeholder="Listenname…" style="flex:1;font-size:14px;color:#232322;border:1.5px solid #ececea;border-radius:10px;padding:10px 14px;background:#fff;min-width:0">
+        <span style="font-size:13.5px;font-weight:700;color:#5a5a55;border:1.5px solid #dcdcd7;border-radius:10px;padding:10px 14px;background:#fff;white-space:nowrap;cursor:pointer" onClick="{{ createEmpty }}">Leere Liste</span>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:6px">AKTIVE LISTEN</div>
+      <sc-for list="{{ activeLists }}" as="l" hint-placeholder-count="2">
+        <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer" onClick="{{ l.open }}">
+          <span style="flex:1;font-size:15px;font-weight:600;color:#232322">{{ l.name }}</span><span style="font-size:12.5px;color:#a3a39b">{{ l.meta }}</span><span style="color:#c6c6bf">›</span>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noActiveLists }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;color:#a3a39b;text-align:center;padding:16px 20px;line-height:1.5">Noch keine Liste — leg oben die erste an.</div>
+      </sc-if>
+      <sc-if value="{{ isOwner }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;font-weight:600;color:#bf4a41;padding:14px 2px 0;cursor:pointer">Projekt löschen…</div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ ARCHIV ============ -->
+<sc-if value="{{ isArchiv }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #ececea;flex:none">
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer" onClick="{{ openDrawer }}">☰</span>
+      <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Archiv</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:8px 16px 24px">
+      <sc-for list="{{ archivedLists }}" as="l" hint-placeholder-count="2">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid #f1f1ee;cursor:pointer" onClick="{{ l.open }}">
+          <span style="width:20px;height:20px;border-radius:50%;background:#e6e9e2;color:#8a8a83;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">✓</span>
+          <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#5a5a55">{{ l.name }}</span><span style="font-size:12px;color:#a3a39b">Abgeschlossen am {{ l.date }}</span></div>
+          <span style="color:#c6c6bf">›</span>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noArchived }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:80px 28px 0">
+          <span style="width:52px;height:52px;border-radius:50%;background:#f1f1ee;color:#a3a39b;display:inline-flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">✓</span>
+          <div style="font-size:16px;font-weight:700;color:#232322;margin-top:14px">Noch nichts abgeschlossen</div>
+          <div style="font-size:13.5px;color:#77776f;line-height:1.5;margin-top:5px">Abgeschlossene Listen landen hier — und machen die Vorschläge schlauer.</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasArchived }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:12px;color:#a3a39b;text-align:center;padding:14px 0 0">Abgeschlossene Listen speisen die Vorschläge für neue Listen.</div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ FAVORITEN ============ -->
+<sc-if value="{{ isFavoriten }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #ececea;flex:none">
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer" onClick="{{ openDrawer }}">☰</span>
+      <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Favoriten</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:13px;color:#5a5a55;line-height:1.5;background:#eef2fc;border-radius:10px;padding:10px 13px">★ Favoriten landen automatisch in <b>jeder</b> vorbefüllten Liste dieses Projekts.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px">
+        <sc-for list="{{ favChips }}" as="f" hint-placeholder-count="4">
+          <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">{{ f.name }}<span style="color:#c6c6bf;font-size:12px;cursor:pointer" onClick="{{ f.remove }}">✕</span></span>
+        </sc-for>
+      </div>
+      <div style="position:relative">
+        <div style="display:flex;gap:8px">
+          <input value="{{ favAdd }}" onChange="{{ setFavAdd }}" onKeyDown="{{ favKey }}" placeholder="Artikelname" style="flex:1;font-size:14px;color:#232322;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff;min-width:0">
+          <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;white-space:nowrap;cursor:pointer" onClick="{{ addFavorite }}">Als Favorit</span>
+        </div>
+        <sc-if value="{{ hasFavSuggestions }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;top:100%;margin-top:5px;background:#fff;border:1px solid #ececea;border-radius:10px;box-shadow:0 8px 24px rgba(35,35,34,.12);overflow:hidden;z-index:5">
+            <sc-for list="{{ favSuggestions }}" as="s" hint-placeholder-count="2">
+              <div style="font-size:14px;color:#232322;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f6f6f4" onClick="{{ s.pick }}">{{ s.label }}<span style="font-size:11.5px;color:#a3a39b"> {{ s.sub }}</span></div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ KATALOG ============ -->
+<sc-if value="{{ isKatalog }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #ececea;flex:none">
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer" onClick="{{ openDrawer }}">☰</span>
+      <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Katalog</span>
+      <span style="font-size:12px;color:#a3a39b">{{ artCount }} Artikel</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:10px 16px 24px">
+      <div style="display:flex;align-items:center;gap:9px;background:#f1f1ee;border-radius:10px;padding:2px 13px">
+        <span style="font-size:13px;color:#a3a39b">⌕</span>
+        <input value="{{ search }}" onChange="{{ setSearch }}" placeholder="Artikel suchen…" style="flex:1;font-size:14px;color:#232322;border:none;background:transparent;padding:8px 0">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input value="{{ katAdd }}" onChange="{{ setKatAdd }}" onKeyDown="{{ katKey }}" placeholder="Neuen Artikel anlegen…" style="flex:1;font-size:14px;color:#232322;border:1.5px solid #ececea;border-radius:10px;padding:9px 13px;background:#fff;min-width:0">
+        <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:9px 14px;white-space:nowrap;cursor:pointer;align-self:stretch;display:flex;align-items:center" onClick="{{ addArticle }}">＋</span>
+      </div>
+      <sc-for list="{{ arts }}" as="a" hint-placeholder-count="5">
+        <div>
+          <sc-if value="{{ a.editing }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border:1px solid #dfe4f2;border-radius:12px;padding:12px 14px;margin:8px 0;box-shadow:0 2px 8px rgba(62,99,196,.08)">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">NAME</div>
+              <input value="{{ draftName }}" onChange="{{ setDraftName }}" style="{{ draftNameStyle }}">
+              <sc-if value="{{ artError }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#bf4a41;margin-top:4px">{{ artError }}</div></sc-if>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">STANDARD-KATEGORIE</div><input value="{{ draftCat }}" onChange="{{ setDraftCat }}" style="width:100%;box-sizing:border-box;font-size:13.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:8px 11px;margin-top:4px"></div>
+                <div style="width:90px"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">EINHEIT</div><input value="{{ draftUnit }}" onChange="{{ setDraftUnit }}" style="width:100%;box-sizing:border-box;font-size:13.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:8px 11px;margin-top:4px"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+                <span style="font-size:13px;font-weight:700;color:#fff;background:#3e63c4;border-radius:9px;padding:8px 14px;cursor:pointer" onClick="{{ saveArt }}">Speichern</span>
+                <span style="font-size:13px;font-weight:600;color:#5a5a55;cursor:pointer" onClick="{{ cancelArt }}">Abbrechen</span>
+                <span style="flex:1"></span>
+                <sc-if value="{{ a.deletable }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:600;color:#bf4a41;cursor:pointer" onClick="{{ a.remove }}">Löschen</span></sc-if>
+              </div>
+              <sc-if value="{{ a.usedNote }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#a3a39b;margin-top:10px">Löschen nicht möglich — {{ a.usedNote }}</div></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ a.display }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #f1f1ee;cursor:pointer" onClick="{{ a.edit }}">
+              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">{{ a.name }}</span><span style="font-size:12px;color:#a3a39b">{{ a.sub }}</span></div>
+              <span style="color:#c6c6bf">›</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ MITGLIEDER ============ -->
+<sc-if value="{{ isMitglieder }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #ececea;flex:none">
+      <span style="font-size:19px;color:#4a4a48;cursor:pointer" onClick="{{ openDrawer }}">☰</span>
+      <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Mitglieder</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px">
+      <div style="background:#fff;border:1px solid #ececea;border-radius:12px;overflow:hidden">
+        <sc-for list="{{ memberRows }}" as="m" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid #f1f1ee">
+            <span style="{{ m.avatarStyle }}">{{ m.initial }}</span>
+            <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">{{ m.label }}</span><span style="font-size:12px;color:#a3a39b">{{ m.email }}</span></div>
+            <sc-if value="{{ m.isOwnerRow }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;font-weight:700;color:#2f4a94;background:#eef2fc;border-radius:99px;padding:3px 8px">OWNER</span></sc-if>
+            <sc-if value="{{ m.removable }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:600;color:#bf4a41;cursor:pointer" onClick="{{ m.remove }}">Entfernen</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ isOwner }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:4px">MITGLIED EINLADEN</div>
+          <div style="display:flex;gap:8px">
+            <input value="{{ invite }}" onChange="{{ setInvite }}" onKeyDown="{{ inviteKey }}" placeholder="E-Mail-Adresse" style="flex:1;font-size:14px;color:#232322;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff;min-width:0">
+            <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;cursor:pointer" onClick="{{ doInvite }}">Einladen</span>
+          </div>
+          <div style="font-size:12px;color:#a3a39b;line-height:1.45">Nur freigeschaltete E-Mail-Adressen können eingeladen werden.</div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ DRAWER ============ -->
+<sc-if value="{{ drawer }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:20">
+    <div style="position:absolute;inset:0;background:rgba(35,35,34,.35);animation:slfade .2s ease-out" onClick="{{ closeDrawer }}"></div>
+    <div style="position:absolute;top:0;left:0;bottom:0;width:276px;background:#f3f4f2;display:flex;flex-direction:column;padding:14px 12px;box-sizing:border-box;box-shadow:4px 0 24px rgba(35,35,34,.18);animation:sldrawer .24s ease-out">
+      <div style="position:relative">
+        <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 1px 2px rgba(35,35,34,.08);cursor:pointer" onClick="{{ toggleProjPicker }}">
+          <span style="{{ projAvatarStyle }}">{{ projInitial }}</span>
+          <span style="flex:1;font-size:15px;font-weight:700;color:#232322">{{ projName }}</span>
+          <span style="font-size:11px;color:#a3a39b">▾</span>
+        </div>
+        <sc-if value="{{ projPicker }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid #ececea;border-radius:12px;box-shadow:0 10px 30px rgba(35,35,34,.16);overflow:hidden;z-index:5">
+            <sc-for list="{{ projRows }}" as="p" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid #f6f6f4" onClick="{{ p.pick }}">
+                <span style="{{ p.avatarStyle }}">{{ p.initial }}</span>
+                <span style="flex:1;font-size:14px;font-weight:600;color:#232322">{{ p.name }}</span>
+                <span style="font-size:13px;font-weight:700;color:#3e63c4">{{ p.current }}</span>
+              </div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer" onClick="{{ notInProto }}">
+              <span style="flex:none;width:24px;height:24px;border-radius:7px;border:1.5px dashed #c6c6bf;color:#a3a39b;display:flex;align-items:center;justify-content:center;font-size:14px;box-sizing:border-box">＋</span>
+              <span style="flex:1;font-size:14px;font-weight:600;color:#5a5a55">Neues Projekt…</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+        <sc-for list="{{ navMain }}" as="n" hint-placeholder-count="2">
+          <div style="{{ n.style }}" onClick="{{ n.go }}"><span style="{{ n.iconStyle }}"></span><span style="{{ n.labelStyle }}">{{ n.label }}</span><span style="font-size:12px;font-weight:700;color:#a3a39b">{{ n.count }}</span></div>
+        </sc-for>
+      </div>
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:16px 12px 6px">PROJEKT</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <sc-for list="{{ navProject }}" as="n" hint-placeholder-count="3">
+          <div style="{{ n.style }}" onClick="{{ n.go }}"><span style="{{ n.iconStyle }}"></span><span style="{{ n.labelStyle }}">{{ n.label }}</span><span style="font-size:12px;font-weight:700;color:#a3a39b">{{ n.count }}</span></div>
+        </sc-for>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;cursor:pointer" onClick="{{ goAdmin }}"><span style="width:17px;height:17px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14.5px;color:#5a5a55">Verwaltung</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;cursor:pointer" onClick="{{ logout }}"><span style="width:17px;height:17px;border-radius:5px;background:#dddfd9"></span><span style="flex:1;font-size:14.5px;color:#a3a39b">Abmelden</span></div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ ⋮ MENÜ ============ -->
+<sc-if value="{{ menu }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:20" onClick="{{ closeMenu }}">
+    <div style="position:absolute;top:48px;right:14px;background:#fff;border:1px solid #ececea;border-radius:12px;box-shadow:0 10px 30px rgba(35,35,34,.16);overflow:hidden;min-width:190px;animation:slfade .15s ease-out">
+      <sc-if value="{{ listActive }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:14px;color:#232322;padding:12px 16px;cursor:pointer;border-bottom:1px solid #f1f1ee" onClick="{{ completeList }}">Liste abschließen</div>
+      </sc-if>
+      <div style="font-size:14px;color:#bf4a41;padding:12px 16px;cursor:pointer" onClick="{{ deleteList }}">Liste löschen</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ EINTRAG-SHEET ============ -->
+<sc-if value="{{ entrySheet }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:30">
+    <div style="position:absolute;inset:0;background:rgba(35,35,34,.3);animation:slfade .2s ease-out" onClick="{{ closeSheet }}"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(35,35,34,.18);padding:14px 18px 30px;animation:slsheet .28s cubic-bezier(.2,.9,.3,1)">
+      <div style="width:36px;height:4px;border-radius:2px;background:#e3e3df;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#232322">{{ sheetTitle }}</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <div style="width:100px"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">MENGE</div><input value="{{ draftQty }}" onChange="{{ setDraftQty }}" placeholder="1,5" style="width:100%;box-sizing:border-box;font-size:14.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:9px 11px;margin-top:4px"></div>
+        <div style="width:90px"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">EINHEIT</div><input value="{{ draftUnit }}" onChange="{{ setDraftUnit }}" placeholder="l" style="width:100%;box-sizing:border-box;font-size:14.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:9px 11px;margin-top:4px"></div>
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">KATEGORIE</div><input value="{{ draftCat }}" onChange="{{ setDraftCat }}" placeholder="Ohne Kategorie" style="width:100%;box-sizing:border-box;font-size:14.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:9px 11px;margin-top:4px"></div>
+      </div>
+      <sc-if value="{{ hasCatChips }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+          <sc-for list="{{ catChips }}" as="cc" hint-placeholder-count="3">
+            <span style="{{ cc.style }}" onClick="{{ cc.pick }}">{{ cc.name }}</span>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="font-size:11.5px;color:#a3a39b;margin-top:9px;line-height:1.45">Kategorie und Einheit werden als neuer Standard im Katalog gemerkt.</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+        <span style="flex:1;font-size:14.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:11px;padding:12px 0;text-align:center;cursor:pointer" onClick="{{ saveSheet }}">Fertig</span>
+        <span style="font-size:13px;font-weight:600;color:#bf4a41;cursor:pointer;padding:0 6px" onClick="{{ deleteEntry }}">Eintrag löschen</span>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ NEUE-LISTE-SHEET ============ -->
+<sc-if value="{{ newListSheet }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:30">
+    <div style="position:absolute;inset:0;background:rgba(35,35,34,.3);animation:slfade .2s ease-out" onClick="{{ closeSheet }}"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(35,35,34,.18);padding:14px 18px 30px;animation:slsheet .28s cubic-bezier(.2,.9,.3,1)">
+      <div style="width:36px;height:4px;border-radius:2px;background:#e3e3df;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#232322">Neue Liste</div>
+      <input value="{{ newListName }}" onChange="{{ setNewListName }}" placeholder="Listenname" style="width:100%;box-sizing:border-box;margin-top:12px;font-size:15px;color:#232322;border:1.5px solid #3e63c4;border-radius:10px;padding:11px 14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
+        <span style="font-size:13px;font-weight:700;color:#232322">Vorbefüllen</span>
+        <span style="flex:1;font-size:11.5px;color:#a3a39b">Favoriten + häufige Artikel</span>
+        <span style="{{ toggleStyle }}" onClick="{{ togglePrefill }}"><span style="{{ knobStyle }}"></span></span>
+      </div>
+      <sc-if value="{{ prefillOn }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px">
+          <sc-for list="{{ previewChips }}" as="p" hint-placeholder-count="5">
+            <span style="{{ p.style }}" onClick="{{ p.pick }}">{{ p.label }}</span>
+          </sc-for>
+        </div>
+        <div style="font-size:11px;color:#a3a39b;margin-top:9px">★ Favoriten · übrige aus den letzten 4 abgeschlossenen Listen</div>
+      </sc-if>
+      <div style="margin-top:16px;background:#3e63c4;color:#fff;font-size:15px;font-weight:700;text-align:center;padding:13px 0;border-radius:12px;cursor:pointer" onClick="{{ createList }}">{{ createLabel }}</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ ZUGANG-ENTZIEHEN-SHEET ============ -->
+<sc-if value="{{ revokeSheet }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:30">
+    <div style="position:absolute;inset:0;background:rgba(35,35,34,.3);animation:slfade .2s ease-out" onClick="{{ closeRevoke }}"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(35,35,34,.18);padding:14px 18px 30px;animation:slsheet .28s cubic-bezier(.2,.9,.3,1)">
+      <div style="width:36px;height:4px;border-radius:2px;background:#e3e3df;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#232322">Zugang entziehen: {{ revokeEmail }}</div>
+      <sc-if value="{{ revokeHasProjects }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;color:#5a5a55;margin-top:6px;line-height:1.5">Mitglied in diesen Projekten:</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:9px">
+          <sc-for list="{{ revokeProjects }}" as="p" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:9px;background:#f7f7f5;border-radius:9px;padding:9px 12px"><span style="flex:1;font-size:13.5px;font-weight:600;color:#232322">{{ p.name }}</span><span style="{{ p.roleStyle }}">{{ p.role }}</span></div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="margin-top:16px;border:1.5px solid #dcdcd7;border-radius:12px;padding:12px 14px;cursor:pointer" onClick="{{ revokeOnly }}">
+        <div style="font-size:14px;font-weight:700;color:#232322">Nur Zugang entziehen</div>
+        <div style="font-size:12px;color:#5a5a55;margin-top:2px;line-height:1.45">Keine neuen Logins. Mitgliedschaften bleiben — erneutes Einladen stellt alles wieder her.</div>
+      </div>
+      <sc-if value="{{ revokeLoggedIn }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:8px;border:1.5px solid #bf4a41;background:#fdf3f2;border-radius:12px;padding:12px 14px;cursor:pointer" onClick="{{ revokeAll }}">
+          <div style="font-size:14px;font-weight:700;color:#bf4a41">Zugang entziehen und aus allen Projekten entfernen</div>
+          <div style="font-size:12px;color:#8a4038;margin-top:2px;line-height:1.45">Sofort und endgültig — erneutes Einladen bringt die Mitgliedschaften <b>nicht</b> zurück.</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ revokeOwnerNote }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:11.5px;color:#a3a39b;margin-top:10px;line-height:1.45">{{ revokeOwnerNote }}</div>
+      </sc-if>
+      <div style="font-size:13.5px;font-weight:600;color:#5a5a55;text-align:center;margin-top:12px;cursor:pointer" onClick="{{ closeRevoke }}">Abbrechen</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ TOAST ============ -->
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:#232322;color:#fff;font-size:13px;padding:9px 16px;border-radius:99px;z-index:40;white-space:nowrap;animation:slfade .2s ease-out">{{ toast }}</div>
+</sc-if>
+
+</div>
+<div style="flex:none;height:22px;position:relative;pointer-events:none"><span style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:#232322;opacity:.85"></span></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Owner&quot;,&quot;Mitglied&quot;],&quot;default&quot;:&quot;Mitglied&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sicht&quot;},&quot;simRemote&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Verhalten&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'login', listId: 'l1', chip: 'Alle', drawer: false, menu: false,
+    sheet: null, draft: {}, addText: '', emptyName: '', newListName: '', prefill: true,
+    favAdd: '', search: '', editArt: null, artError: null, invite: '', flashId: null, toast: null,
+    adminInvite: '', revoke: null, projPicker: false, swipe: null,
+    projectId: 'p1',
+    projects: [
+      {id:'p1',name:'Haushalt',initial:'H',color:'#3e63c4'},
+      {id:'p2',name:'Camping',initial:'C',color:'#7a8fc9'}
+    ],
+    allow: [
+      {id:'u1',email:'anna@web.de',name:'Anna',admin:true,me:true,loggedIn:true,projects:[]},
+      {id:'u2',email:'ben@gmail.com',name:'Ben',admin:false,me:false,loggedIn:true,projects:[{name:'Haushalt',role:'Mitglied'},{name:'Camping',role:'Owner'}]},
+      {id:'u3',email:'dora@gmx.de',name:null,admin:false,me:false,loggedIn:false,projects:[]}
+    ],
+    catalog: [
+      {id:'a1',name:'Äpfel',cat:'Obst & Gemüse',unit:'kg',fav:false},
+      {id:'a2',name:'Bananen',cat:'Obst & Gemüse',unit:'',fav:false},
+      {id:'a3',name:'Milch',cat:'Molkerei',unit:'l',fav:true},
+      {id:'a4',name:'Butter',cat:'Molkerei',unit:'',fav:true},
+      {id:'a5',name:'Joghurt',cat:'Molkerei',unit:'g',fav:false},
+      {id:'a6',name:'Brot',cat:'Backwaren',unit:'',fav:true},
+      {id:'a7',name:'Kaffee',cat:'Getränke',unit:'Packung',fav:true},
+      {id:'a8',name:'Eier',cat:'Molkerei',unit:'Stück',fav:true},
+      {id:'a9',name:'Nudeln',cat:'Trockenwaren',unit:'g',fav:false},
+      {id:'a10',name:'Klopapier',cat:'Haushalt',unit:'Packung',fav:true},
+      {id:'a11',name:'Grillanzünder',cat:'',unit:'',fav:false},
+      {id:'a12',name:'Würstchen',cat:'Grillen',unit:'Stück',fav:false},
+      {id:'a13',name:'Kohle',cat:'Grillen',unit:'kg',fav:false},
+      {id:'a14',name:'Zelt',cat:'Ausrüstung',unit:'',fav:false},
+      {id:'a15',name:'Schlafsack',cat:'Ausrüstung',unit:'',fav:false},
+      {id:'a16',name:'Campingkocher',cat:'Ausrüstung',unit:'',fav:false}
+    ],
+    lists: [
+      {id:'l1',proj:'p1',name:'Einkauf Samstag',status:'active',completedAt:null,items:[
+        {id:'i1',art:'a1',name:'Äpfel',qty:'1',unit:'kg',cat:'Obst & Gemüse',checked:false},
+        {id:'i2',art:'a2',name:'Bananen',qty:'',unit:'',cat:'Obst & Gemüse',checked:true},
+        {id:'i3',art:'a3',name:'Milch',qty:'1,5',unit:'l',cat:'Molkerei',checked:false},
+        {id:'i4',art:'a4',name:'Butter',qty:'',unit:'',cat:'Molkerei',checked:false},
+        {id:'i5',art:'a11',name:'Grillanzünder',qty:'',unit:'',cat:'',checked:false}
+      ]},
+      {id:'l2',proj:'p1',name:'Einkauf Mittwoch',status:'completed',completedAt:'29.07.2026',items:[
+        {id:'i21',art:'a3',name:'Milch',qty:'1',unit:'l',cat:'Molkerei',checked:true},
+        {id:'i22',art:'a7',name:'Kaffee',qty:'1',unit:'Packung',cat:'Getränke',checked:true},
+        {id:'i23',art:'a5',name:'Joghurt',qty:'500',unit:'g',cat:'Molkerei',checked:true}
+      ]},
+      {id:'l3',proj:'p1',name:'Wocheneinkauf',status:'completed',completedAt:'25.07.2026',items:[
+        {id:'i31',art:'a3',name:'Milch',qty:'2',unit:'l',cat:'Molkerei',checked:true},
+        {id:'i32',art:'a6',name:'Brot',qty:'',unit:'',cat:'Backwaren',checked:true},
+        {id:'i33',art:'a8',name:'Eier',qty:'10',unit:'Stück',cat:'Molkerei',checked:true},
+        {id:'i34',art:'a5',name:'Joghurt',qty:'',unit:'',cat:'Molkerei',checked:true}
+      ]},
+      {id:'l4',proj:'p1',name:'Grillabend',status:'completed',completedAt:'19.07.2026',items:[
+        {id:'i41',art:'a12',name:'Würstchen',qty:'8',unit:'Stück',cat:'Grillen',checked:true},
+        {id:'i42',art:'a11',name:'Grillanzünder',qty:'',unit:'',cat:'',checked:true},
+        {id:'i43',art:'a13',name:'Kohle',qty:'3',unit:'kg',cat:'Grillen',checked:true}
+      ]},
+      {id:'l5',proj:'p2',name:'Packliste Wochenende',status:'active',completedAt:null,items:[
+        {id:'i51',art:'a14',name:'Zelt',qty:'1',unit:'',cat:'Ausrüstung',checked:false},
+        {id:'i52',art:'a15',name:'Schlafsack',qty:'2',unit:'',cat:'Ausrüstung',checked:false},
+        {id:'i53',art:'a16',name:'Campingkocher',qty:'',unit:'',cat:'Ausrüstung',checked:false}
+      ]}
+    ],
+    members: [
+      {id:'m1',name:'Anna',email:'anna@web.de',owner:true,me:true},
+      {id:'m2',name:'Ben',email:'ben@gmail.com',owner:false,me:false},
+      {id:'m3',name:'Clara',email:'clara@gmail.com',owner:false,me:false}
+    ]
+  };
+  componentDidMount(){ this._t = setInterval(() => this.simRemote(), 11000); }
+  componentWillUnmount(){ clearInterval(this._t); }
+  norm(s){ return s.trim().toLowerCase().replace(/\s+/g,' '); }
+  uid(){ return 'x' + Math.random().toString(36).slice(2,9); }
+  mutList(id, fn){ this.setState(s => ({lists: s.lists.map(l => l.id === id ? fn(l) : l)})); }
+  showToast(msg){ this.setState({toast: msg}); clearTimeout(this._tt); this._tt = setTimeout(() => this.setState({toast: null}), 2200); }
+  simRemote(){
+    if (!(this.props.simRemote ?? true)) return;
+    const {screen, listId, lists, sheet, drawer} = this.state;
+    if (screen !== 'list' || sheet || drawer) return;
+    const l = lists.find(x => x.id === listId);
+    if (!l || l.status !== 'active') return;
+    const it = l.items.find(i => !i.checked);
+    if (!it) return;
+    this.mutList(listId, li => ({...li, items: li.items.map(i => i.id === it.id ? {...i, checked: true} : i)}));
+    this.setState({flashId: it.id});
+    clearTimeout(this._ft); this._ft = setTimeout(() => this.setState({flashId: null}), 1500);
+  }
+  catFor(it){ return it.cat && it.cat.trim() ? it.cat : 'Ohne Kategorie'; }
+  allCats(){
+    const set = new Set();
+    this.state.catalog.forEach(a => { if (a.cat && a.cat.trim()) set.add(a.cat.trim()); });
+    this.state.lists.forEach(l => l.items.forEach(i => { if (i.cat && i.cat.trim()) set.add(i.cat.trim()); }));
+    return [...set].sort((a,b) => a.localeCompare(b,'de'));
+  }
+  usedIn(artId){ return this.state.lists.filter(l => l.items.some(i => i.art === artId)).length; }
+  findArt(name){ const n = this.norm(name); return this.state.catalog.find(a => this.norm(a.name) === n); }
+  ensureArt(name, cat){
+    const ex = this.findArt(name);
+    if (ex) return ex;
+    const art = {id: this.uid(), name: name.trim(), cat: cat || '', unit: '', fav: false};
+    this.setState(s => ({catalog: [...s.catalog, art]}));
+    return art;
+  }
+  parseTyped(t){
+    const m = t.match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|stück|stk|packung|pck|dose|dosen)?\.?\s+(.+)$/i);
+    if (m) return {qty: m[1], unit: m[2] || '', name: m[3].trim()};
+    return {qty: '', unit: '', name: t};
+  }
+  addEntry(name){
+    const raw = name.trim(); if (!raw) return;
+    const p = this.parseTyped(raw);
+    const t = p.name;
+    const {chip, listId} = this.state;
+    const existing = this.findArt(t);
+    const art = existing || this.ensureArt(t, chip !== 'Alle' && chip !== 'Ohne Kategorie' ? chip : '');
+    let cat = art.cat || '';
+    if (chip !== 'Alle') cat = chip === 'Ohne Kategorie' ? '' : chip;
+    const item = {id: this.uid(), art: art.id, name: art.name, qty: p.qty, unit: p.unit || art.unit || '', cat, checked: false};
+    this.mutList(listId, l => ({...l, items: [...l.items, item]}));
+    if (!existing && !cat) this.setState({addText: '', sheet: {type: 'entry', id: item.id}, draft: {qty: '', unit: item.unit, cat: item.cat}});
+    else this.setState({addText: ''});
+  }
+  prefillSet(){
+    const favs = this.state.catalog.filter(a => a.fav);
+    const done = this.state.lists.filter(l => l.status === 'completed' && (l.proj || 'p1') === this.state.projectId).slice(0, 4);
+    const counts = {};
+    done.forEach(l => { const seen = new Set(); l.items.forEach(i => { if (i.art && !seen.has(i.art)) { seen.add(i.art); counts[i.art] = (counts[i.art] || 0) + 1; } }); });
+    const stats = this.state.catalog.filter(a => !a.fav && counts[a.id] >= 2);
+    return {favs, stats};
+  }
+  renderVals(){
+    const s = this.state;
+    const role = this.props.role ?? 'Owner';
+    const isOwner = role === 'Owner';
+    const list = s.lists.find(l => l.id === s.listId) || null;
+    const listActive = !!list && list.status === 'active';
+    const listCompleted = !!list && list.status === 'completed';
+    const items = list ? list.items : [];
+    // chips
+    const catSet = new Set(items.map(i => this.catFor(i)));
+    if (s.chip !== 'Alle') catSet.add(s.chip);
+    const cats = [...catSet].filter(c => c !== 'Ohne Kategorie').sort((a,b) => a.localeCompare(b,'de'));
+    if (catSet.has('Ohne Kategorie')) cats.push('Ohne Kategorie');
+    const chipBase = 'flex:none;font-size:13.5px;padding-bottom:9px;cursor:pointer;white-space:nowrap;';
+    const chips = ['Alle', ...cats].map(name => ({
+      name,
+      style: name === s.chip ? chipBase + 'font-weight:700;color:#3e63c4;border-bottom:2px solid #3e63c4' : chipBase + 'font-weight:500;color:#77776f',
+      pick: () => this.setState({chip: name})
+    }));
+    // groups
+    const mkItem = it => {
+      const sw = s.swipe && s.swipe.id === it.id ? s.swipe : null;
+      const dx = sw ? sw.dx : 0;
+      return {
+        id: it.id, name: it.name,
+        qtyLabel: [it.qty, it.unit].filter(Boolean).join(' '),
+        checkMark: it.checked ? '✓' : '',
+        wrapStyle: 'position:relative;overflow:hidden;border-radius:6px',
+        delStyle: 'position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;padding-right:16px;box-sizing:border-box;background:#bf4a41;color:#fff;font-size:13px;font-weight:700;border-radius:6px;opacity:' + (dx < 0 ? '1' : '0'),
+        rowStyle: 'display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid #f1f1ee;cursor:pointer;border-radius:6px;position:relative;background:#fcfcfb;touch-action:pan-y;transform:translateX(' + dx + 'px);' + (sw ? '' : 'transition:transform .18s ease-out;') + (s.flashId === it.id ? 'animation:slflash 1.4s ease-out' : ''),
+        checkStyle: 'flex:none;width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;' + (it.checked ? (listCompleted ? 'background:#b8bdb2;color:#fff' : 'background:#3e63c4;color:#fff;animation:slpop .2s ease-out') : 'border:2px solid #c6c6bf;box-sizing:border-box'),
+        nameStyle: 'flex:1;font-size:15.5px;min-width:0;' + (it.checked ? 'color:#b3b3ab;text-decoration:line-through' : 'color:#232322'),
+        toggle: e => { e.stopPropagation(); if (listCompleted) return; this.mutList(s.listId, l => ({...l, items: l.items.map(x => x.id === it.id ? {...x, checked: !x.checked} : x)})); },
+        open: () => { if (listCompleted || this._justSwiped) return; this.setState({sheet: {type:'entry', id: it.id}, draft: {qty: it.qty, unit: it.unit, cat: it.cat}}); },
+        pDown: e => { if (listCompleted) return; this.setState({swipe: {id: it.id, startX: e.clientX, dx: 0, moved: false}}); },
+        pMove: e => {
+          const cur = this.state.swipe;
+          if (!cur || cur.id !== it.id) return;
+          if (e.pointerType === 'mouse' && e.buttons === 0) { this.setState({swipe: null}); return; }
+          const d = Math.min(0, e.clientX - cur.startX);
+          if (cur.moved || Math.abs(d) > 5) this.setState({swipe: {...cur, dx: d, moved: true}});
+        },
+        pUp: () => {
+          const cur = this.state.swipe;
+          if (!cur || cur.id !== it.id) return;
+          if (cur.moved) { this._justSwiped = true; clearTimeout(this._jt); this._jt = setTimeout(() => { this._justSwiped = false; }, 150); }
+          if (cur.dx < -80) this.mutList(s.listId, l => ({...l, items: l.items.filter(x => x.id !== it.id)}));
+          this.setState({swipe: null});
+        }
+      };
+    };
+    let groups = [];
+    if (s.chip === 'Alle') {
+      const order = [...cats];
+      groups = order.map(c => ({title: c, items: items.filter(i => this.catFor(i) === c).map(mkItem)})).filter(g => g.items.length);
+    } else {
+      groups = [{title: null, items: items.filter(i => this.catFor(i) === s.chip).map(mkItem)}];
+    }
+    const chipEmpty = s.chip !== 'Alle' && groups[0] && groups[0].items.length === 0;
+    if (chipEmpty) groups = [];
+    const allChecked = listActive && items.length > 0 && items.every(i => i.checked);
+    // add suggestions
+    const q = this.norm(s.addText || '');
+    let suggestions = [];
+    if (q) {
+      suggestions = s.catalog.filter(a => this.norm(a.name).includes(q)).slice(0, 3)
+        .map(a => ({label: a.name, sub: a.cat ? '· ' + a.cat : '', pick: () => this.addEntry(a.name)}));
+      const parsedName = this.parseTyped(s.addText.trim()).name;
+      if (!this.findArt(parsedName)) suggestions.push({label: '„' + parsedName + '" neu anlegen', sub: '', pick: () => this.addEntry(s.addText)});
+    }
+    // prefill preview
+    const {favs, stats} = this.prefillSet();
+    const excluded = s.excluded || {};
+    const mkPrev = (a, fav) => {
+      const off = !!excluded[a.id];
+      const base = 'font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;cursor:pointer;user-select:none;';
+      const onStyle = fav ? 'background:#eef2fc;color:#2f4a94' : 'background:#f1f1ee;color:#5a5a55';
+      return {
+        label: (fav ? '★ ' : '') + a.name + (off ? ' ✕' : ''),
+        style: base + (off ? 'background:#fcfcfb;color:#c2c2ba;border:1px dashed #dcdcd7;text-decoration:line-through' : onStyle),
+        pick: () => this.setState(st => ({excluded: {...(st.excluded || {}), [a.id]: !off}}))
+      };
+    };
+    const previewChips = [...favs.map(a => mkPrev(a, true)), ...stats.map(a => mkPrev(a, false))];
+    const prefillCount = [...favs, ...stats].filter(a => !excluded[a.id]).length;
+    // sheets
+    const entrySheet = s.sheet && s.sheet.type === 'entry';
+    const sheetIt = entrySheet ? items.find(i => i.id === s.sheet.id) : null;
+    // project lists
+    const proj = s.projects.find(p => p.id === s.projectId) || s.projects[0];
+    const inProj = l => (l.proj || 'p1') === s.projectId;
+    const activeLists = s.lists.filter(l => l.status === 'active' && inProj(l)).map(l => ({
+      name: l.name, meta: l.items.filter(i => !i.checked).length + ' offen',
+      open: () => this.setState({screen: 'list', listId: l.id, chip: 'Alle'})
+    }));
+    const archivedLists = s.lists.filter(l => l.status === 'completed' && inProj(l)).map(l => ({
+      name: l.name, date: l.completedAt,
+      open: () => this.setState({screen: 'list', listId: l.id, chip: 'Alle'})
+    }));
+    // favorites
+    const favChips = s.catalog.filter(a => a.fav).map(a => ({
+      name: a.name, remove: () => this.setState(st => ({catalog: st.catalog.map(x => x.id === a.id ? {...x, fav: false} : x)}))
+    }));
+    const fq = this.norm(s.favAdd || '');
+    let favSuggestions = [];
+    if (fq) {
+      favSuggestions = s.catalog.filter(a => !a.fav && this.norm(a.name).includes(fq)).slice(0, 3)
+        .map(a => ({label: a.name, sub: a.cat ? '· ' + a.cat : '', pick: () => this.makeFavorite(a.name)}));
+      if (!this.findArt(s.favAdd)) favSuggestions.push({label: '„' + s.favAdd.trim() + '" neu anlegen', sub: '', pick: () => this.makeFavorite(s.favAdd)});
+    }
+    // catalog
+    const kq = this.norm(s.search || '');
+    const arts = s.catalog.filter(a => !kq || this.norm(a.name).includes(kq))
+      .sort((a,b) => a.name.localeCompare(b.name,'de')).map(a => {
+        const used = this.usedIn(a.id);
+        const editing = s.editArt === a.id;
+        return {
+          name: a.name, sub: (a.cat || 'Ohne Kategorie') + (a.unit ? ' · ' + a.unit : ''),
+          editing, display: !editing, deletable: editing && used === 0,
+          usedNote: editing && used > 0 ? 'wird in ' + used + (used === 1 ? ' Liste' : ' Listen') + ' verwendet.' : null,
+          edit: () => this.setState({editArt: a.id, artError: null, draft: {name: a.name, cat: a.cat, unit: a.unit}}),
+          remove: () => this.setState(st => ({catalog: st.catalog.filter(x => x.id !== a.id), editArt: null}))
+        };
+      });
+    // members
+    const memberRows = s.members.map(m => ({
+      initial: m.name[0], label: m.name + (m.me ? ' (du)' : ''), email: m.email,
+      isOwnerRow: m.owner, removable: isOwner && !m.owner,
+      avatarStyle: 'flex:none;width:30px;height:30px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;background:' + (m.owner ? '#3e63c4' : '#7a8fc9'),
+      remove: () => this.setState(st => ({members: st.members.filter(x => x.id !== m.id)}))
+    }));
+    // drawer nav
+    const navItem = (label, screen, count, extra) => {
+      const active = s.screen === screen;
+      return {
+        label, count: count || '',
+        style: 'display:flex;align-items:center;gap:11px;padding:10px 12px;cursor:pointer;border-radius:10px;' + (active ? 'background:#fff;box-shadow:0 1px 2px rgba(35,35,34,.06)' : ''),
+        iconStyle: 'flex:none;width:17px;height:17px;border-radius:5px;background:' + (active ? '#3e63c4;opacity:.85' : '#c9cbc5'),
+        labelStyle: 'flex:1;font-size:14.5px;' + (active ? 'font-weight:700;color:#232322' : 'color:#5a5a55'),
+        go: () => this.setState({screen, drawer: false, ...(extra || {})})
+      };
+    };
+    const navMain = [navItem('Listen', 'project', String(activeLists.length)), navItem('Archiv', 'archiv', '')];
+    const navProject = [navItem('Favoriten', 'favoriten', ''), navItem('Katalog', 'katalog', ''), navItem('Mitglieder', 'mitglieder', String(s.members.length))];
+    const on = s.prefill;
+    return {
+      role, isOwner,
+      isList: s.screen === 'list', isProject: s.screen === 'project', isArchiv: s.screen === 'archiv',
+      isFavoriten: s.screen === 'favoriten', isKatalog: s.screen === 'katalog', isMitglieder: s.screen === 'mitglieder',
+      isLogin: s.screen === 'login', isAdmin: s.screen === 'admin',
+      doLogin: () => this.setState({screen: 'list', listId: 'l1', chip: 'Alle'}),
+      logout: () => this.setState({screen: 'login', drawer: false}),
+      goAdmin: () => this.setState({screen: 'admin', drawer: false}),
+      allowRows: s.allow.map(u => ({
+        email: u.email + (u.me ? ' (du)' : ''),
+        status: u.name || 'Noch nie angemeldet',
+        adminLabel: 'Admin: ' + (u.admin ? 'Ja' : 'Nein'),
+        grantable: u.loggedIn && !u.me,
+        grantLabel: u.admin ? 'Admin entziehen' : 'Admin gewähren',
+        grant: () => this.setState(st => ({allow: st.allow.map(x => x.id === u.id ? {...x, admin: !x.admin} : x)})),
+        neverNote: !u.loggedIn, revocable: !u.me,
+        revoke: () => this.setState({revoke: u.id})
+      })),
+      adminInvite: s.adminInvite, setAdminInvite: e => this.setState({adminInvite: e.target.value}),
+      adminInviteKey: e => { if (e.key === 'Enter') this.doAdminInvite(); }, doAdminInvite: () => this.doAdminInvite(),
+      ...this.revokeVals(),
+      listName: list ? list.name : '', listActive, listCompleted, completedAt: list ? list.completedAt : '',
+      chips, groups, chipEmpty, chipName: s.chip, allChecked,
+      addText: s.addText, setAddText: e => this.setState({addText: e.target.value}),
+      addKey: e => { if (e.key === 'Enter') this.addEntry(s.addText); },
+      addPlaceholder: s.chip === 'Alle' ? 'Eintrag hinzufügen' : 'Neu in „' + s.chip + '"',
+      hasSuggestions: suggestions.length > 0, suggestions,
+      goProject: () => this.setState({screen: 'project'}),
+      projName: proj.name, projInitial: proj.initial,
+      projAvatarStyle: 'flex:none;width:30px;height:30px;border-radius:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:' + proj.color,
+      projPicker: s.projPicker, toggleProjPicker: () => this.setState({projPicker: !s.projPicker}),
+      projRows: s.projects.map(p => ({
+        name: p.name, current: p.id === s.projectId ? '✓' : '',
+        avatarStyle: 'flex:none;width:24px;height:24px;border-radius:7px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:' + p.color,
+        initial: p.initial,
+        pick: () => this.setState({projectId: p.id, projPicker: false, screen: 'project', drawer: false, chip: 'Alle'})
+      })),
+      openDrawer: () => this.setState({drawer: true, projPicker: false}), closeDrawer: () => this.setState({drawer: false, projPicker: false}),
+      drawer: s.drawer, navMain, navProject,
+      notInProto: () => this.showToast('Im Prototyp nicht enthalten'),
+      menu: s.menu, toggleMenu: () => this.setState({menu: !s.menu}), closeMenu: () => this.setState({menu: false}),
+      completeList: () => { const d = new Date(); const dd = String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear(); this.mutList(s.listId, l => ({...l, status: 'completed', completedAt: dd})); this.setState({menu: false}); },
+      reopenList: () => this.mutList(s.listId, l => ({...l, status: 'active', completedAt: null})),
+      deleteList: () => this.setState(st => ({lists: st.lists.filter(l => l.id !== st.listId), menu: false, screen: 'project'})),
+      activeLists, noActiveLists: activeLists.length === 0,
+      archivedLists, noArchived: archivedLists.length === 0, hasArchived: archivedLists.length > 0,
+      emptyName: s.emptyName, setEmptyName: e => this.setState({emptyName: e.target.value}),
+      emptyKey: e => { if (e.key === 'Enter') this.createEmptyList(); },
+      createEmpty: () => this.createEmptyList(),
+      openNewList: () => this.setState({sheet: {type: 'newlist'}, newListName: '', prefill: true, excluded: {}}),
+      newListSheet: s.sheet && s.sheet.type === 'newlist',
+      newListName: s.newListName, setNewListName: e => this.setState({newListName: e.target.value}),
+      prefillOn: on, togglePrefill: () => this.setState({prefill: !on}),
+      toggleStyle: 'width:42px;height:25px;border-radius:99px;position:relative;cursor:pointer;flex:none;transition:background .15s;background:' + (on ? '#3e63c4' : '#dcdcd7'),
+      knobStyle: 'position:absolute;top:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;left:' + (on ? '19.5px' : '2.5px'),
+      previewChips, createLabel: on && prefillCount ? 'Liste mit ' + prefillCount + ' Einträgen anlegen' : 'Leere Liste anlegen',
+      createList: () => this.createPrefilled(),
+      entrySheet, sheetTitle: sheetIt ? sheetIt.name : '',
+      draftQty: s.draft.qty || '', setDraftQty: e => this.setState({draft: {...s.draft, qty: e.target.value}}),
+      draftUnit: s.draft.unit || '', setDraftUnit: e => this.setState({draft: {...s.draft, unit: e.target.value}}),
+      draftCat: s.draft.cat || '', setDraftCat: e => this.setState({draft: {...s.draft, cat: e.target.value}}),
+      hasCatChips: entrySheet && this.allCats().length > 0,
+      catChips: entrySheet ? this.allCats().map(c => {
+        const active = (s.draft.cat || '').trim() === c;
+        return {
+          name: c,
+          style: 'font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;cursor:pointer;' + (active ? 'background:#3e63c4;color:#fff' : 'background:#f1f1ee;color:#5a5a55'),
+          pick: () => this.setState({draft: {...this.state.draft, cat: active ? '' : c}})
+        };
+      }) : [],
+      draftName: s.draft.name || '', setDraftName: e => this.setState({draft: {...s.draft, name: e.target.value}, artError: null}),
+      draftNameStyle: 'width:100%;box-sizing:border-box;font-size:14.5px;color:#232322;border-radius:8px;padding:8px 11px;margin-top:4px;border:1.5px solid ' + (s.artError ? '#bf4a41' : '#ececea'),
+      closeSheet: () => this.setState({sheet: null}),
+      saveSheet: () => this.applyEntrySheet(),
+      deleteEntry: () => { if (!entrySheet) return; this.mutList(s.listId, l => ({...l, items: l.items.filter(i => i.id !== s.sheet.id)})); this.setState({sheet: null}); },
+      favChips, favAdd: s.favAdd, setFavAdd: e => this.setState({favAdd: e.target.value}),
+      favKey: e => { if (e.key === 'Enter') this.makeFavorite(s.favAdd); },
+      addFavorite: () => this.makeFavorite(s.favAdd),
+      hasFavSuggestions: favSuggestions.length > 0, favSuggestions,
+      artCount: s.catalog.length, search: s.search, setSearch: e => this.setState({search: e.target.value}),
+      katAdd: s.katAdd || '', setKatAdd: e => this.setState({katAdd: e.target.value}),
+      katKey: e => { if (e.key === 'Enter') this.addArticle(); }, addArticle: () => this.addArticle(),
+      arts, artError: s.artError,
+      saveArt: () => this.saveArticle(), cancelArt: () => this.setState({editArt: null, artError: null}),
+      memberRows, invite: s.invite, setInvite: e => this.setState({invite: e.target.value}),
+      inviteKey: e => { if (e.key === 'Enter') this.doInvite(); }, doInvite: () => this.doInvite(),
+      toast: s.toast
+    };
+  }
+  createEmptyList(){
+    const name = this.state.emptyName.trim() || 'Neue Liste';
+    const l = {id: this.uid(), proj: this.state.projectId, name, status: 'active', completedAt: null, items: []};
+    this.setState(s => ({lists: [l, ...s.lists], emptyName: '', screen: 'list', listId: l.id, chip: 'Alle'}));
+  }
+  createPrefilled(){
+    const name = this.state.newListName.trim() || 'Neue Liste';
+    let itemsArts = [];
+    if (this.state.prefill) { const {favs, stats} = this.prefillSet(); const ex = this.state.excluded || {}; itemsArts = [...favs, ...stats].filter(a => !ex[a.id]); }
+    const items = itemsArts.map(a => ({id: this.uid(), art: a.id, name: a.name, qty: '', unit: a.unit || '', cat: a.cat || '', checked: false}));
+    const l = {id: this.uid(), proj: this.state.projectId, name, status: 'active', completedAt: null, items};
+    this.setState(s => ({lists: [l, ...s.lists], sheet: null, screen: 'list', listId: l.id, chip: 'Alle'}));
+  }
+  applyEntrySheet(){
+    const {sheet, draft, listId} = this.state;
+    if (!sheet) return;
+    let artId = null;
+    this.mutList(listId, l => ({...l, items: l.items.map(i => { if (i.id !== sheet.id) return i; artId = i.art; return {...i, qty: draft.qty || '', unit: draft.unit || '', cat: (draft.cat || '').trim()}; })}));
+    if (artId) this.setState(s => ({catalog: s.catalog.map(a => a.id === artId ? {...a, cat: (draft.cat || '').trim(), unit: draft.unit || ''} : a)}));
+    this.setState({sheet: null});
+  }
+  makeFavorite(name){
+    const t = (name || '').trim(); if (!t) return;
+    const ex = this.findArt(t);
+    if (ex) this.setState(s => ({catalog: s.catalog.map(a => a.id === ex.id ? {...a, fav: true} : a), favAdd: ''}));
+    else { const art = {id: this.uid(), name: t, cat: '', unit: '', fav: true}; this.setState(s => ({catalog: [...s.catalog, art], favAdd: ''})); }
+  }
+  saveArticle(){
+    const {editArt, draft} = this.state;
+    const t = (draft.name || '').trim();
+    if (!t) { this.setState({artError: 'Name darf nicht leer sein'}); return; }
+    const n = this.norm(t);
+    const clash = this.state.catalog.find(a => a.id !== editArt && this.norm(a.name) === n);
+    if (clash) { this.setState({artError: 'Artikel existiert bereits'}); return; }
+    this.setState(s => ({
+      catalog: s.catalog.map(a => a.id === editArt ? {...a, name: t, cat: (draft.cat || '').trim(), unit: (draft.unit || '').trim()} : a),
+      lists: s.lists.map(l => ({...l, items: l.items.map(i => i.art === editArt ? {...i, name: t} : i)})),
+      editArt: null, artError: null
+    }));
+  }
+  addArticle(){
+    const t = (this.state.katAdd || '').trim(); if (!t) return;
+    const name = this.parseTyped(t).name;
+    if (this.findArt(name)) { this.showToast('Artikel existiert bereits'); return; }
+    const art = {id: this.uid(), name, cat: '', unit: '', fav: false};
+    this.setState(s => ({catalog: [...s.catalog, art], katAdd: '', search: '', editArt: art.id, artError: null, draft: {name: art.name, cat: '', unit: ''}}));
+  }
+  revokeVals(){
+    const u = this.state.allow.find(x => x.id === this.state.revoke);
+    if (!u) return {revokeSheet: false, revokeProjects: [], revokeEmail: '', revokeHasProjects: false, revokeOwnerNote: null, revokeLoggedIn: false, closeRevoke: () => {}, revokeOnly: () => {}, revokeAll: () => {}};
+    const owned = u.projects.filter(p => p.role === 'Owner');
+    return {
+      revokeSheet: true, revokeEmail: u.email,
+      revokeProjects: u.projects.map(p => ({name: p.name, role: p.role, roleStyle: 'font-size:11px;' + (p.role === 'Owner' ? 'font-weight:700;color:#2f4a94' : 'color:#a3a39b')})),
+      revokeHasProjects: u.projects.length > 0,
+      revokeLoggedIn: u.loggedIn,
+      revokeOwnerNote: owned.length ? 'Als Owner von „' + owned.map(p => p.name).join('", „') + '" behält ' + (u.name || u.email) + ' dort in jedem Fall Zugriff.' : null,
+      closeRevoke: () => this.setState({revoke: null}),
+      revokeOnly: () => { this.setState(st => ({allow: st.allow.filter(x => x.id !== u.id), revoke: null})); this.showToast('Zugang entzogen — Mitgliedschaften bleiben'); },
+      revokeAll: () => { this.setState(st => ({allow: st.allow.filter(x => x.id !== u.id), members: st.members.filter(m => m.email !== u.email), revoke: null})); this.showToast('Zugang entzogen, aus Projekten entfernt'); }
+    };
+  }
+  doAdminInvite(){
+    const t = this.state.adminInvite.trim(); if (!t || !t.includes('@')) return;
+    if (this.state.allow.some(u => this.norm(u.email) === this.norm(t))) { this.showToast('E-Mail ist bereits freigeschaltet'); return; }
+    this.setState(s => ({allow: [...s.allow, {id: this.uid(), email: t, name: null, admin: false, me: false, loggedIn: false, projects: []}], adminInvite: ''}));
+    this.showToast(t + ' freigeschaltet');
+  }
+  doInvite(){
+    const t = this.state.invite.trim(); if (!t || !t.includes('@')) return;
+    const name = t.split('@')[0].replace(/^./, c => c.toUpperCase());
+    this.setState(s => ({members: [...s.members, {id: this.uid(), name, email: t, owner: false, me: false}], invite: ''}));
+    this.showToast(t + ' eingeladen');
+  }
+}
+</script>
+</body>
+</html>

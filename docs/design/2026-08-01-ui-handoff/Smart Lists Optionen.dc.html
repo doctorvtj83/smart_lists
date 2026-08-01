@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>body{margin:0;background:#f0eee9;font-family:'Figtree',system-ui,sans-serif}a{color:#1a1a1a}a:hover{color:#000}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 'Figtree',sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'Figtree',sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 'Figtree',sans-serif;color:rgba(0,0,0,.5)}</style></helmet>
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Leere Zustände — ein Muster: Glyphe, ein Satz, direkte Aktion</span></div>
+<div class="dv-opts">
+
+<!-- 5a keine Projekte -->
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Keine Projekte</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Projekte</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;text-align:center">
+    <span style="width:52px;height:52px;border-radius:16px;background:#eef2fc;color:#3e63c4;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800">H</span>
+    <div style="font-size:16px;font-weight:700;color:#232322;margin-top:14px">Noch kein Projekt</div>
+    <div style="font-size:13.5px;color:#77776f;line-height:1.5;margin-top:5px">Ein Projekt bündelt Listen, Katalog und Favoriten — z.&#8201;B. „Haushalt".</div>
+    <div style="display:flex;gap:8px;margin-top:18px;width:100%">
+      <span style="flex:1;font-size:14px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff;text-align:left">Projektname</span>
+      <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;white-space:nowrap">Anlegen</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5b Projekt ohne Listen -->
+<div class="dv-opt" id="5b"><div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Projekt ohne Listen</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 4px">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="font-size:18px;font-weight:700;color:#232322;border-bottom:1.5px dashed #c6c6bf;padding-bottom:1px">Haushalt</span>
+    <span style="flex:1"></span>
+    <span style="font-size:11.5px;color:#a3a39b">Deine Rolle: Owner</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;text-align:center">
+    <span style="width:52px;height:52px;border-radius:50%;background:#f1f1ee;display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #c6c6bf"></span></span>
+    <div style="font-size:16px;font-weight:700;color:#232322;margin-top:14px">Noch keine Liste</div>
+    <div style="font-size:13.5px;color:#77776f;line-height:1.5;margin-top:5px">Sobald Listen abgeschlossen sind, kann Smart Lists neue Listen vorbefüllen.</div>
+    <div style="width:100%;margin-top:18px;background:#3e63c4;border-radius:14px;padding:14px 16px;color:#fff;text-align:left;box-shadow:0 4px 14px rgba(62,99,196,.22)">
+      <div style="font-size:15px;font-weight:800">Erste Liste anlegen</div>
+      <div style="font-size:12.5px;opacity:.9;margin-top:2px">Später auch vorbefüllt mit deinen Favoriten</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5c leere Liste -->
+<div class="dv-opt" id="5c"><div class="dv-olabel"><a class="dv-oid" href="#5c">5c</a>Leere Liste — die Eingabezeile ist der Empty State</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Baumarkt</span>
+    <span style="font-size:19px;color:#4a4a48">⋮</span>
+  </div>
+  <div style="padding:14px 16px 0">
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0">
+      <span style="width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:#3e63c4;font-size:19px;font-weight:600">＋</span>
+      <span style="flex:1;font-size:15.5px;color:#232322">Dübel<span style="color:#3e63c4">|</span></span>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 44px;text-align:center">
+    <div style="font-size:13.5px;color:#a3a39b;line-height:1.55">Einfach lostippen — jeder Eintrag mit ↵ legt gleich die nächste Zeile an.</div>
+  </div>
+</div></div>
+
+<!-- 5d Kategorie leer geworden -->
+<div class="dv-opt" id="5d"><div class="dv-olabel"><a class="dv-oid" href="#5d">5d</a>Aktiver Chip, Kategorie gerade leer geworden</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Einkauf Samstag</span>
+    <span style="font-size:19px;color:#4a4a48">⋮</span>
+  </div>
+  <div style="display:flex;gap:16px;padding:11px 16px 0;border-bottom:1px solid #ececea">
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Alle</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Obst &amp; Gemüse</span>
+    <span style="font-size:13.5px;font-weight:700;color:#3e63c4;padding-bottom:9px;border-bottom:2px solid #3e63c4">Molkerei</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 44px;text-align:center">
+    <div style="font-size:14px;font-weight:700;color:#5a5a55">Nichts mehr in „Molkerei"</div>
+    <div style="font-size:13px;color:#a3a39b;line-height:1.5;margin-top:4px">Der letzte Eintrag wurde gerade entfernt. Du bleibst hier — oder zurück zu „Alle".</div>
+  </div>
+  <div style="padding:0 16px 16px">
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0">
+      <span style="width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:#3e63c4;font-size:19px;font-weight:600">＋</span>
+      <span style="flex:1;font-size:15.5px;color:#c2c2ba">Neu in „Molkerei"</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5e keine Favoriten -->
+<div class="dv-opt" id="5e"><div class="dv-olabel"><a class="dv-oid" href="#5e">5e</a>Keine Favoriten</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Favoriten</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center">
+    <span style="width:52px;height:52px;border-radius:50%;background:#eef2fc;color:#3e63c4;display:flex;align-items:center;justify-content:center;font-size:22px">★</span>
+    <div style="font-size:16px;font-weight:700;color:#232322;margin-top:14px">Noch keine Favoriten</div>
+    <div style="font-size:13.5px;color:#77776f;line-height:1.5;margin-top:5px">Favoriten landen automatisch in jeder vorbefüllten Liste — perfekt für Milch, Brot &amp; Co.</div>
+    <div style="display:flex;gap:8px;margin-top:18px;width:100%">
+      <span style="flex:1;font-size:14px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff;text-align:left">Artikelname</span>
+      <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;white-space:nowrap">Als Favorit</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5f leerer Katalog -->
+<div class="dv-opt" id="5f"><div class="dv-olabel"><a class="dv-oid" href="#5f">5f</a>Leerer Katalog</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Katalog</span>
+    <span style="font-size:12px;color:#a3a39b">0 Artikel</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center">
+    <span style="width:52px;height:52px;border-radius:16px;background:#f1f1ee;color:#a3a39b;display:flex;align-items:center;justify-content:center;font-size:22px">⌕</span>
+    <div style="font-size:16px;font-weight:700;color:#232322;margin-top:14px">Der Katalog füllt sich von selbst</div>
+    <div style="font-size:13.5px;color:#77776f;line-height:1.5;margin-top:5px">Jeder Artikel, den du auf einer Liste verwendest, wird hier gesammelt — mit Standard-Kategorie und -Einheit.</div>
+  </div>
+</div></div>
+
+<!-- 5g leeres Archiv -->
+<div class="dv-opt" id="5g"><div class="dv-olabel"><a class="dv-oid" href="#5g">5g</a>Leeres Archiv</div>
+<div class="dv-card" style="width:360px;height:480px;background:#fcfcfb;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Archiv</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center">
+    <span style="width:52px;height:52px;border-radius:50%;background:#f1f1ee;color:#a3a39b;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">✓</span>
+    <div style="font-size:16px;font-weight:700;color:#232322;margin-top:14px">Noch nichts abgeschlossen</div>
+    <div style="font-size:13.5px;color:#77776f;line-height:1.5;margin-top:5px">Abgeschlossene Listen landen hier — und machen die Vorschläge für neue Listen schlauer.</div>
+  </div>
+</div></div>
+
+</div>
+<p class="dv-next">Als Nächstes: „interaktiven Prototyp bauen" · „Desktop für Katalog/Verwaltung" · „Feinschliff an einzelnen Screens"</p>
+</section>
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Desktop — feste Sidebar (<a class="dv-oid" href="#2b">2b</a>) + Inhalt in Richtung „Tinte"</span></div>
+<div class="dv-opts">
+
+<!-- 4a Desktop Liste -->
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Desktop — Liste „Alle"</div>
+<div class="dv-card" style="width:1060px;height:640px;display:flex;background:#fcfcfb">
+  <div style="width:250px;flex:none;background:#f3f4f2;border-right:1px solid #e7e8e4;display:flex;flex-direction:column;padding:16px 12px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:11px 13px;box-shadow:0 1px 2px rgba(35,35,34,.08)">
+      <span style="width:28px;height:28px;border-radius:8px;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">H</span>
+      <span style="flex:1;font-size:14.5px;font-weight:700;color:#232322">Haushalt</span>
+      <span style="font-size:10px;color:#a3a39b">▾</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(35,35,34,.06)"><span style="width:16px;height:16px;border-radius:5px;background:#3e63c4;opacity:.85"></span><span style="flex:1;font-size:14px;font-weight:700;color:#232322">Listen</span><span style="font-size:11.5px;font-weight:700;color:#a3a39b">3</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Archiv</span></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:16px 12px 6px">PROJEKT</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Favoriten</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Katalog</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Mitglieder</span><span style="font-size:11.5px;color:#a3a39b">4</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Verwaltung</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#dddfd9"></span><span style="flex:1;font-size:14px;color:#a3a39b">Abmelden</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 36px 12px;border-bottom:1px solid #ececea">
+      <span style="flex:1;font-size:21px;font-weight:800;color:#232322">Einkauf Samstag</span>
+      <span style="font-size:19px;color:#4a4a48">⋮</span>
+    </div>
+    <div style="display:flex;gap:22px;padding:12px 36px 0;border-bottom:1px solid #ececea">
+      <span style="font-size:13.5px;font-weight:700;color:#3e63c4;padding-bottom:10px;border-bottom:2px solid #3e63c4">Alle</span>
+      <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:10px">Obst &amp; Gemüse</span>
+      <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:10px">Molkerei</span>
+      <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:10px">Tiefkühl</span>
+      <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:10px">Ohne Kategorie</span>
+    </div>
+    <div style="padding:10px 36px 24px;max-width:620px;display:flex;flex-direction:column">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:12px 0 4px">OBST &amp; GEMÜSE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+        <span style="width:20px;height:20px;border-radius:50%;border:2px solid #c6c6bf"></span>
+        <span style="flex:1;font-size:15px;color:#232322">Äpfel</span><span style="font-size:13px;color:#a3a39b">1 kg</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+        <span style="width:20px;height:20px;border-radius:50%;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">✓</span>
+        <span style="flex:1;font-size:15px;color:#b3b3ab;text-decoration:line-through">Bananen</span>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:16px 0 4px">MOLKEREI</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+        <span style="width:20px;height:20px;border-radius:50%;border:2px solid #c6c6bf"></span>
+        <span style="flex:1;font-size:15px;color:#232322">Milch</span><span style="font-size:13px;color:#a3a39b">1,5 l</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+        <span style="width:20px;height:20px;border-radius:50%;border:2px solid #c6c6bf"></span>
+        <span style="flex:1;font-size:15px;color:#232322">Butter</span>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:16px 0 4px">OHNE KATEGORIE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+        <span style="width:20px;height:20px;border-radius:50%;border:2px solid #c6c6bf"></span>
+        <span style="flex:1;font-size:15px;color:#232322">Grillanzünder</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px">
+        <span style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:#3e63c4;font-size:18px;font-weight:600">＋</span>
+        <span style="flex:1;font-size:15px;color:#c2c2ba">Eintrag hinzufügen</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4b Desktop Projekt-Detail -->
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Desktop — Projekt-Detail (Listen)</div>
+<div class="dv-card" style="width:1060px;height:640px;display:flex;background:#fcfcfb">
+  <div style="width:250px;flex:none;background:#f3f4f2;border-right:1px solid #e7e8e4;display:flex;flex-direction:column;padding:16px 12px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:11px 13px;box-shadow:0 1px 2px rgba(35,35,34,.08)">
+      <span style="width:28px;height:28px;border-radius:8px;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">H</span>
+      <span style="flex:1;font-size:14.5px;font-weight:700;color:#232322">Haushalt</span>
+      <span style="font-size:10px;color:#a3a39b">▾</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(35,35,34,.06)"><span style="width:16px;height:16px;border-radius:5px;background:#3e63c4;opacity:.85"></span><span style="flex:1;font-size:14px;font-weight:700;color:#232322">Listen</span><span style="font-size:11.5px;font-weight:700;color:#a3a39b">3</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Archiv</span></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:16px 12px 6px">PROJEKT</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Favoriten</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Katalog</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Mitglieder</span><span style="font-size:11.5px;color:#a3a39b">4</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14px;color:#5a5a55">Verwaltung</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px"><span style="width:16px;height:16px;border-radius:5px;background:#dddfd9"></span><span style="flex:1;font-size:14px;color:#a3a39b">Abmelden</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="display:flex;align-items:center;gap:14px;padding:20px 36px 14px;border-bottom:1px solid #ececea">
+      <span style="font-size:21px;font-weight:800;color:#232322;border-bottom:1.5px dashed #c6c6bf;padding-bottom:1px">Haushalt</span>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:#a3a39b">Deine Rolle: Owner</span>
+    </div>
+    <div style="padding:20px 36px 24px;max-width:620px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px;align-items:stretch">
+        <div style="flex:1;background:#3e63c4;border-radius:14px;padding:16px 18px;color:#fff;box-shadow:0 4px 14px rgba(62,99,196,.22)">
+          <div style="font-size:15px;font-weight:800">Vorbefüllte Liste anlegen</div>
+          <div style="font-size:12.5px;opacity:.9;margin-top:2px">Startet mit Favoriten + häufigen Artikeln</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;width:260px">
+          <span style="font-size:13.5px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:9px 13px;background:#fff">Listenname…</span>
+          <span style="font-size:13px;font-weight:700;color:#5a5a55;border:1.5px solid #dcdcd7;border-radius:10px;padding:9px 13px;background:#fff;text-align:center">Leere Liste</span>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:8px">AKTIVE LISTEN</div>
+      <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:12px;padding:14px 16px">
+        <span style="flex:1;font-size:15px;font-weight:600;color:#232322">Einkauf Samstag</span><span style="font-size:12.5px;color:#a3a39b">5 offen · zuletzt heute</span><span style="color:#c6c6bf">›</span>
+      </div>
+      <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:12px;padding:14px 16px">
+        <span style="flex:1;font-size:15px;font-weight:600;color:#232322">Packliste Camping</span><span style="font-size:12.5px;color:#a3a39b">12 offen · zuletzt gestern</span><span style="color:#c6c6bf">›</span>
+      </div>
+      <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:12px;padding:14px 16px">
+        <span style="flex:1;font-size:15px;font-weight:600;color:#232322">Baumarkt</span><span style="font-size:12.5px;color:#a3a39b">2 offen · zuletzt 28.07.2026</span><span style="color:#c6c6bf">›</span>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:#bf4a41;padding:12px 2px 0">Projekt löschen…</div>
+    </div>
+  </div>
+</div></div>
+
+</div>
+<p class="dv-next">Als Nächstes: „Desktop für Katalog/Verwaltung" · „Leere Zustände" · „interaktiven Prototyp bauen"</p>
+</section>
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Alle Screens in Richtung „Tinte" (<a class="dv-oid" href="#2a">2a</a>) — Liste offen/gefiltert siehe <a class="dv-oid" href="#2a">2a</a>, Drawer <a class="dv-oid" href="#2b">2b</a>, Vorbefüllung <a class="dv-oid" href="#2c">2c</a></span></div>
+<div class="dv-opts">
+
+<!-- 3a Login -->
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Login</div>
+<div class="dv-card" style="width:360px;height:560px;background:#fcfcfb;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;box-sizing:border-box">
+  <div style="width:64px;height:64px;border-radius:18px;background:#3e63c4;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(62,99,196,.25)">
+    <span style="color:#fff;font-size:30px;font-weight:800">✓</span>
+  </div>
+  <div style="font-size:24px;font-weight:800;color:#232322;margin-top:18px;letter-spacing:-.01em">Smart Lists</div>
+  <div style="font-size:13px;font-weight:600;color:#a3a39b;margin-top:2px;letter-spacing:.06em">ANMELDUNG</div>
+  <div style="font-size:14px;color:#5a5a55;text-align:center;line-height:1.5;margin-top:22px">Der Zugang ist geschlossen. Melde dich mit einem freigeschalteten Google-Konto an.</div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:26px;background:#fff;border:1.5px solid #dcdcd7;border-radius:12px;padding:13px 0">
+    <span style="width:20px;height:20px;border-radius:50%;background:conic-gradient(#4285f4 0 25%,#34a853 25% 50%,#fbbc05 50% 75%,#ea4335 75% 100%)"></span>
+    <span style="font-size:15px;font-weight:700;color:#232322">Mit Google anmelden</span>
+  </div>
+</div></div>
+
+<!-- 3b Zugang verweigert -->
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Zugang nicht freigeschaltet</div>
+<div class="dv-card" style="width:360px;height:560px;background:#fcfcfb;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;box-sizing:border-box">
+  <div style="width:56px;height:56px;border-radius:50%;background:#f1f1ee;display:flex;align-items:center;justify-content:center;font-size:24px">🔒</div>
+  <div style="font-size:19px;font-weight:800;color:#232322;margin-top:18px;text-align:center">Zugang nicht freigeschaltet</div>
+  <div style="font-size:14px;color:#5a5a55;text-align:center;line-height:1.55;margin-top:10px">Dieses Google-Konto ist noch nicht freigeschaltet. Ein Administrator muss deine E-Mail-Adresse zuerst einladen.</div>
+  <div style="font-size:14.5px;font-weight:700;color:#3e63c4;margin-top:24px">← Zurück zur Anmeldung</div>
+</div></div>
+
+<!-- 3c Home -->
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Home — Einstieg mit „Weitermachen"</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 4px">
+    <span style="flex:1;font-size:20px;font-weight:800;color:#232322">Smart Lists</span>
+    <span style="font-size:11.5px;color:#a3a39b">anna@web.de</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b">WEITERMACHEN</div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:14px;padding:14px;box-shadow:0 1px 2px rgba(35,35,34,.05)">
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="flex:1;font-size:16px;font-weight:700;color:#232322">Einkauf Samstag</span><span style="color:#c6c6bf">›</span></div>
+      <div style="font-size:12.5px;color:#a3a39b;margin-top:2px">Haushalt · 5 von 8 offen</div>
+      <div style="height:5px;border-radius:3px;background:#f1f1ee;margin-top:10px;overflow:hidden"><div style="width:38%;height:100%;background:#3e63c4;border-radius:3px"></div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:6px">PROJEKTE</div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:11px;padding:12px 14px">
+      <span style="width:28px;height:28px;border-radius:8px;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">H</span>
+      <span style="flex:1;font-size:14.5px;font-weight:600;color:#232322">Haushalt</span><span style="font-size:12px;color:#a3a39b">3 Listen</span><span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:11px;padding:12px 14px">
+      <span style="width:28px;height:28px;border-radius:8px;background:#7a8fc9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">C</span>
+      <span style="flex:1;font-size:14.5px;font-weight:600;color:#232322">Camping</span><span style="font-size:12px;color:#a3a39b">1 Liste</span><span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="display:flex;gap:14px;padding:8px 2px 0">
+      <span style="font-size:13px;font-weight:600;color:#5a5a55">Verwaltung</span>
+      <span style="flex:1"></span>
+      <span style="font-size:13px;color:#a3a39b">Abmelden</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3d Projekte -->
+<div class="dv-opt" id="3d"><div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>Projekte-Übersicht</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Projekte</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:11px;padding:13px 14px;box-shadow:0 1px 2px rgba(35,35,34,.05)">
+      <span style="width:30px;height:30px;border-radius:9px;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">H</span>
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:700;color:#232322">Haushalt</span><span style="font-size:12px;color:#a3a39b">3 Listen · 4 Mitglieder</span></div>
+      <span style="font-size:10.5px;font-weight:700;color:#2f4a94;background:#eef2fc;border-radius:99px;padding:3px 8px">OWNER</span>
+      <span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:11px;padding:13px 14px;box-shadow:0 1px 2px rgba(35,35,34,.05)">
+      <span style="width:30px;height:30px;border-radius:9px;background:#7a8fc9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">C</span>
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:700;color:#232322">Camping</span><span style="font-size:12px;color:#a3a39b">1 Liste · 2 Mitglieder</span></div>
+      <span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <span style="flex:1;font-size:14px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff">Projektname</span>
+      <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;white-space:nowrap">Anlegen</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3e Projekt-Detail -->
+<div class="dv-opt" id="3e"><div class="dv-olabel"><a class="dv-oid" href="#3e">3e</a>Projekt-Detail — nur Listen · Name inline editierbar</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 4px">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="font-size:18px;font-weight:700;color:#232322;border-bottom:1.5px dashed #c6c6bf;padding-bottom:1px">Haushalt</span>
+    <span style="flex:1"></span>
+    <span style="font-size:11.5px;color:#a3a39b">Deine Rolle: Owner</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:#3e63c4;border-radius:14px;padding:15px 16px;color:#fff;box-shadow:0 4px 14px rgba(62,99,196,.22)">
+      <div style="font-size:15px;font-weight:800">Vorbefüllte Liste anlegen</div>
+      <div style="font-size:12.5px;opacity:.9;margin-top:2px">Startet mit Favoriten + häufigen Artikeln</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <span style="flex:1;font-size:14px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:10px 14px;background:#fff">Listenname…</span>
+      <span style="font-size:13.5px;font-weight:700;color:#5a5a55;border:1.5px solid #dcdcd7;border-radius:10px;padding:10px 14px;background:#fff;white-space:nowrap">Leere Liste</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:6px">AKTIVE LISTEN</div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:12px;padding:13px 14px">
+      <span style="flex:1;font-size:15px;font-weight:600;color:#232322">Einkauf Samstag</span><span style="font-size:12.5px;color:#a3a39b">5 offen</span><span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;display:flex;align-items:center;gap:12px;padding:13px 14px">
+      <span style="flex:1;font-size:15px;font-weight:600;color:#232322">Packliste Camping</span><span style="font-size:12.5px;color:#a3a39b">12 offen</span><span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#bf4a41;padding:14px 2px 0">Projekt löschen…</div>
+  </div>
+</div></div>
+
+<!-- 3f Archiv -->
+<div class="dv-opt" id="3f"><div class="dv-olabel"><a class="dv-oid" href="#3f">3f</a>Archiv — ruhige Historie</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Archiv</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid #f1f1ee">
+      <span style="width:20px;height:20px;border-radius:50%;background:#e6e9e2;color:#8a8a83;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">✓</span>
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#5a5a55">Einkauf Mittwoch</span><span style="font-size:12px;color:#a3a39b">Abgeschlossen am 29.07.2026</span></div>
+      <span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid #f1f1ee">
+      <span style="width:20px;height:20px;border-radius:50%;background:#e6e9e2;color:#8a8a83;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">✓</span>
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#5a5a55">Wocheneinkauf</span><span style="font-size:12px;color:#a3a39b">Abgeschlossen am 25.07.2026</span></div>
+      <span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 2px">
+      <span style="width:20px;height:20px;border-radius:50%;background:#e6e9e2;color:#8a8a83;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">✓</span>
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#5a5a55">Grillabend</span><span style="font-size:12px;color:#a3a39b">Abgeschlossen am 19.07.2026</span></div>
+      <span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="font-size:12px;color:#a3a39b;text-align:center;padding:14px 0 0">Abgeschlossene Listen speisen die Vorschläge für neue Listen.</div>
+  </div>
+</div></div>
+
+<!-- 3g Favoriten -->
+<div class="dv-opt" id="3g"><div class="dv-olabel"><a class="dv-oid" href="#3g">3g</a>Favoriten — Chips + Erklärung</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Favoriten</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:13px;color:#5a5a55;line-height:1.5;background:#eef2fc;border-radius:10px;padding:10px 13px">★ Favoriten landen automatisch in <b>jeder</b> vorbefüllten Liste dieses Projekts.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px">
+      <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">Milch<span style="color:#c6c6bf;font-size:12px">✕</span></span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">Butter<span style="color:#c6c6bf;font-size:12px">✕</span></span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">Brot<span style="color:#c6c6bf;font-size:12px">✕</span></span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">Kaffee<span style="color:#c6c6bf;font-size:12px">✕</span></span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">Eier<span style="color:#c6c6bf;font-size:12px">✕</span></span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:99px;background:#fff;border:1px solid #ececea;color:#232322">Klopapier<span style="color:#c6c6bf;font-size:12px">✕</span></span>
+    </div>
+    <div style="position:relative">
+      <div style="display:flex;gap:8px">
+        <span style="flex:1;font-size:14px;color:#232322;border:1.5px solid #3e63c4;border-radius:10px;padding:11px 14px;background:#fff">Jog<span style="color:#3e63c4">|</span></span>
+        <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px;white-space:nowrap">Als Favorit</span>
+      </div>
+      <div style="margin-top:6px;background:#fff;border:1px solid #ececea;border-radius:10px;box-shadow:0 6px 18px rgba(35,35,34,.1);overflow:hidden">
+        <div style="font-size:14px;color:#232322;padding:10px 14px;background:#f6f7fb"><b>Jog</b>hurt <span style="font-size:11.5px;color:#a3a39b">· Molkerei</span></div>
+        <div style="font-size:14px;color:#5a5a55;padding:10px 14px">„Jog" neu anlegen</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3h Katalog -->
+<div class="dv-opt" id="3h"><div class="dv-olabel"><a class="dv-oid" href="#3h">3h</a>Katalog — dicht, durchsuchbar, eine Zeile geöffnet</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Katalog</span>
+    <span style="font-size:12px;color:#a3a39b">124 Artikel</span>
+  </div>
+  <div style="padding:10px 16px 18px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:9px;background:#f1f1ee;border-radius:10px;padding:9px 13px">
+      <span style="font-size:13px;color:#a3a39b">⌕</span><span style="font-size:14px;color:#a3a39b">Artikel suchen…</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #f1f1ee;margin-top:6px">
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">Äpfel</span><span style="font-size:12px;color:#a3a39b">Obst &amp; Gemüse · kg</span></div><span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="background:#fff;border:1px solid #dfe4f2;border-radius:12px;padding:12px 14px;margin:8px 0;box-shadow:0 2px 8px rgba(62,99,196,.08)">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">NAME</div>
+      <div style="font-size:14.5px;color:#232322;border:1.5px solid #bf4a41;border-radius:8px;padding:8px 11px;margin-top:4px;background:#fff">Milch</div>
+      <div style="font-size:12px;color:#bf4a41;margin-top:4px">Artikel existiert bereits</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">STANDARD-KATEGORIE</div><div style="font-size:13.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:8px 11px;margin-top:4px">Molkerei</div></div>
+        <div style="width:86px"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#a3a39b">EINHEIT</div><div style="font-size:13.5px;color:#232322;border:1.5px solid #ececea;border-radius:8px;padding:8px 11px;margin-top:4px">l</div></div>
+      </div>
+      <div style="font-size:12px;color:#a3a39b;margin-top:10px">Löschen nicht möglich — wird in 3 Listen verwendet.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #f1f1ee">
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">Müsli</span><span style="font-size:12px;color:#a3a39b">Frühstück · Packung</span></div><span style="color:#c6c6bf">›</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 2px">
+      <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">Nudeln</span><span style="font-size:12px;color:#a3a39b">Trockenwaren · g</span></div>
+      <span style="font-size:12.5px;font-weight:600;color:#bf4a41">Löschen</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3i Mitglieder -->
+<div class="dv-opt" id="3i"><div class="dv-olabel"><a class="dv-oid" href="#3i">3i</a>Mitglieder — Owner-Sicht</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Mitglieder</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid #f1f1ee">
+        <span style="width:30px;height:30px;border-radius:50%;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">A</span>
+        <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">Anna <span style="font-weight:400;color:#a3a39b">(du)</span></span><span style="font-size:12px;color:#a3a39b">anna@web.de</span></div>
+        <span style="font-size:10.5px;font-weight:700;color:#2f4a94;background:#eef2fc;border-radius:99px;padding:3px 8px">OWNER</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid #f1f1ee">
+        <span style="width:30px;height:30px;border-radius:50%;background:#7a8fc9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">B</span>
+        <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">Ben</span><span style="font-size:12px;color:#a3a39b">ben@gmail.com</span></div>
+        <span style="font-size:12.5px;font-weight:600;color:#bf4a41">Entfernen</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px">
+        <span style="width:30px;height:30px;border-radius:50%;background:#9aa8cf;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">C</span>
+        <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#232322">Clara</span><span style="font-size:12px;color:#a3a39b">clara@gmail.com</span></div>
+        <span style="font-size:12.5px;font-weight:600;color:#bf4a41">Entfernen</span>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:4px">MITGLIED EINLADEN</div>
+    <div style="display:flex;gap:8px">
+      <span style="flex:1;font-size:14px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff">E-Mail-Adresse</span>
+      <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px">Einladen</span>
+    </div>
+    <div style="font-size:12px;color:#a3a39b;line-height:1.45">Nur freigeschaltete E-Mail-Adressen können eingeladen werden.</div>
+  </div>
+</div></div>
+
+<!-- 3j Liste abgeschlossen -->
+<div class="dv-opt" id="3j"><div class="dv-olabel"><a class="dv-oid" href="#3j">3j</a>Liste — abgeschlossen (eingefroren)</div>
+<div class="dv-card" style="width:360px;background:#f7f7f5">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:13.5px;color:#3e63c4;font-weight:600;white-space:nowrap">← Zum Projekt</span>
+    <span style="flex:1;font-size:17px;font-weight:700;color:#5a5a55;text-align:right">Grillabend</span>
+  </div>
+  <div style="margin:12px 16px 0;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#eef1ea;border-radius:10px">
+    <span style="width:20px;height:20px;border-radius:50%;background:#6d8a5e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">✓</span>
+    <span style="flex:1;font-size:13px;color:#4c5c43">Abgeschlossen am 19.07.2026</span>
+    <span style="font-size:13px;font-weight:700;color:#3e63c4;white-space:nowrap">Wieder öffnen</span>
+  </div>
+  <div style="padding:6px 16px 18px;display:flex;flex-direction:column;opacity:.75">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:10px 0 4px">GRILLEN</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #ececea">
+      <span style="width:21px;height:21px;border-radius:50%;background:#b8bdb2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#a3a39b;text-decoration:line-through">Würstchen</span><span style="font-size:13px;color:#c4c4bc">8 Stück</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #ececea">
+      <span style="width:21px;height:21px;border-radius:50%;background:#b8bdb2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#a3a39b;text-decoration:line-through">Grillanzünder</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0">
+      <span style="width:21px;height:21px;border-radius:50%;background:#b8bdb2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#a3a39b;text-decoration:line-through">Kohle</span><span style="font-size:13px;color:#c4c4bc">3 kg</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3k Verwaltung -->
+<div class="dv-opt" id="3k"><div class="dv-olabel"><a class="dv-oid" href="#3k">3k</a>Verwaltung — Zugang (Allowlist)</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Verwaltung</span>
+    <span style="font-size:10.5px;font-weight:700;color:#2f4a94;background:#eef2fc;border-radius:99px;padding:3px 8px">ADMIN</span>
+  </div>
+  <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b">ZUGANG</div>
+    <div style="background:#fff;border:1px solid #ececea;border-radius:12px;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid #f1f1ee">
+        <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:14px;font-weight:600;color:#232322">anna@web.de <span style="font-weight:400;color:#a3a39b">(du)</span></span><span style="font-size:11px;color:#a3a39b">Admin: Ja</span></div>
+        <div style="font-size:12px;color:#a3a39b;margin-top:1px">Anna</div>
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid #f1f1ee">
+        <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:14px;font-weight:600;color:#232322">ben@gmail.com</span><span style="font-size:12px;font-weight:600;color:#3e63c4">Admin gewähren</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:1px"><span style="flex:1;font-size:12px;color:#a3a39b">Ben · Admin: Nein</span><span style="font-size:12px;font-weight:600;color:#bf4a41">Zugang entziehen</span></div>
+      </div>
+      <div style="padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:14px;font-weight:600;color:#232322">dora@gmx.de</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:1px"><span style="flex:1;font-size:12px;color:#a3a39b">Noch nie angemeldet · Admin erst nach erstem Login möglich</span><span style="font-size:12px;font-weight:600;color:#bf4a41">Zugang entziehen</span></div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;margin-top:4px">E-MAIL EINLADEN</div>
+    <div style="display:flex;gap:8px">
+      <span style="flex:1;font-size:14px;color:#c2c2ba;border:1.5px solid #ececea;border-radius:10px;padding:11px 14px;background:#fff">E-Mail-Adresse</span>
+      <span style="font-size:13.5px;font-weight:700;color:#fff;background:#3e63c4;border-radius:10px;padding:11px 14px">Einladen</span>
+    </div>
+    <div style="font-size:12px;color:#a3a39b;line-height:1.45">Es wird keine Einladungs-E-Mail versendet — sag der Person selbst Bescheid.</div>
+  </div>
+</div></div>
+
+<!-- 3l Zugang entziehen — Bestätigung -->
+<div class="dv-opt" id="3l"><div class="dv-olabel"><a class="dv-oid" href="#3l">3l</a>Verwaltung — „Zugang entziehen", zwei Wege</div>
+<div class="dv-card" style="width:360px;height:560px;position:relative;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 6px;opacity:.4">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Verwaltung</span>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(35,35,34,.3)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(35,35,34,.18);padding:14px 18px 20px">
+    <div style="width:36px;height:4px;border-radius:2px;background:#e3e3df;margin:0 auto 14px"></div>
+    <div style="font-size:17px;font-weight:800;color:#232322">Zugang entziehen: ben@gmail.com</div>
+    <div style="font-size:13px;color:#5a5a55;margin-top:6px;line-height:1.5">Ben ist Mitglied in diesen Projekten:</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:9px">
+      <div style="display:flex;align-items:center;gap:9px;background:#f7f7f5;border-radius:9px;padding:9px 12px"><span style="flex:1;font-size:13.5px;font-weight:600;color:#232322">Haushalt</span><span style="font-size:11px;color:#a3a39b">Mitglied</span></div>
+      <div style="display:flex;align-items:center;gap:9px;background:#f7f7f5;border-radius:9px;padding:9px 12px"><span style="flex:1;font-size:13.5px;font-weight:600;color:#232322">Camping</span><span style="font-size:11px;font-weight:700;color:#2f4a94">Owner</span></div>
+    </div>
+    <div style="margin-top:16px;border:1.5px solid #dcdcd7;border-radius:12px;padding:12px 14px">
+      <div style="font-size:14px;font-weight:700;color:#232322">Nur Zugang entziehen</div>
+      <div style="font-size:12px;color:#5a5a55;margin-top:2px;line-height:1.45">Keine neuen Logins. Mitgliedschaften bleiben — erneutes Einladen stellt alles wieder her.</div>
+    </div>
+    <div style="margin-top:8px;border:1.5px solid #bf4a41;background:#fdf3f2;border-radius:12px;padding:12px 14px">
+      <div style="font-size:14px;font-weight:700;color:#bf4a41">Zugang entziehen und aus allen Projekten entfernen</div>
+      <div style="font-size:12px;color:#8a4038;margin-top:2px;line-height:1.45">Sofort und endgültig — erneutes Einladen bringt die Mitgliedschaften <b>nicht</b> zurück.</div>
+    </div>
+    <div style="font-size:11.5px;color:#a3a39b;margin-top:10px;line-height:1.45">Als Owner von „Camping" behält Ben dort in jedem Fall Zugriff.</div>
+    <div style="font-size:13.5px;font-weight:600;color:#5a5a55;text-align:center;margin-top:12px">Abbrechen</div>
+  </div>
+</div></div>
+
+</div>
+<p class="dv-next">Als Nächstes: „Desktop-Layout (Sidebar + Liste)" · „Leere Zustände für alle Screens" · „interaktiven Prototyp aus <a class="dv-oid" href="#2a">2a</a>–<a class="dv-oid" href="#2c">2c</a> bauen"</p>
+</section>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Richtung „Tinte" — <a class="dv-oid" href="#1c">1c</a> + Karten aus <a class="dv-oid" href="#1e">1e</a> + Vorbefüllung aus <a class="dv-oid" href="#1g">1g</a></span></div>
+<div class="dv-opts">
+
+<!-- ============ 2a Liste Tinte, Alle ============ -->
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Liste — „Alle", offene Einträge</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Einkauf Samstag</span>
+    <span style="font-size:19px;color:#4a4a48">⋮</span>
+  </div>
+  <div style="display:flex;gap:16px;padding:11px 16px 0;border-bottom:1px solid #ececea">
+    <span style="font-size:13.5px;font-weight:700;color:#3e63c4;padding-bottom:9px;border-bottom:2px solid #3e63c4">Alle</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Obst &amp; Gemüse</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Molkerei</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Tiefk…</span>
+  </div>
+  <div style="padding:6px 16px 18px;display:flex;flex-direction:column">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:10px 0 4px">OBST &amp; GEMÜSE</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c6c6bf"></span>
+      <span style="flex:1;font-size:15.5px;color:#232322">Äpfel</span><span style="font-size:13px;color:#a3a39b">1 kg</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#b3b3ab;text-decoration:line-through">Bananen</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:14px 0 4px">MOLKEREI</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c6c6bf"></span>
+      <span style="flex:1;font-size:15.5px;color:#232322">Milch</span><span style="font-size:13px;color:#a3a39b">1,5 l</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c6c6bf"></span>
+      <span style="flex:1;font-size:15.5px;color:#232322">Butter</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:14px 0 4px">OHNE KATEGORIE</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c6c6bf"></span>
+      <span style="flex:1;font-size:15.5px;color:#232322">Grillanzünder</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px">
+      <span style="width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:#3e63c4;font-size:19px;font-weight:600">＋</span>
+      <span style="flex:1;font-size:15.5px;color:#c2c2ba">Eintrag hinzufügen</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============ 2b Drawer Tinte ============ -->
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Drawer — Projektkarte + Zähler, kühl getönt</div>
+<div class="dv-card" style="width:360px;height:560px;position:relative;background:#fcfcfb">
+  <div style="position:absolute;inset:0;background:rgba(35,35,34,.35)"></div>
+  <div style="position:absolute;top:0;left:0;bottom:0;width:276px;background:#f3f4f2;display:flex;flex-direction:column;padding:14px 12px">
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 1px 2px rgba(35,35,34,.08)">
+      <span style="width:30px;height:30px;border-radius:9px;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">H</span>
+      <span style="flex:1;font-size:15px;font-weight:700;color:#232322">Haushalt</span>
+      <span style="font-size:11px;color:#a3a39b">▾</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(35,35,34,.06)"><span style="width:17px;height:17px;border-radius:5px;background:#3e63c4;opacity:.85"></span><span style="flex:1;font-size:14.5px;font-weight:700;color:#232322">Listen</span><span style="font-size:12px;font-weight:700;color:#a3a39b">3</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14.5px;color:#5a5a55">Archiv</span></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:16px 12px 6px">PROJEKT</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14.5px;color:#5a5a55">Favoriten</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14.5px;color:#5a5a55">Katalog</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14.5px;color:#5a5a55">Mitglieder</span><span style="font-size:12px;color:#a3a39b">4</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#c9cbc5"></span><span style="flex:1;font-size:14.5px;color:#5a5a55">Verwaltung</span></div>
+    <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#dddfd9"></span><span style="flex:1;font-size:14.5px;color:#a3a39b">Abmelden</span></div>
+  </div>
+</div></div>
+
+<!-- ============ 2c Vorbefüllung Sheet Tinte ============ -->
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Vorbefüllung — „Neue Liste"-Sheet mit Artikel-Vorschau</div>
+<div class="dv-card" style="width:360px;height:560px;position:relative;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 6px;opacity:.45">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Haushalt</span>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(35,35,34,.3)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(35,35,34,.18);padding:14px 18px 20px">
+    <div style="width:36px;height:4px;border-radius:2px;background:#e3e3df;margin:0 auto 14px"></div>
+    <div style="font-size:17px;font-weight:800;color:#232322">Neue Liste</div>
+    <div style="margin-top:12px;font-size:15px;color:#232322;border:1.5px solid #3e63c4;border-radius:10px;padding:11px 14px;background:#fff">Einkauf Samstag<span style="color:#3e63c4">|</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
+      <span style="font-size:13px;font-weight:700;color:#232322">Vorbefüllen</span>
+      <span style="flex:1;font-size:11.5px;color:#a3a39b">Favoriten + häufige Artikel</span>
+      <span style="width:42px;height:25px;border-radius:99px;background:#3e63c4;position:relative"><span style="position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px">
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#eef2fc;color:#2f4a94">★ Milch</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#eef2fc;color:#2f4a94">★ Butter</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#eef2fc;color:#2f4a94">★ Brot</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1f1ee;color:#5a5a55">Äpfel</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1f1ee;color:#5a5a55">Joghurt</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1f1ee;color:#5a5a55">Kaffee</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1f1ee;color:#5a5a55">+ 4 weitere</span>
+    </div>
+    <div style="font-size:11px;color:#a3a39b;margin-top:9px">★ Favoriten · übrige aus den letzten 4 abgeschlossenen Listen</div>
+    <div style="margin-top:16px;background:#3e63c4;color:#fff;font-size:15px;font-weight:700;text-align:center;padding:13px 0;border-radius:12px">Liste mit 10 Einträgen anlegen</div>
+  </div>
+</div></div>
+
+</div>
+<p class="dv-next">Als Nächstes: „alle 11 Screens in dieser Richtung ausbauen" · „Desktop-Layout dazu" · „interaktiven Prototyp bauen"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Smart Lists — Liste (3 Richtungen), Drawer (2), Vorbefüllung (2)</span></div>
+<div class="dv-opts">
+
+<!-- ============ 1a Koralle · dicht ============ -->
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Liste „Koralle" — dicht, warm, Todoist-nah</div>
+<div class="dv-card" style="width:360px;background:#fbf8f5">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;background:#fbf8f5">
+    <span style="font-size:19px;color:#4a4440">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#2b2622">Einkauf Samstag</span>
+    <span style="font-size:19px;color:#4a4440">⋮</span>
+  </div>
+  <div style="display:flex;gap:7px;padding:4px 16px 12px;overflow:hidden">
+    <span style="flex:none;font-size:13px;font-weight:600;padding:6px 13px;border-radius:99px;background:#d95d4e;color:#fff">Alle</span>
+    <span style="flex:none;font-size:13px;font-weight:500;padding:6px 13px;border-radius:99px;background:#f1e9e2;color:#5c534c">Obst &amp; Gemüse</span>
+    <span style="flex:none;font-size:13px;font-weight:500;padding:6px 13px;border-radius:99px;background:#f1e9e2;color:#5c534c">Molkerei</span>
+    <span style="flex:none;font-size:13px;font-weight:500;padding:6px 13px;border-radius:99px;background:#f1e9e2;color:#5c534c">Tiefkü…</span>
+  </div>
+  <div style="padding:2px 16px 18px;display:flex;flex-direction:column">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a89a8e;padding:8px 0 4px">OBST &amp; GEMÜSE</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f0e8e0">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c9beb4"></span>
+      <span style="flex:1;font-size:15.5px;color:#2b2622">Äpfel</span><span style="font-size:13px;color:#a89a8e">1 kg</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f0e8e0">
+      <span style="width:21px;height:21px;border-radius:50%;background:#d95d4e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#b5a99d;text-decoration:line-through">Bananen</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a89a8e;padding:14px 0 4px">MOLKEREI</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f0e8e0">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c9beb4"></span>
+      <span style="flex:1;font-size:15.5px;color:#2b2622">Milch</span><span style="font-size:13px;color:#a89a8e">1,5 l</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f0e8e0">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c9beb4"></span>
+      <span style="flex:1;font-size:15.5px;color:#2b2622">Butter</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a89a8e;padding:14px 0 4px">OHNE KATEGORIE</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f0e8e0">
+      <span style="width:21px;height:21px;border-radius:50%;border:2px solid #c9beb4"></span>
+      <span style="flex:1;font-size:15.5px;color:#2b2622">Grillanzünder</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px">
+      <span style="width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:#d95d4e;font-size:19px;font-weight:600">＋</span>
+      <span style="flex:1;font-size:15.5px;color:#c0b4a8">Eintrag hinzufügen</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============ 1b Salbei · Karten, gefiltert ============ -->
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Liste „Salbei" — Kartengruppen · Chip „Molkerei" aktiv</div>
+<div class="dv-card" style="width:360px;background:#f4f5f2">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px">
+    <span style="font-size:19px;color:#464b45">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#23271f">Einkauf Samstag</span>
+    <span style="font-size:19px;color:#464b45">⋮</span>
+  </div>
+  <div style="display:flex;gap:7px;padding:4px 16px 12px;overflow:hidden">
+    <span style="flex:none;font-size:13px;font-weight:500;padding:6px 13px;border-radius:10px;background:#fff;border:1px solid #dfe2db;color:#575e53">Alle</span>
+    <span style="flex:none;font-size:13px;font-weight:500;padding:6px 13px;border-radius:10px;background:#fff;border:1px solid #dfe2db;color:#575e53">Obst &amp; G…</span>
+    <span style="flex:none;font-size:13px;font-weight:600;padding:6px 13px;border-radius:10px;background:#356e5e;border:1px solid #356e5e;color:#fff">Molkerei</span>
+    <span style="flex:none;font-size:13px;font-weight:500;padding:6px 13px;border-radius:10px;background:#fff;border:1px solid #dfe2db;color:#575e53">Tiefk…</span>
+  </div>
+  <div style="padding:4px 14px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(30,40,30,.06);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #f0f2ee">
+        <span style="width:22px;height:22px;border-radius:7px;border:2px solid #c3cabe"></span>
+        <span style="flex:1;font-size:15.5px;color:#23271f">Milch</span><span style="font-size:13px;color:#9aa294">1,5 l</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #f0f2ee">
+        <span style="width:22px;height:22px;border-radius:7px;border:2px solid #c3cabe"></span>
+        <span style="flex:1;font-size:15.5px;color:#23271f">Butter</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+        <span style="width:22px;height:22px;border-radius:7px;border:2px solid #c3cabe"></span>
+        <span style="flex:1;font-size:15.5px;color:#23271f">Joghurt</span><span style="font-size:13px;color:#9aa294">500 g</span>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(30,40,30,.06);display:flex;align-items:center;gap:12px;padding:12px 14px">
+      <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:#356e5e;font-size:19px;font-weight:600">＋</span>
+      <span style="flex:1;font-size:15.5px;color:#aab2a4">Neu in „Molkerei"</span>
+    </div>
+    <div style="font-size:12px;color:#9aa294;text-align:center;padding:2px 0 0">Neue Einträge landen in Molkerei</div>
+  </div>
+</div></div>
+
+<!-- ============ 1c Blau · Linien, alles abgehakt ============ -->
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Liste „Tinte" — ruhige Linien · alles abgehakt, leiser Hinweis</div>
+<div class="dv-card" style="width:360px;background:#fcfcfb">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 10px;border-bottom:1px solid #ececea">
+    <span style="font-size:19px;color:#4a4a48">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#232322">Einkauf Samstag</span>
+    <span style="font-size:19px;color:#4a4a48">⋮</span>
+  </div>
+  <div style="display:flex;gap:16px;padding:11px 16px 0;border-bottom:1px solid #ececea">
+    <span style="font-size:13.5px;font-weight:700;color:#3e63c4;padding-bottom:9px;border-bottom:2px solid #3e63c4">Alle</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Obst &amp; Gemüse</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Molkerei</span>
+    <span style="font-size:13.5px;font-weight:500;color:#77776f;padding-bottom:9px">Tiefk…</span>
+  </div>
+  <div style="margin:12px 16px 0;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#eef2fc;border-radius:10px">
+    <span style="font-size:15px">✓</span>
+    <span style="flex:1;font-size:13.5px;color:#2f4a94;line-height:1.35">Alle Einträge sind abgehakt.</span>
+    <span style="font-size:13px;font-weight:700;color:#3e63c4;white-space:nowrap">Abschließen</span>
+  </div>
+  <div style="padding:6px 16px 18px;display:flex;flex-direction:column">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:10px 0 4px">OBST &amp; GEMÜSE</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#b3b3ab;text-decoration:line-through">Äpfel</span><span style="font-size:13px;color:#c4c4bc">1 kg</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#b3b3ab;text-decoration:line-through">Bananen</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a3a39b;padding:14px 0 4px">MOLKEREI</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f1ee">
+      <span style="width:21px;height:21px;border-radius:50%;background:#3e63c4;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>
+      <span style="flex:1;font-size:15.5px;color:#b3b3ab;text-decoration:line-through">Milch</span><span style="font-size:13px;color:#c4c4bc">1,5 l</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px">
+      <span style="width:21px;height:21px;display:flex;align-items:center;justify-content:center;color:#3e63c4;font-size:19px;font-weight:600">＋</span>
+      <span style="flex:1;font-size:15.5px;color:#c2c2ba">Eintrag hinzufügen</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============ 1d Drawer flach ============ -->
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Drawer — flach &amp; textnah (wie im Brief)</div>
+<div class="dv-card" style="width:360px;height:560px;position:relative;background:#fbf8f5">
+  <div style="position:absolute;inset:0;background:rgba(43,38,34,.35)"></div>
+  <div style="position:absolute;top:0;left:0;bottom:0;width:264px;background:#fbf8f5;box-shadow:4px 0 24px rgba(43,38,34,.18);display:flex;flex-direction:column;padding:18px 0 14px">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 20px 16px">
+      <span style="font-size:15px;font-weight:800;letter-spacing:.04em;color:#2b2622">HAUSHALT</span>
+      <span style="font-size:11px;color:#a89a8e">▾</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px;background:#f3e6df;border-right:3px solid #d95d4e"><span style="font-size:14.5px;font-weight:700;color:#2b2622">Listen</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px"><span style="font-size:14.5px;color:#5c534c">Archiv</span></div>
+    <div style="height:1px;background:#eadfd6;margin:10px 20px"></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px"><span style="font-size:14.5px;color:#5c534c">Favoriten</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px"><span style="font-size:14.5px;color:#5c534c">Katalog</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px"><span style="font-size:14.5px;color:#5c534c">Mitglieder</span></div>
+    <div style="flex:1"></div>
+    <div style="height:1px;background:#eadfd6;margin:10px 20px"></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px"><span style="font-size:14.5px;color:#5c534c">Verwaltung</span><span style="font-size:12px;color:#a89a8e">⚙</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px"><span style="font-size:14.5px;color:#a89a8e">Abmelden</span></div>
+  </div>
+</div></div>
+
+<!-- ============ 1e Drawer getönt m. Icons ============ -->
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Drawer — getönt, Projektkarte + Icon-Platzhalter</div>
+<div class="dv-card" style="width:360px;height:560px;position:relative;background:#fbf8f5">
+  <div style="position:absolute;inset:0;background:rgba(43,38,34,.35)"></div>
+  <div style="position:absolute;top:0;left:0;bottom:0;width:276px;background:#f6efe8;display:flex;flex-direction:column;padding:14px 12px">
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 1px 2px rgba(43,38,34,.08)">
+      <span style="width:30px;height:30px;border-radius:9px;background:#d95d4e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">H</span>
+      <span style="flex:1;font-size:15px;font-weight:700;color:#2b2622">Haushalt</span>
+      <span style="font-size:11px;color:#a89a8e">▾</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;background:#fff;border-radius:10px"><span style="width:17px;height:17px;border-radius:5px;background:#d95d4e;opacity:.85"></span><span style="flex:1;font-size:14.5px;font-weight:700;color:#2b2622">Listen</span><span style="font-size:12px;font-weight:700;color:#a89a8e">3</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#cbbfb3"></span><span style="flex:1;font-size:14.5px;color:#5c534c">Archiv</span></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#a89a8e;padding:16px 12px 6px">PROJEKT</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#cbbfb3"></span><span style="flex:1;font-size:14.5px;color:#5c534c">Favoriten</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#cbbfb3"></span><span style="flex:1;font-size:14.5px;color:#5c534c">Katalog</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#cbbfb3"></span><span style="flex:1;font-size:14.5px;color:#5c534c">Mitglieder</span><span style="font-size:12px;color:#a89a8e">4</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#cbbfb3"></span><span style="flex:1;font-size:14.5px;color:#5c534c">Verwaltung</span></div>
+    <div style="display:flex;align-items:center;gap:11px;padding:10px 12px"><span style="width:17px;height:17px;border-radius:5px;background:#e2d6ca"></span><span style="flex:1;font-size:14.5px;color:#a89a8e">Abmelden</span></div>
+  </div>
+</div></div>
+
+<!-- ============ 1f Vorbefüllung als Hero-Karte ============ -->
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Vorbefüllung — Hero-Karte auf dem Projekt-Screen</div>
+<div class="dv-card" style="width:360px;background:#fbf8f5">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 6px">
+    <span style="font-size:19px;color:#4a4440">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#2b2622">Haushalt</span>
+    <span style="font-size:11.5px;color:#a89a8e">Deine Rolle: Owner</span>
+  </div>
+  <div style="padding:10px 16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:linear-gradient(135deg,#d95d4e,#c94a56);border-radius:16px;padding:16px;color:#fff">
+      <div style="font-size:15.5px;font-weight:800">Vorbefüllte Liste anlegen</div>
+      <div style="font-size:13px;opacity:.92;margin-top:3px;line-height:1.4">Startet mit deinen 6 Favoriten und 4 häufigen Artikeln aus den letzten Einkäufen.</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <span style="flex:1;background:rgba(255,255,255,.96);color:#c94a56;font-size:13.5px;font-weight:700;padding:9px 0;border-radius:9px;text-align:center">Liste erstellen</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 2px">
+      <span style="flex:1;height:1px;background:#eadfd6"></span>
+      <span style="font-size:12px;color:#a89a8e">oder leer starten</span>
+      <span style="flex:1;height:1px;background:#eadfd6"></span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <span style="flex:1;font-size:14px;color:#c0b4a8;border:1.5px dashed #dccfc2;border-radius:10px;padding:10px 14px;background:#fff">Listenname…</span>
+      <span style="font-size:13.5px;font-weight:700;color:#5c534c;border:1.5px solid #dccfc2;border-radius:10px;padding:10px 14px;background:#fff;white-space:nowrap">Leere Liste</span>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;color:#a89a8e;padding:12px 0 0">AKTIVE LISTEN</div>
+    <div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(43,38,34,.06);display:flex;align-items:center;gap:12px;padding:13px 14px">
+      <span style="flex:1;font-size:15px;font-weight:600;color:#2b2622">Einkauf Samstag</span><span style="font-size:12.5px;color:#a89a8e">5 offen</span><span style="color:#c9beb4">›</span>
+    </div>
+    <div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(43,38,34,.06);display:flex;align-items:center;gap:12px;padding:13px 14px">
+      <span style="flex:1;font-size:15px;font-weight:600;color:#2b2622">Packliste Camping</span><span style="font-size:12.5px;color:#a89a8e">12 offen</span><span style="color:#c9beb4">›</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============ 1g Vorbefüllung als Sheet m. Vorschau ============ -->
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Vorbefüllung — „Neue Liste"-Sheet mit Vorschau der Artikel</div>
+<div class="dv-card" style="width:360px;height:560px;position:relative;background:#fbf8f5">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px 6px;opacity:.45">
+    <span style="font-size:19px;color:#4a4440">☰</span>
+    <span style="flex:1;font-size:18px;font-weight:700;color:#2b2622">Haushalt</span>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(43,38,34,.3)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(43,38,34,.18);padding:14px 18px 20px">
+    <div style="width:36px;height:4px;border-radius:2px;background:#e3d8cd;margin:0 auto 14px"></div>
+    <div style="font-size:17px;font-weight:800;color:#2b2622">Neue Liste</div>
+    <div style="margin-top:12px;font-size:15px;color:#2b2622;border:1.5px solid #d95d4e;border-radius:10px;padding:11px 14px;background:#fff">Einkauf Samstag<span style="color:#d95d4e">|</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
+      <span style="font-size:13px;font-weight:700;color:#2b2622">Vorbefüllen</span>
+      <span style="flex:1;font-size:11.5px;color:#a89a8e">Favoriten + häufige Artikel</span>
+      <span style="width:42px;height:25px;border-radius:99px;background:#d95d4e;position:relative"><span style="position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px">
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#fdeeec;color:#b04a3e">★ Milch</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#fdeeec;color:#b04a3e">★ Butter</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#fdeeec;color:#b04a3e">★ Brot</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1e9e2;color:#5c534c">Äpfel</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1e9e2;color:#5c534c">Joghurt</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1e9e2;color:#5c534c">Kaffee</span>
+      <span style="font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:#f1e9e2;color:#5c534c">+ 4 weitere</span>
+    </div>
+    <div style="font-size:11px;color:#a89a8e;margin-top:9px">★ Favoriten · übrige aus den letzten 4 abgeschlossenen Listen</div>
+    <div style="margin-top:16px;background:#d95d4e;color:#fff;font-size:15px;font-weight:700;text-align:center;padding:13px 0;border-radius:12px">Liste mit 10 Einträgen anlegen</div>
+  </div>
+</div></div>
+
+</div>
+<p class="dv-next">Als Nächstes: „mehr wie <a class="dv-oid" href="#1a">1a</a>, aber mit den Karten aus <a class="dv-oid" href="#1b">1b</a>" · „<a class="dv-oid" href="#1f">1f</a> + <a class="dv-oid" href="#1g">1g</a> kombinieren" · „Gewinner interaktiv machen + Desktop-Layout"</p>
+</section>
+</x-dc>
+</body>
+</html>
