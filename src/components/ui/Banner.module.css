@@ -1,0 +1,30 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius-control);
+  animation: sl-banner var(--motion-sheet) ease-out;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.info {
+  background: var(--color-accent-tint);
+  color: var(--color-accent-dark);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.success {
+  background: var(--color-success-tint);
+  color: var(--color-success-text);
+  font-size: 13px;
+}
+
+.action {
+  flex: none;
+}
