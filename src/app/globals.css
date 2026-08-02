@@ -23,6 +23,8 @@
   --color-accent: #3e63c4;
   --color-accent-dark: #2f4a94;
   --color-accent-tint: #eef2fc;
+  /* White icon/text on accent fills (login logo tile check mark). */
+  --color-on-accent: #ffffff;
 
   --color-danger: #bf4a41;
   --color-danger-tint: #fdf3f2;
@@ -57,6 +59,8 @@
   --shadow-dropdown: 0 8px 24px rgba(35, 35, 34, 0.14);
   --shadow-sheet: 0 -8px 32px rgba(35, 35, 34, 0.18);
   --shadow-hero: 0 4px 14px rgba(62, 99, 196, 0.22);
+  /* Login logo tile — slightly larger/spread than --shadow-hero (handoff 3a). */
+  --shadow-logo: 0 6px 18px rgba(62, 99, 196, 0.25);
   --shadow-panel-active: 0 2px 8px rgba(62, 99, 196, 0.08);
 
   /* --- Motion --------------------------------------------------------- */

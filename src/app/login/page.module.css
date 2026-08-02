@@ -17,11 +17,11 @@
   height: 64px;
   border-radius: 18px;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 18px rgba(62, 99, 196, 0.25);
+  box-shadow: var(--shadow-logo);
 }
 
 .wordmark {
