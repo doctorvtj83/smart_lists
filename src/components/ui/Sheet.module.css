@@ -1,0 +1,40 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  animation: sl-fade var(--motion-fade) ease-out;
+  z-index: 30;
+}
+
+.panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--shadow-sheet);
+  /* 30px of bottom padding from the design, plus the iPhone home indicator. */
+  padding: 14px 18px calc(30px + var(--safe-bottom));
+  animation: sl-sheet var(--motion-sheet) var(--ease-sheet);
+  z-index: 31;
+  /* A long sheet (the revoke sheet with many projects) scrolls inside itself
+     instead of growing past the top of the screen. */
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* Purely decorative affordance that says "this panel came up from below". */
+.grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-grabber);
+  margin: 0 auto 14px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
