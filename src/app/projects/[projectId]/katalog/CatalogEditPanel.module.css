@@ -1,0 +1,47 @@
+/* Handoff screen 3h, opened row: white surface, accent-tinted border, soft
+   accent shadow — visibly a different object from the flat rows around it. */
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-active-panel);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel-active);
+  padding: 12px 14px;
+  margin: 8px 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Kategorie takes the room, Einheit is a narrow fixed column (design: 90px). */
+.defaults {
+  display: flex;
+  gap: 8px;
+}
+
+.unitField {
+  display: flex;
+  width: 90px;
+  flex: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+/* Pushes "Löschen" to the trailing edge, away from the confirming action. */
+.spacer {
+  flex: 1;
+}
+
+.note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin-top: 10px;
+}
