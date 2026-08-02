@@ -57,4 +57,22 @@ describe("TextField", () => {
     render(<TextField label="E-Mail-Adresse" name="email" />);
     expect(screen.getByLabelText("E-Mail-Adresse")).toHaveAttribute("name", "email");
   });
+
+  it("keeps error aria wiring even when the caller passes conflicting aria props", () => {
+    render(
+      <TextField
+        label="Name"
+        error="Artikel existiert bereits"
+        aria-invalid={false}
+        aria-describedby="some-other-id"
+      />,
+    );
+
+    const input = screen.getByLabelText("Name");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.getAttribute("aria-describedby")).toMatch(/-error$/);
+    expect(document.getElementById(input.getAttribute("aria-describedby") as string)).toHaveTextContent(
+      "Artikel existiert bereits",
+    );
+  });
 });

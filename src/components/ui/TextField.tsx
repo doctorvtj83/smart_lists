@@ -32,6 +32,8 @@ export function TextField({
   fieldSize = "md",
   className,
   id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   ...rest
 }: TextFieldProps) {
   // useId gives a stable id across server render and hydration; an explicit
@@ -57,13 +59,13 @@ export function TextField({
         </label>
       ) : null}
       <input
+        {...rest}
         id={inputId}
         className={inputClasses}
-        // `undefined` (not false/"") so the attributes vanish entirely when the
-        // field is valid — a stray aria-invalid="false" confuses some readers.
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        {...rest}
+        // Spread rest first, then controlled props — error wiring always wins so
+        // callers cannot accidentally silence screen-reader announcements.
+        aria-invalid={error ? true : ariaInvalid}
+        aria-describedby={error ? errorId : ariaDescribedBy}
       />
       {error ? <FieldError id={errorId}>{error}</FieldError> : null}
     </div>
