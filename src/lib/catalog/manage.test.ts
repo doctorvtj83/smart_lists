@@ -1,0 +1,128 @@
+import { PrismaClient } from "@prisma/client";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { resetDb } from "@/test/reset-db";
+import { listCatalog } from "./manage";
+
+const db = new PrismaClient();
+let projectId: string;
+
+beforeEach(async () => {
+  await resetDb(db);
+  // A catalog item needs a project; the user is only needed as the project owner.
+  const user = await db.user.create({ data: { googleSub: "g-u", email: "u@example.com" } });
+  const project = await db.project.create({ data: { name: "Haushalt", ownerId: user.id } });
+  projectId = project.id;
+});
+
+afterAll(async () => {
+  await db.$disconnect();
+});
+
+// Test helpers: the catalog management core is tested against real rows, so these
+// build the fixtures directly instead of going through the Slice 3 operations —
+// that keeps a failure here pointing at THIS module and not at applyOperation.
+async function makeArticle(name: string, defaults: { category?: string; unit?: string } = {}) {
+  return db.catalogItem.create({
+    data: {
+      projectId,
+      name,
+      normalizedName: name.trim().toLowerCase(),
+      defaultCategory: defaults.category ?? null,
+      defaultUnit: defaults.unit ?? null,
+    },
+  });
+}
+
+async function makeList(name: string, completed = false) {
+  return db.list.create({
+    data: {
+      projectId,
+      name,
+      status: completed ? "completed" : "active",
+      completedAt: completed ? new Date() : null,
+    },
+  });
+}
+
+async function addEntry(listId: string, catalogItemId: string, sortIndex = 1) {
+  return db.listItem.create({ data: { listId, catalogItemId, sortIndex } });
+}
+
+describe("listCatalog", () => {
+  it("returns an empty array for a project without articles", async () => {
+    expect(await listCatalog(db, projectId)).toEqual([]);
+  });
+
+  // The shared ordering rule (compareArticleNames) sorts under German rules, so
+  // "Äpfel" belongs next to "Apfel" — not after "Zucker" where a code-point sort
+  // would put it.
+  it("sorts articles by display name under German rules", async () => {
+    await makeArticle("Zucker");
+    await makeArticle("Äpfel");
+    await makeArticle("Butter");
+
+    const articles = await listCatalog(db, projectId);
+    expect(articles.map((a) => a.name)).toEqual(["Äpfel", "Butter", "Zucker"]);
+  });
+
+  it("surfaces the catalog defaults", async () => {
+    await makeArticle("Milch", { category: "Molkerei", unit: "l" });
+
+    const [milch] = await listCatalog(db, projectId);
+    expect(milch.defaultCategory).toBe("Molkerei");
+    expect(milch.defaultUnit).toBe("l");
+  });
+
+  // The delete guard counts LISTS, not entries: the same article twice on one
+  // list is still one list, and the note must say "1 Liste".
+  it("counts the distinct lists an article appears on, not the entries", async () => {
+    const milch = await makeArticle("Milch");
+    const einkauf = await makeList("Einkauf");
+    const wochenende = await makeList("Wochenende");
+    await addEntry(einkauf.id, milch.id, 1);
+    await addEntry(einkauf.id, milch.id, 2); // same list again -> still one list
+    await addEntry(wochenende.id, milch.id, 1);
+
+    const [article] = await listCatalog(db, projectId);
+    expect(article.usedInListCount).toBe(2);
+  });
+
+  // Completed lists count too: they feed the N-of-M suggestion statistic, which
+  // is precisely what the delete guard protects.
+  it("counts completed lists as usage", async () => {
+    const nudeln = await makeArticle("Nudeln");
+    const archiviert = await makeList("Letzte Woche", true);
+    await addEntry(archiviert.id, nudeln.id);
+
+    const [article] = await listCatalog(db, projectId);
+    expect(article.usedInListCount).toBe(1);
+  });
+
+  it("reports zero usage for an article no list mentions", async () => {
+    await makeArticle("Kerzen");
+    const [article] = await listCatalog(db, projectId);
+    expect(article.usedInListCount).toBe(0);
+  });
+
+  it("flags an article that is a project favourite", async () => {
+    const milch = await makeArticle("Milch");
+    await makeArticle("Kerzen");
+    await db.favorite.create({ data: { projectId, catalogItemId: milch.id } });
+
+    const articles = await listCatalog(db, projectId);
+    expect(articles.find((a) => a.name === "Milch")!.isFavorite).toBe(true);
+    expect(articles.find((a) => a.name === "Kerzen")!.isFavorite).toBe(false);
+  });
+
+  it("never returns another project's articles", async () => {
+    const otherUser = await db.user.create({ data: { googleSub: "g-o", email: "o@example.com" } });
+    const otherProject = await db.project.create({ data: { name: "Ferien", ownerId: otherUser.id } });
+    await db.catalogItem.create({
+      data: { projectId: otherProject.id, name: "Zelt", normalizedName: "zelt" },
+    });
+    await makeArticle("Milch");
+
+    const articles = await listCatalog(db, projectId);
+    expect(articles.map((a) => a.name)).toEqual(["Milch"]);
+  });
+});
