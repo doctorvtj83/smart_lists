@@ -1,0 +1,79 @@
+/* Handoff screen 3f: quiet rows, no card look. */
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 8px var(--screen-padding) calc(24px + var(--safe-bottom));
+}
+
+.rows {
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--color-hairline-weak);
+}
+
+/* The 20px desaturated check circle — the archive's visual signature. */
+.check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-success-tint);
+  color: var(--color-text-tertiary);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-control-border);
+}
+
+.footnote {
+  padding-top: 14px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}
