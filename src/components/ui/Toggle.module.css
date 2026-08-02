@@ -1,0 +1,31 @@
+/* Handoff: „Neue Liste"-Sheet — 42×25 track, 20px knob, 15ms-class transitions. */
+.track {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 25px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+
+.track[data-checked="true"] {
+  background: var(--color-accent);
+}
+
+.knob {
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  transition: left 150ms ease-out;
+}
+
+.track[data-checked="true"] .knob {
+  left: 19.5px;
+}
