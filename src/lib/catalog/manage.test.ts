@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import {
   createCatalogArticle,
+  deleteCatalogArticle,
   DUPLICATE_ARTICLE_MESSAGE,
   listCatalog,
   updateCatalogArticle,
@@ -309,6 +310,89 @@ describe("updateCatalogArticle", () => {
         category: null,
         unit: null,
       }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe("deleteCatalogArticle", () => {
+  it("deletes an article that no list uses", async () => {
+    const article = await makeArticle("Kerzen");
+
+    await deleteCatalogArticle(db, { projectId, catalogItemId: article.id });
+
+    expect(await db.catalogItem.count({ where: { projectId } })).toBe(0);
+  });
+
+  // The guard exists because CatalogItem.listItems cascades: without it, deleting
+  // an article would quietly delete its entries from every list it is on.
+  it("refuses an article that an active list uses, and says how many", async () => {
+    const article = await makeArticle("Milch");
+    const list = await makeList("Einkauf");
+    await addEntry(list.id, article.id);
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: article.id }),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: "Löschen nicht möglich — wird in 1 Liste verwendet.",
+    });
+    expect(await db.catalogItem.count({ where: { projectId } })).toBe(1);
+  });
+
+  // Completed lists are the input to the suggestion statistic — they protect the
+  // article just as much as an active list does.
+  it("refuses an article that only a completed list uses", async () => {
+    const article = await makeArticle("Nudeln");
+    const archiviert = await makeList("Letzte Woche", true);
+    await addEntry(archiviert.id, article.id);
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: article.id }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("counts distinct lists in the refusal message", async () => {
+    const article = await makeArticle("Milch");
+    const einkauf = await makeList("Einkauf");
+    const wochenende = await makeList("Wochenende");
+    await addEntry(einkauf.id, article.id, 1);
+    await addEntry(einkauf.id, article.id, 2);
+    await addEntry(wochenende.id, article.id, 1);
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: article.id }),
+    ).rejects.toMatchObject({
+      message: "Löschen nicht möglich — wird in 2 Listen verwendet.",
+    });
+  });
+
+  // A favourite is NOT a usage (the brief names list usage as the only guard),
+  // so the delete goes through and the FK cascade takes the favourite with it.
+  it("deletes an unused article that is a favourite, and its favourite row with it", async () => {
+    const article = await makeArticle("Kerzen");
+    await db.favorite.create({ data: { projectId, catalogItemId: article.id } });
+
+    await deleteCatalogArticle(db, { projectId, catalogItemId: article.id });
+
+    expect(await db.favorite.count({ where: { projectId } })).toBe(0);
+  });
+
+  it("hides another project's article behind a 404", async () => {
+    const otherUser = await db.user.create({ data: { googleSub: "g-o4", email: "o4@example.com" } });
+    const otherProject = await db.project.create({ data: { name: "Ferien", ownerId: otherUser.id } });
+    const foreign = await db.catalogItem.create({
+      data: { projectId: otherProject.id, name: "Zelt", normalizedName: "zelt" },
+    });
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: foreign.id }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(await db.catalogItem.count({ where: { projectId: otherProject.id } })).toBe(1);
+  });
+
+  it("answers 404 for a malformed id instead of crashing", async () => {
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: "not-a-uuid" }),
     ).rejects.toMatchObject({ status: 404 });
   });
 });

@@ -1,5 +1,6 @@
 import type { CatalogItem, PrismaClient } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { formatUsedInLists } from "@/lib/format/plural";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
 import { MAX_ITEM_NAME_LENGTH } from "./catalog";
@@ -226,4 +227,67 @@ export async function updateCatalogArticle(
     // Concurrent rename onto the same target name — the unique index catches it.
     rethrowAsDuplicate(error);
   }
+}
+
+/**
+ * How many DISTINCT lists of the project contain this article — active and
+ * completed alike. This is the delete guard's input and the same number the
+ * screen's note prints.
+ *
+ * `distinct: ["listId"]` does the de-duplication in the database, so an article
+ * that appears three times on one list still counts as one list.
+ */
+export async function countListsUsingArticle(
+  db: PrismaClient,
+  projectId: string,
+  catalogItemId: string,
+): Promise<number> {
+  const rows = await db.listItem.findMany({
+    // The nested `list: { projectId }` filter keeps the count project-scoped even
+    // if an id from elsewhere ever reached this function.
+    where: { catalogItemId, list: { projectId } },
+    select: { listId: true },
+    distinct: ["listId"],
+  });
+  return rows.length;
+}
+
+export interface DeleteCatalogArticleInput {
+  projectId: string;
+  catalogItemId: string;
+}
+
+/**
+ * Deletes an article from the project's catalog — but ONLY when no list uses it.
+ *
+ * Why the guard is not optional: ListItem.catalogItemId cascades on delete, so
+ * without it, removing an article would silently strip that article's entries
+ * from every list it appears on, including completed ones. Those completed lists
+ * are exactly what the N-of-M suggestion statistic reads (MVP design § 4.3), so
+ * an unguarded delete would quietly rewrite history and change future suggestions.
+ *
+ * The count is re-read HERE and not taken from the caller: the screen decided
+ * whether to show the button from a render that may be seconds old, and in the
+ * meantime another member may have put the article on a list.
+ */
+export async function deleteCatalogArticle(
+  db: PrismaClient,
+  input: DeleteCatalogArticleInput,
+): Promise<void> {
+  const { projectId, catalogItemId } = input;
+  if (!isUuid(catalogItemId)) throw new ApiError(404, "Artikel nicht gefunden");
+
+  // Project-scoped existence check first — a foreign id is a 404, never a delete.
+  const article = await db.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
+  if (!article) throw new ApiError(404, "Artikel nicht gefunden");
+
+  const usedInListCount = await countListsUsingArticle(db, projectId, catalogItemId);
+  if (usedInListCount > 0) {
+    // Same sentence the panel prints from the read model — see formatUsedInLists.
+    throw new ApiError(409, `Löschen nicht möglich — ${formatUsedInLists(usedInListCount)}.`);
+  }
+
+  // The article's Favorite row (0 or 1) goes with it via the FK cascade. That is
+  // intended: an article that no longer exists cannot stay a favourite.
+  await db.catalogItem.delete({ where: { id: catalogItemId } });
 }
