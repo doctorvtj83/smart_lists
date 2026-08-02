@@ -1,0 +1,59 @@
+/* Handoff screen 3e / Optionen 4b. */
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px var(--screen-padding) calc(24px + var(--safe-bottom));
+}
+
+.role {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.emptyRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* The field must be allowed to shrink, or the button is pushed off a 375px
+   screen (min-width:0 defeats the flex item's automatic min-content floor). */
+.emptyField {
+  flex: 1;
+  min-width: 0;
+}
+
+.section {
+  margin-top: 6px;
+}
+
+.openCount {
+  flex: none;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Lets the empty state centre itself in the remaining height instead of
+   hugging the header (the fix Slice 14 applied to /projects). */
+.empty {
+  display: flex;
+  flex: 1;
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}

@@ -1,307 +1,223 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { ListChecks } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { deleteProject, getProject, renameProject } from "@/lib/projects/projects";
-import { addMember, listMembers, removeMember } from "@/lib/projects/membership";
+import { deleteProject, renameProject } from "@/lib/projects/projects";
 import { requireMembership, requireOwner } from "@/lib/projects/guard";
-import Link from "next/link";
-import { createList, listLists } from "@/lib/lists/lists";
-import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
-import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
-import { addFavorite, listFavorites, removeFavorite } from "@/lib/favorites/favorites";
-import { createPrefilledList } from "@/lib/suggestions/suggestions";
-import { formatGermanDate } from "@/lib/format/date";
+import { getProjectNav } from "@/lib/projects/nav";
+import { listActiveListSummaries } from "@/lib/lists/summaries";
+import { listFavorites } from "@/lib/favorites/favorites";
+import { computeSuggestions, createListWithArticles } from "@/lib/suggestions/suggestions";
+import { formatOpenCount } from "@/lib/format/plural";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { RowLink } from "@/components/ui/RowLink";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { TextField } from "@/components/ui/TextField";
+import { DrawerTrigger } from "@/components/nav/DrawerTrigger";
+import { ProjectTitle } from "./ProjectTitle";
+import { DeleteProjectButton } from "./DeleteProjectButton";
+import { NewListSheet } from "./NewListSheet";
+import styles from "./page.module.css";
 
-// Next.js 16: dynamic route params are a Promise in server components — must be awaited.
-// This type reflects the new async params API introduced in Next.js 15/16.
+// Next.js 16: dynamic route params are a Promise in server components.
 type Props = { params: Promise<{ projectId: string }> };
 
-// Server Component: renders entirely on the server with direct DB access.
-// Protects itself via requireMembership; non-members are redirected to /projects.
+/**
+ * The project screen, reduced to ONE concern: the project's open lists
+ * (handoff screen 3e).
+ *
+ * Slice 11 moved members, favourites, the archive and the catalog link out into
+ * their own screens behind the drawer. What is left is the working surface: name
+ * the list, create it (pre-filled or empty), open one.
+ *
+ * Server Component: it reads the session and calls the domain layer directly,
+ * no HTTP round-trip. The three client components it renders (ProjectTitle,
+ * NewListSheet, DeleteProjectButton) receive Server Actions as props, so every
+ * mutation stays server-owned.
+ */
 export default async function ProjectDetailPage({ params }: Props) {
-  // Await the params Promise — required in Next.js 16 (params is no longer a plain object).
   const { projectId } = await params;
   const session = await auth();
-  // middleware.ts guarantees session is present; user.id is safe to assert.
+  // middleware.ts guarantees a session on this route, so user.id is safe.
   const userId = session!.user.id;
 
-  // Guard: a non-member must not see this page.
-  // requireMembership throws an error if the user is not a member of this project.
-  // We catch that error and redirect the user back to the projects list.
-  // This mirrors the same guard used in the REST routes, so the access rule is consistent.
-  let role;
-  try {
-    role = await requireMembership(prisma, projectId, userId);
-  } catch {
-    redirect("/projects");
-  }
+  // The layout already guarded the render, but this page defines Server Actions
+  // — individually addressable POST endpoints — so it re-checks for itself.
+  // getProjectNav answers null for non-member / unknown / malformed alike.
+  const nav = await getProjectNav(prisma, projectId, userId);
+  if (!nav) redirect("/projects");
 
-  // If we reach here, role is guaranteed to be "owner" | "member".
-  // The two reads are independent, so run them in parallel (Promise.all) instead of sequentially —
-  // one DB round-trip of latency instead of two.
-  const [project, members, activeLists, archivedLists, favorites, catalogSuggestions] =
-    await Promise.all([
-      getProject(prisma, projectId),
-      listMembers(prisma, projectId),
-      // Slice 6: split the project's lists into the working set ("Listen") and the archive ("Archiv").
-      // Active = newest-created first; archive = newest-completed first (see listLists).
-      listLists(prisma, projectId, "active"),
-      listLists(prisma, projectId, "completed"),
-      // Slice 5: the project's favorites (alphabetical) and the whole catalog for the favorite
-      // datalist. We pass CATALOG_DATALIST_LIMIT (not searchCatalog's short default) because a native
-      // <datalist> filters client-side over exactly the options we pre-render — same reasoning as the
-      // list detail page; see CATALOG_DATALIST_LIMIT in search.ts.
-      listFavorites(prisma, projectId),
-      searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
-    ]);
+  const isOwner = nav.role === "owner";
 
-  // Convenience flag used to conditionally render owner-only UI sections.
-  const isOwner = role === "owner";
+  // Three independent reads → Promise.all: one round-trip of latency, not three.
+  // The suggestions and the favourite ids feed the sheet's preview; the summaries
+  // feed the list rows.
+  const [activeLists, suggestions, favorites] = await Promise.all([
+    listActiveListSummaries(prisma, projectId),
+    computeSuggestions(prisma, projectId),
+    listFavorites(prisma, projectId),
+  ]);
 
-  // --- Owner-only Server Actions ---
-  // Each action re-derives identity from auth() and calls requireOwner (defense in depth).
-  // This matters because server actions are individually addressable POST endpoints —
-  // a malicious client could call them directly without going through this component.
+  // The sheet needs to know WHICH suggestions are favourites (for the ★ and the
+  // ordering). Favourites are a subset of the suggestion set, so an id list is
+  // all that has to cross the boundary.
+  const favoriteIds = favorites.map((favorite) => favorite.catalogItemId);
 
-  // Rename action: validates ownership, then updates the project name.
-  async function rename(formData: FormData) {
+  // --- Server Actions ---------------------------------------------------------
+  // Each re-derives identity and re-checks permission (defense in depth).
+
+  /**
+   * Creates a list from the sheet's surviving selection and jumps into it.
+   * Member-level: per the permission matrix every member may create lists.
+   */
+  async function createFromSheetAction(formData: FormData) {
     "use server";
     const s = await auth();
-    // requireOwner throws if the caller is not the project owner.
-    await requireOwner(prisma, projectId, s!.user.id);
+    await requireMembership(prisma, projectId, s!.user.id);
+
     const name = String(formData.get("name") ?? "").trim();
-    if (!name) return; // Ignore empty submissions.
-    await renameProject(prisma, projectId, name);
-    // Revalidate so the heading updates to the new name on the next render.
+    if (!name) return; // Ignore empty submissions (the convention across this app).
+
+    // getAll: the sheet posts one `articleName` field per surviving chip. An
+    // empty result is the legitimate "Leere Liste anlegen" case.
+    const articleNames = formData.getAll("articleName").map((value) => String(value));
+
+    const list = await createListWithArticles(prisma, { projectId, name, articleNames });
+    // redirect() throws a special Next.js error internally — it must not be
+    // wrapped in try/catch, and nothing may run after it.
+    redirect(`/lists/${list.id}`);
+  }
+
+  /** The secondary „Leere Liste" row next to the hero card. Member-level. */
+  async function createEmptyListAction(formData: FormData) {
+    "use server";
+    const s = await auth();
+    await requireMembership(prisma, projectId, s!.user.id);
+
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return;
+
+    await createListWithArticles(prisma, { projectId, name, articleNames: [] });
     revalidatePath(`/projects/${projectId}`);
   }
 
-  // Delete action: removes the project entirely, then redirects to the list.
-  // Note: redirect() throws a special Next.js error internally — it must not be caught.
-  async function remove() {
+  /** Inline rename. Owner-only (handoff: members see plain text). */
+  async function renameAction(name: string) {
+    "use server";
+    const s = await auth();
+    await requireOwner(prisma, projectId, s!.user.id);
+
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    await renameProject(prisma, projectId, trimmed);
+    // "layout" scope, not the default: the drawer and the sidebar print the
+    // project name too, and they live in the layout above this page.
+    revalidatePath(`/projects/${projectId}`, "layout");
+  }
+
+  /** Deletes the project and leaves. Owner-only. */
+  async function deleteAction() {
     "use server";
     const s = await auth();
     await requireOwner(prisma, projectId, s!.user.id);
     await deleteProject(prisma, projectId);
-    // After deletion the page no longer exists; send the user back to the projects list.
     redirect("/projects");
   }
 
-  // Invite action: looks up the user by email and adds them as a member.
-  // addMember throws "Nutzer nicht gefunden" if the email has never logged in —
-  // that propagates as a server error overlay in dev (expected guard behavior).
-  async function invite(formData: FormData) {
-    "use server";
-    const s = await auth();
-    await requireOwner(prisma, projectId, s!.user.id);
-    const email = String(formData.get("email") ?? "").trim();
-    if (!email) return;
-    await addMember(prisma, { projectId, email });
-    revalidatePath(`/projects/${projectId}`);
-  }
-
-  // Kick (remove member) action: takes a userId hidden field from the form.
-  // The "Entfernen" button is only rendered for non-owner members, so this
-  // should never be called on the project owner — but requireOwner guards it anyway.
-  async function kick(formData: FormData) {
-    "use server";
-    const s = await auth();
-    await requireOwner(prisma, projectId, s!.user.id);
-    const memberUserId = String(formData.get("userId") ?? "");
-    if (!memberUserId) return;
-    await removeMember(prisma, { projectId, userId: memberUserId });
-    revalidatePath(`/projects/${projectId}`);
-  }
-
-  // Create-list action (Slice 3). MEMBER-level, not owner-only: per the permission matrix
-  // (MVP design §6) every member may create lists — so this re-checks membership, not ownership.
-  async function createListAction(formData: FormData) {
-    "use server";
-    const s = await auth();
-    // requireMembership (not requireOwner): any member may create lists in the project.
-    await requireMembership(prisma, projectId, s!.user.id);
-    const name = String(formData.get("name") ?? "").trim();
-    if (!name) return; // Ignore empty submissions (same convention as the other actions).
-    await createList(prisma, { projectId, name });
-    revalidatePath(`/projects/${projectId}`);
-  }
-
-  // Create-prefilled-list action (Slice 5). MEMBER-level, like createListAction. Creates a list
-  // seeded from the project's suggestions (favorites + N-of-M statistic), then navigates to it so the
-  // user immediately sees the pre-filled entries and can remove the unwanted ones (MVP design §4.3,
-  // step 4).
-  async function createPrefilledListAction(formData: FormData) {
-    "use server";
-    const s = await auth();
-    await requireMembership(prisma, projectId, s!.user.id);
-    const name = String(formData.get("name") ?? "").trim();
-    if (!name) return; // Ignore empty submissions (same convention as the other actions).
-    const list = await createPrefilledList(prisma, { projectId, name });
-    // redirect() throws a special Next.js error internally — it must not be wrapped in try/catch,
-    // and nothing may run after it.
-    redirect(`/lists/${list.id}`);
-  }
-
-  // Add-favorite action (Slice 5). MEMBER-level: favorites/catalog upkeep is allowed for every
-  // member (permission matrix, MVP design §6). Favoriting by NAME (not id) is friendlier and lets a
-  // member favorite an article they have not listed yet — getOrCreateCatalogItem resolves the name
-  // to the project's catalog row (creating it on first use), then addFavorite pins it.
-  async function addFavoriteAction(formData: FormData) {
-    "use server";
-    const s = await auth();
-    await requireMembership(prisma, projectId, s!.user.id);
-    const name = String(formData.get("name") ?? "").trim();
-    if (!name) return;
-    const catalogItem = await getOrCreateCatalogItem(prisma, { projectId, name });
-    await addFavorite(prisma, { projectId, catalogItemId: catalogItem.id });
-    revalidatePath(`/projects/${projectId}`);
-  }
-
-  // Remove-favorite action (Slice 5). Member-level; idempotent (removeFavorite tolerates a missing
-  // row). The hidden field carries the catalog item id of the favorite to drop.
-  async function removeFavoriteAction(formData: FormData) {
-    "use server";
-    const s = await auth();
-    await requireMembership(prisma, projectId, s!.user.id);
-    const catalogItemId = String(formData.get("catalogItemId") ?? "");
-    if (!catalogItemId) return;
-    await removeFavorite(prisma, { projectId, catalogItemId });
-    revalidatePath(`/projects/${projectId}`);
-  }
+  // The hero copy differs between a project with lists and one without: the
+  // empty state invites a FIRST list and does not promise pre-fill yet, because
+  // there is no history to pre-fill from (handoff 5b).
+  const hasLists = activeLists.length > 0;
+  const newListSheet = (
+    <NewListSheet
+      suggestions={suggestions}
+      favoriteIds={favoriteIds}
+      heroTitle={hasLists ? "Vorbefüllte Liste anlegen" : "Erste Liste anlegen"}
+      heroSubtitle={
+        hasLists
+          ? "Startet mit Favoriten + häufigen Artikeln"
+          : "Später auch vorbefüllt mit deinen Favoriten"
+      }
+      createAction={createFromSheetAction}
+    />
+  );
 
   return (
-    <main style={{ padding: 24 }}>
-      {/* Back-link to the projects overview — same pattern as the list page's "← Zum Projekt".
-          Without this, the only ways back were the browser back button or typing /projects. */}
-      <p>
-        <Link href="/projects">← Zu meinen Projekten</Link>
-      </p>
-      {/* Project name as heading; project may be null if deleted concurrently, so use optional chaining. */}
-      <h1>{project?.name}</h1>
-      <p>Deine Rolle: {role === "owner" ? "Owner" : "Mitglied"}</p>
-      {/* Slice 10: the catalog screen. This page is still the un-restyled Slice 2/3
-          markup — Slice 11 splits it into drawer screens and this link becomes the
-          drawer's „Katalog" entry, so keep it to one line until then. */}
-      <p>
-        <Link href={`/projects/${projectId}/katalog`}>Katalog</Link>
-      </p>
+    <>
+      {/* No hairline: the hero card carries the visual weight right below
+          (handoff screen 3e). */}
+      {/*
+        PageHeader title decision (Task 10): the brief put `nav.projectName` in
+        the <h1> AND rendered ProjectTitle in the content — that doubles the name
+        on screen. Handoff 3e puts the (editable) name in the header row only
+        (☰ · name · Rolle). Fix: empty PageHeader title so its flex:1 <h1> acts
+        as the spacer from the prototype; ProjectTitle sits in `leading` next to
+        the drawer trigger. Accessible name comes from InlineEdit's "Projektname"
+        label (owner) / the visible text (member).
+      */}
+      <PageHeader
+        title=""
+        hairline={false}
+        leading={
+          <>
+            <DrawerTrigger />
+            <ProjectTitle name={nav.projectName} editable={isOwner} renameAction={renameAction} />
+          </>
+        }
+        trailing={
+          <span className={styles.role}>Deine Rolle: {isOwner ? "Owner" : "Mitglied"}</span>
+        }
+      />
+      <main className={styles.content}>
+        {hasLists ? (
+          <>
+            {newListSheet}
 
-      <h2>Mitglieder</h2>
-      <ul>
-        {members.map((m) => (
-          <li key={m.id}>
-            {/* Display email and role label in German. */}
-            {m.user.email} ({m.role === "owner" ? "Owner" : "Mitglied"})
-            {/* Owners can remove non-owner members. The remove form posts to the kick action. */}
-            {isOwner && m.role !== "owner" && (
-              <form action={kick} style={{ display: "inline" }}>
-                {/* Hidden field passes the target user's ID to the action. */}
-                <input type="hidden" name="userId" value={m.userId} />
-                <button type="submit">Entfernen</button>
-              </form>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {/* Slice 3: the project's lists. Visible and usable for EVERY member (member-level actions). */}
-      <h2>Listen</h2>
-      <form action={createListAction}>
-        <input name="name" placeholder="Listenname" aria-label="Listenname" />
-        <button type="submit">Liste anlegen</button>
-      </form>
-      {/* Slice 5: create a list already pre-filled from the project's suggestions (favorites +
-          N-of-M statistic). A SEPARATE form from "Liste anlegen" above so the two intents stay
-          explicit — the user chooses empty vs. pre-filled, we never guess. Member-level. */}
-      <form action={createPrefilledListAction}>
-        <input
-          name="name"
-          placeholder="Listenname (vorbefüllt)"
-          aria-label="Vorbefüllte Liste anlegen"
-        />
-        <button type="submit">Vorbefüllte Liste anlegen</button>
-      </form>
-      <ul>
-        {activeLists.map((l) => (
-          <li key={l.id}>
-            <Link href={`/lists/${l.id}`}>{l.name}</Link>
-          </li>
-        ))}
-      </ul>
-
-      {/* Slice 6: the archive of completed lists. Rendered only when non-empty so an all-active
-          project shows no empty heading. Completed lists stay visible (and feed Slice 5's statistic)
-          until deleted (MVP design §4.6). */}
-      {archivedLists.length > 0 && (
-        <>
-          <h2>Archiv</h2>
-          <ul>
-            {archivedLists.map((l) => (
-              <li key={l.id}>
-                <Link href={`/lists/${l.id}`}>{l.name}</Link>
-                {l.completedAt ? ` (${formatGermanDate(l.completedAt)})` : ""}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {/* Slice 5: the project's shared favorites — the always-suggested half of the pre-fill set.
-          Every member may add/remove (member-level). Adding is by article name, backed by a
-          <datalist> of the catalog for zero-JS autocomplete (same pattern as the list detail page);
-          a brand-new name creates a catalog article and favorites it in one step. */}
-      <h2>Favoriten</h2>
-      <datalist id="favorite-suggestions">
-        {catalogSuggestions.map((s) => (
-          // Only the value is needed — the browser inserts it into the input on selection.
-          <option key={s.id} value={s.name} />
-        ))}
-      </datalist>
-      <form action={addFavoriteAction}>
-        <input
-          name="name"
-          placeholder="Artikel"
-          aria-label="Favorit hinzufügen"
-          list="favorite-suggestions"
-        />
-        <button type="submit">Als Favorit</button>
-      </form>
-      <ul>
-        {favorites.map((f) => (
-          <li key={f.catalogItemId}>
-            {/* The display name comes from the catalog item (article identity, MVP design §3.1),
-                already flattened onto the lean FavoriteArticle shape by listFavorites. */}
-            {f.name}{" "}
-            <form action={removeFavoriteAction} style={{ display: "inline" }}>
-              <input type="hidden" name="catalogItemId" value={f.catalogItemId} />
-              <button type="submit">Entfernen</button>
+            {/* The quiet alternative to the hero: name it, get an empty list. */}
+            <form action={createEmptyListAction} className={styles.emptyRow}>
+              <div className={styles.emptyField}>
+                <TextField name="name" aria-label="Listenname" placeholder="Listenname…" />
+              </div>
+              <Button type="submit" variant="secondary">
+                Leere Liste
+              </Button>
             </form>
-          </li>
-        ))}
-      </ul>
 
-      {/* Owner-only controls: invite, rename, delete. Hidden from plain members. */}
-      {isOwner && (
-        <>
-          <h2>Mitglied einladen</h2>
-          <form action={invite}>
-            <input name="email" placeholder="E-Mail" aria-label="E-Mail" />
-            <button type="submit">Einladen</button>
-          </form>
+            <div className={styles.section}>
+              <SectionLabel>AKTIVE LISTEN</SectionLabel>
+            </div>
+            {activeLists.map((list) => (
+              <RowLink
+                key={list.id}
+                href={`/lists/${list.id}`}
+                title={list.name}
+                trailing={<span className={styles.openCount}>{formatOpenCount(list.openCount)}</span>}
+              />
+            ))}
+          </>
+        ) : (
+          // Empty state 5b: the hero card IS the action, directly under the copy.
+          <div className={styles.empty}>
+            <EmptyState
+              icon={<Icon icon={ListChecks} size={22} />}
+              title="Noch keine Liste"
+              description="Sobald Listen abgeschlossen sind, kann Smart Lists neue Listen vorbefüllen."
+            >
+              {newListSheet}
+            </EmptyState>
+          </div>
+        )}
 
-          <h2>Projekt umbenennen</h2>
-          <form action={rename}>
-            <input name="name" placeholder="Neuer Name" aria-label="Neuer Name" />
-            <button type="submit">Umbenennen</button>
-          </form>
-
-          <h2>Projekt löschen</h2>
-          <form action={remove}>
-            <button type="submit">Projekt löschen</button>
-          </form>
-        </>
-      )}
-    </main>
+        {/* Owner-only, and NOT rendered for members — never merely disabled. */}
+        {isOwner && (
+          <DeleteProjectButton projectName={nav.projectName} deleteAction={deleteAction} />
+        )}
+      </main>
+    </>
   );
 }
