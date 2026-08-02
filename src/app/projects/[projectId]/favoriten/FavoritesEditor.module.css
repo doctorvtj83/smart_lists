@@ -12,16 +12,10 @@
   gap: 7px;
 }
 
+/* Wrapper only — the shared Autocomplete owns its own layout (no side button). */
 .addRow {
   display: flex;
-  gap: 8px;
-}
-
-/* min-width:0 defeats the flex item's min-content floor, so the button survives
-   on a 375px screen. */
-.addField {
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
 }
 
 .empty {

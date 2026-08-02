@@ -32,8 +32,8 @@ export default async function FavoritesPage({ params }: Props) {
   if (!nav) redirect("/projects");
 
   // Two independent reads → one round-trip of latency. CATALOG_DATALIST_LIMIT
-  // (not searchCatalog's short default) because a native <datalist> filters
-  // client-side over exactly the options we pre-render.
+  // (not searchCatalog's short default) seeds the Autocomplete catalog; the
+  // browser filters that array with buildAutocomplete on every keystroke.
   const [favorites, catalogItems] = await Promise.all([
     listFavorites(prisma, projectId),
     searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
@@ -77,7 +77,9 @@ export default async function FavoritesPage({ params }: Props) {
       <main className={styles.content}>
         <FavoritesEditor
           favorites={favorites}
-          catalogNames={catalogItems.map((item) => item.name)}
+          // The whole catalog row, not just the name: the dropdown shows each
+          // article's default category as its sub-label.
+          articles={catalogItems}
           addAction={addFavoriteAction}
           removeAction={removeFavoriteAction}
         />

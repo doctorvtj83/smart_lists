@@ -21,7 +21,10 @@ const brot: FavoriteArticle = {
 function renderEditor(overrides: Partial<Parameters<typeof FavoritesEditor>[0]> = {}) {
   const props = {
     favorites: [milch, brot],
-    catalogNames: ["Milch", "Brot", "Butter"],
+    articles: [
+      { id: "c1", name: "Milch", defaultCategory: "Molkerei" },
+      { id: "c2", name: "Milchreis", defaultCategory: null },
+    ],
     addAction: vi.fn(),
     removeAction: vi.fn(),
     ...overrides,
@@ -57,27 +60,48 @@ describe("FavoritesEditor", () => {
     expect(formData.get("catalogItemId")).toBe(milch.catalogItemId);
   });
 
+  // Enter on the Autocomplete field submits the typed name — there is no longer
+  // a separate „Als Favorit" submit button beside the field.
   it("adds a favourite by name", async () => {
     const addAction = vi.fn();
     renderEditor({ addAction });
 
-    await userEvent.type(screen.getByLabelText("Artikelname"), "Butter");
-    await userEvent.click(screen.getByRole("button", { name: "Als Favorit" }));
+    const field = screen.getByLabelText("Artikelname");
+    await userEvent.type(field, "Butter");
+    await userEvent.keyboard("{Enter}");
 
     const formData = addAction.mock.calls[0][0] as FormData;
     expect(formData.get("name")).toBe("Butter");
   });
 
-  // Zero-JS autocomplete: the catalog is pre-rendered as <datalist> options, so
-  // the browser filters them without a round-trip per keystroke.
-  it("offers the catalog as native autocomplete options", () => {
+  it("suggests catalog articles while typing a favourite", async () => {
     renderEditor();
 
-    const field = screen.getByLabelText("Artikelname");
-    const listId = field.getAttribute("list");
-    expect(listId).toBeTruthy();
-    const datalist = document.getElementById(listId!);
-    expect(datalist?.querySelectorAll("option")).toHaveLength(3);
+    await userEvent.type(screen.getByLabelText("Artikelname"), "Milc");
+
+    expect(screen.getByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
+  });
+
+  it("adds the picked article as a favourite", async () => {
+    const addAction = vi.fn();
+    renderEditor({ addAction });
+
+    await userEvent.type(screen.getByLabelText("Artikelname"), "Milc");
+    await userEvent.click(screen.getByRole("button", { name: /Milchreis/ }));
+
+    const formData = addAction.mock.calls[0][0] as FormData;
+    expect(formData.get("name")).toBe("Milchreis");
+  });
+
+  it("offers to create an unknown article as a favourite", async () => {
+    const addAction = vi.fn();
+    renderEditor({ addAction });
+
+    await userEvent.type(screen.getByLabelText("Artikelname"), "Dinkelmehl");
+    await userEvent.click(screen.getByRole("button", { name: "„Dinkelmehl“ neu anlegen" }));
+
+    const formData = addAction.mock.calls[0][0] as FormData;
+    expect(formData.get("name")).toBe("Dinkelmehl");
   });
 
   it("shows the empty state with the add row when there are no favourites", () => {
