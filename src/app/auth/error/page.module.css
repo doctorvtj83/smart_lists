@@ -1,0 +1,47 @@
+/* Handoff screen 3b. Same centred-column skeleton as login, wider gutters (36px). */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + var(--safe-top)) 36px calc(24px + var(--safe-bottom));
+  text-align: center;
+}
+
+/* Neutral circle, NOT the destructive tint: being un-provisioned is not the
+   user's mistake, so the screen must not shout at them (handoff § 3b). */
+.glyph {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-hairline-weak);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin-top: 18px;
+}
+
+.explanation {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  margin-top: 10px;
+  max-width: 320px;
+}
+
+.back {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-top: 24px;
+  /* Padding, not margin, so the tap target covers the full 44px height. */
+  padding: 12px 8px;
+}
