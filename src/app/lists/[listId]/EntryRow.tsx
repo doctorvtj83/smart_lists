@@ -50,6 +50,9 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
   // How far the row currently follows the finger. null = not swiping, so the CSS
   // transition (snap-back) is only active when the finger is off the glass.
   const [offset, setOffset] = useState<number | null>(null);
+  // Mirror of `offset` for pointerUp: state can be stale if move+up flush in one
+  // turn before a re-render; the ref always holds the latest drag distance.
+  const offsetRef = useRef<number | null>(null);
   // Where the gesture started, and whether it ever became a real drag. A ref, not
   // state: changing it must not re-render mid-gesture.
   const gesture = useRef<{ startX: number; moved: boolean } | null>(null);
@@ -58,6 +61,12 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
   const justSwiped = useRef(false);
 
   const quantityLabel = formatQuantityLabel(entry.quantity, entry.unit);
+
+  /** Keep state (paint) and ref (gesture decision) in lockstep. */
+  const updateOffset = (next: number | null) => {
+    offsetRef.current = next;
+    setOffset(next);
+  };
 
   const handlePointerDown = (event: React.PointerEvent) => {
     if (frozen) return;
@@ -70,7 +79,7 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
     // A mouse that left the row with the button released is not a drag any more.
     if (event.pointerType === "mouse" && event.buttons === 0) {
       gesture.current = null;
-      setOffset(null);
+      updateOffset(null);
       return;
     }
     const next = swipeOffset(current.startX, event.clientX);
@@ -78,7 +87,7 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
     // nudges the row.
     if (current.moved || isSwipeStarted(next)) {
       gesture.current = { ...current, moved: true };
-      setOffset(next);
+      updateOffset(next);
     }
   };
 
@@ -94,10 +103,10 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
       }, 150);
     }
 
-    const released = offset ?? 0;
+    const released = offsetRef.current ?? 0;
     // Drop the offset first: the row snaps back under the CSS transition even in
     // the delete case, which is what it does while the server round-trip runs.
-    setOffset(null);
+    updateOffset(null);
     if (shouldDeleteOnRelease(released)) onDelete();
   };
 

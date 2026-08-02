@@ -29,11 +29,13 @@ function renderRow(overrides: Partial<Parameters<typeof EntryRow>[0]> = {}) {
 // fireEvent.pointer* can fail to deliver clientX in jsdom — MouseEvents with the
 // pointer* type names still reach React's onPointer* handlers.
 function swipe(row: HTMLElement, distance: number) {
-  // Handlers live on the inner row surface (child of the data-item-id wrap); fire
-  // there so the event target is inside the listener's subtree and bubbles correctly.
+  // Structure of the wrap: [delete affordance (aria-hidden), row surface with
+  // pointer handlers]. Prefer the sibling of the delete layer so frozen rows
+  // (no buttons) still exercise the frozen guard — not a silent no-op on <li>.
+  const deleteSurface = row.querySelector('[aria-hidden="true"]');
   const surface =
-    (row.querySelector('[aria-label$="bearbeiten"]')?.parentElement as HTMLElement | null) ??
-    (row.querySelector('[aria-label$="abhaken"]')?.parentElement as HTMLElement | null) ??
+    (deleteSurface?.nextElementSibling as HTMLElement | null) ??
+    (row.children[1] as HTMLElement | undefined) ??
     row;
 
   fireEvent(surface, new MouseEvent("pointerdown", { clientX: 200, bubbles: true }));
