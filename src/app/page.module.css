@@ -1,0 +1,58 @@
+/* Handoff screen 3c. The header has no hairline here, and carries the signed-in
+   email as a muted trailing slot. */
+.email {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  /* Long addresses must shrink rather than push the title. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 45%;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px var(--screen-padding) calc(18px + var(--safe-bottom));
+}
+
+/* The design puts extra air above every section label except the first. */
+.spaced {
+  margin-top: 6px;
+}
+
+/* Trailing list count on a project row: 12px muted (handoff 3c). */
+.rowCount {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 2px 0;
+}
+
+.footerSpacer {
+  flex: 1;
+}
+
+/* Footer "Verwaltung" — 13px/600 secondary, per handoff 3c. Padding, not margin,
+   so the tap target reaches 44px. */
+.adminLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 12px 2px;
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}
