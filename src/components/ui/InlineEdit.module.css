@@ -1,0 +1,39 @@
+.wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Resting state: looks like text, but the dashed underline says "editable". */
+.rest {
+  border: none;
+  background: none;
+  padding: 0 0 1px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  border-bottom: 1.5px dashed var(--color-control-border);
+  cursor: text;
+}
+
+/* Members see the same text without the affordance — the design says
+   owner-only controls are not rendered rather than disabled. */
+.static {
+  font: inherit;
+  color: inherit;
+}
+
+.input {
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  padding: 6px 10px;
+  outline: none;
+  min-width: 0;
+}
+
+.invalid {
+  border-color: var(--color-danger);
+}
