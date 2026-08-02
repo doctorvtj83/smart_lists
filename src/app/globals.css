@@ -1,40 +1,116 @@
+/*
+ * Design tokens + global base styles.
+ *
+ * Source of truth: docs/design/2026-08-01-ui-handoff/ — the inline styles inside
+ * the two .dc.html prototypes are binding for every value below. Changing a
+ * value here means changing the design; src/test/design-tokens.test.ts pins the
+ * palette so that stays a conscious act.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Colours -------------------------------------------------------- */
+  --color-bg: #fcfcfb;
+  --color-bg-frozen: #f7f7f5;
+  --color-bg-sidebar: #f3f4f2;
+  --color-surface: #ffffff;
+
+  --color-text-primary: #232322;
+  --color-text-secondary: #5a5a55;
+  --color-text-tertiary: #77776f;
+  --color-text-muted: #a3a39b;
+  --color-text-placeholder: #c2c2ba;
+  --color-text-checked: #b3b3ab;
+
+  --color-accent: #3e63c4;
+  --color-accent-dark: #2f4a94;
+  --color-accent-tint: #eef2fc;
+
+  --color-danger: #bf4a41;
+  --color-danger-tint: #fdf3f2;
+  --color-danger-dark: #8a4038;
+
+  --color-success: #6d8a5e;
+  --color-success-tint: #eef1ea;
+  --color-success-text: #4c5c43;
+
+  --color-hairline: #ececea;
+  --color-hairline-weak: #f1f1ee;
+  --color-border-strong: #dcdcd7;
+  --color-border-active-panel: #dfe4f2;
+  --color-control-border: #c6c6bf;
+  --color-checked-archived: #b8bdb2;
+  --color-grabber: #e3e3df;
+
+  /* Overlays are rgba, not hex, because they sit on top of content. */
+  --color-overlay: rgba(35, 35, 34, 0.3);
+  --color-overlay-strong: rgba(35, 35, 34, 0.35);
+
+  /* --- Radii ---------------------------------------------------------- */
+  --radius-card: 12px;
+  --radius-panel: 14px;
+  --radius-control: 10px;
+  --radius-control-sm: 8px;
+  --radius-pill: 99px;
+  --radius-sheet: 20px;
+
+  /* --- Shadows -------------------------------------------------------- */
+  --shadow-card: 0 1px 2px rgba(35, 35, 34, 0.06);
+  --shadow-dropdown: 0 8px 24px rgba(35, 35, 34, 0.14);
+  --shadow-sheet: 0 -8px 32px rgba(35, 35, 34, 0.18);
+  --shadow-hero: 0 4px 14px rgba(62, 99, 196, 0.22);
+  --shadow-panel-active: 0 2px 8px rgba(62, 99, 196, 0.08);
+
+  /* --- Motion --------------------------------------------------------- */
+  --motion-fade: 200ms;
+  --motion-sheet: 280ms;
+  --motion-drawer: 240ms;
+  --ease-sheet: cubic-bezier(0.2, 0.9, 0.3, 1);
+
+  /* --- Layout --------------------------------------------------------- */
+  --screen-padding: 16px;
+  --screen-padding-desktop: 36px;
+  --sidebar-width: 250px;
+  --content-max-width: 620px;
+  /* Desktop breakpoint is 900px. It is NOT a custom property because CSS
+     custom properties cannot be used inside @media queries — every media query
+     in this codebase writes the literal `900px` and refers back to this note. */
+
+  /* --- Safe areas (iPhone home indicator / notch) --------------------- */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* The design is light only — this stops iOS from auto-darkening form controls. */
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  /* Horizontal scroll would otherwise leak from the swipeable list rows. */
+  overflow-x: hidden;
 }
 
 html {
   height: 100%;
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
 body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  /* --font-figtree is injected by next/font in layout.tsx. */
+  font-family: var(--font-figtree), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
@@ -42,8 +118,78 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* Form controls do not inherit the font by default in any browser. */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+/* --- Keyframes -------------------------------------------------------- *
+ * Values taken verbatim from the prototype's <style> block so the motion
+ * matches the design reference exactly.
+ * --------------------------------------------------------------------- */
+@keyframes sl-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sl-sheet {
+  from {
+    transform: translateY(46px);
+    opacity: 0;
+  }
+}
+
+@keyframes sl-drawer {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes sl-banner {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+}
+
+@keyframes sl-pop {
+  0% {
+    transform: scale(0.55);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes sl-flash {
+  0% {
+    background: var(--color-accent-tint);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* Respect the OS "reduce motion" setting: the design's animations are all
+   decorative, so switching them off costs nothing and avoids nausea triggers. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
