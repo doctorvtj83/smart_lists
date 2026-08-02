@@ -300,13 +300,13 @@ When you have finished a slice, **before** the final commit do the following:
 
 ### 2026-08-02 — Slice 12: List interaction rework — ✅ Done / verified
 - **Delivered:** `/lists/[listId]` rebuilt around trailing empty row + category chips + entry detail sheet + swipe-to-delete; pure helpers (`categories`, `swipe`, `quantity`, `autocomplete`); `addEntryFromRow` (chip category + `needsCategory`); `Autocomplete` primitive reused on Favoriten; `ListBody` client island over server props; `ListMenu` (complete + ConfirmSheet list delete); `data-item-id` on every row. Plan file `2026-08-02-slice-12-list-interaction-rework.md`. Implementation review: `docs/implementation-reviews/slice-12-list-interaction-rework.md`.
-- **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'` → **72 files / 554 tests** passed (same count via `npm test` from the worktree cwd); `npm run lint` → 3 errors + 8 warnings (2+8 pre-existing in handoff `support.js`; **1 new** in `Autocomplete.tsx` `react-hooks/set-state-in-effect`); `npm run build` succeeds.
+- **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'` → **72 files / 554 tests** passed (same count via `npm test` from the worktree cwd); `npm run lint` → 2 errors + 8 warnings, all pre-existing in handoff `support.js` (`src/` clean; Autocomplete Escape-dismiss uses `dismissedFor === value`, no effect); `npm run build` succeeds.
 - **Deviations from the plan / rulings:** ConfirmSheet constrained to irreversible/cascading only; never nest ConfirmSheet in Sheet; entry delete has no second confirm; Undo-banner parked for Slice 16. Option A restored `add_item` null vs undefined on category/unit (Untouched list exempted for that contract fix). Design conflict 5c/5d `☰` vs §10 `←` → `←` shipped (list outside project layout).
 - **Follow-up decisions for later slices:**
   - **Slice 16 Path B** (flash context; rows stay server-rendered) — Path A not warranted; `data-item-id` already on rows.
   - **Slice 15 seam:** parser between `Autocomplete.onSubmit` and add FormData; `name` stays article-only.
   - Active category chip flows into catalog default on add (accepted product consequence).
-  - Autocomplete: no arrow-key nav (known gap); lint `setDismissed` in effect still open.
+  - Autocomplete: no arrow-key nav (known gap).
 - **Inherited open items:** Slice 7 minors; PageHeader/nav hydration overlay; Toggle <44px; member-path browser smoke. Slice 11 Favoriten-datalist item **closed**. **Slice 15 (Quantity parsing in the entry row) is the next open slice**.
 - **Commit(s):** `2bd9077`…`50ba607` (implementation Tasks 1–12) + this docs commit.
 

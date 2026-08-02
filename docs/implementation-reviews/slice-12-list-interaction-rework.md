@@ -19,7 +19,7 @@ The four deliverables are **fully met**:
 |---|---|
 | `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'` | **72 files / 554 tests** passed |
 | `npm test` (same worktree cwd) | **72 files / 554 tests** passed — the config's `**/.worktrees/**` exclude targets sibling worktrees under the main checkout; from inside a worktree the suite is not self-excluded |
-| `npm run lint` | **3 errors, 8 warnings.** Pre-existing: 2 errors + 8 warnings in `docs/design/2026-08-01-ui-handoff/support.js`. **New:** 1 error in `src/components/ui/Autocomplete.tsx` (`react-hooks/set-state-in-effect` on `setDismissed(false)` when `value` changes). Process exits non-zero. |
+| `npm run lint` | **2 errors, 8 warnings**, all pre-existing in `docs/design/2026-08-01-ui-handoff/support.js`. **`src/` clean.** Process exits non-zero because of that handoff file — do not "fix" the design bundle. (An earlier Autocomplete `setDismissed`/`useEffect` pattern tripped `react-hooks/set-state-in-effect`; fixed via `dismissedFor === value` with no effect.) |
 | `npm run build` | Succeeded (Next.js 16.2.9). `/lists/[listId]` present; project routes unchanged. |
 
 **Human rulings recorded during execution:**

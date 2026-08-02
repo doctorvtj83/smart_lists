@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode, type RefObject } from "react";
+import { useId, useState, type ReactNode, type RefObject } from "react";
 import type { AutocompleteOption } from "@/lib/catalog/autocomplete";
 import styles from "./Autocomplete.module.css";
 
@@ -59,15 +59,11 @@ export function Autocomplete({
 }: AutocompleteProps) {
   // useId keeps the label association stable across server render and hydration.
   const inputId = useId();
-  // Escape hides the dropdown without clearing the field — a way out that does
-  // not throw away what the user typed.
-  const [dismissed, setDismissed] = useState(false);
-
-  // Any change to the query re-arms the dropdown: dismissing is about THIS query,
-  // not about the field forever.
-  useEffect(() => {
-    setDismissed(false);
-  }, [value]);
+  // Escape hides the dropdown for THIS query without clearing the field. Stored
+  // as the dismissed value (not a boolean) so a later keystroke re-arms the
+  // dropdown automatically — no useEffect/setState cascade when `value` changes.
+  const [dismissedFor, setDismissedFor] = useState<string | null>(null);
+  const dismissed = dismissedFor === value;
 
   const hasDropdown = !dismissed && (options.length > 0 || createName !== null);
 
@@ -101,7 +97,7 @@ export function Autocomplete({
               event.preventDefault();
               submit(value);
             }
-            if (event.key === "Escape") setDismissed(true);
+            if (event.key === "Escape") setDismissedFor(value);
           }}
         />
       </div>
