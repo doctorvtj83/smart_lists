@@ -1,0 +1,60 @@
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.neutral {
+  border: 1.5px solid var(--color-border-strong);
+}
+
+.danger {
+  border: 1.5px solid var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.optionLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.danger .optionLabel {
+  color: var(--color-danger);
+}
+
+.optionDescription {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+.danger .optionDescription {
+  color: var(--color-danger-dark);
+}
+
+.cancel {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+}
