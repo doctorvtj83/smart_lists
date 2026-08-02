@@ -104,49 +104,69 @@ export async function computeSuggestions(
   return [...byCatalog.values()].sort((a, b) => compareArticleNames(a.name, b.name));
 }
 
+/**
+ * Creates a list and seeds it with exactly the given articles, in the given order.
+ *
+ * Why this exists next to createPrefilledList: Slice 11's „Neue Liste" sheet lets
+ * the user de-select individual suggestions before creating, so the surviving
+ * selection — not "whatever computeSuggestions returns right now" — is the truth.
+ * Recomputing on the server would silently re-add the articles the user just
+ * dropped.
+ *
+ * Only the NAME is passed to add_item: it resolves the name to the project's
+ * catalog row and INHERITS its category/unit defaults, so the inheritance logic
+ * is never duplicated and can never go stale. Sequential (not Promise.all)
+ * because each add_item derives the next sortIndex from the current maximum, so
+ * the writes must not race each other.
+ */
+export async function createListWithArticles(
+  db: PrismaClient,
+  input: CreateListInput & { articleNames: string[] },
+): Promise<List> {
+  // createList enforces the name rules and the optional client-supplied UUID, so
+  // an invalid request fails BEFORE anything is written.
+  const list = await createList(db, input);
+
+  try {
+    for (const name of input.articleNames) {
+      await applyOperation(db, list, {
+        op: "add_item",
+        itemId: randomUUID(), // stable entry identity, generated caller-side by convention
+        name,
+      });
+    }
+  } catch (error) {
+    // Pattern: COMPENSATING ACTION. A half-filled list is an artifact the user
+    // never asked for — it would appear under "AKTIVE LISTEN" with an arbitrary
+    // subset and no sign that anything went wrong. Delete it, then rethrow the
+    // ORIGINAL error so the caller still sees the real cause.
+    //
+    // WHY NOT db.$transaction: applyOperation/createList/getOrCreateCatalogItem
+    // all declare their first parameter as PrismaClient, while an interactive
+    // transaction hands back Omit<PrismaClient, ITXClientDenyList> — not
+    // assignable. Widening those signatures is a far larger change than this
+    // failure mode justifies.
+    //
+    // .catch(): the cleanup is best-effort. If the delete ALSO fails the caller
+    // must still see the original cause, not a secondary rollback error.
+    await db.list.delete({ where: { id: list.id } }).catch(() => undefined);
+    throw error;
+  }
+
+  return list;
+}
+
 // Creates a new list and pre-fills it from the project's suggestion set (MVP design §4.3, step 3).
-// Reuses createList for the list itself (so name/id validation is not duplicated), then adds one
-// entry per suggested article THROUGH applyOperation — the single mutation path (MVP design §4.5),
-// so pre-fill obeys the same contract as every other entry write and stays replayable for Slice 7.
+// Slice 11 made this a thin wrapper: computing the set is this function's job, writing the list is
+// createListWithArticles'. Both callers (REST `prefill: true` and the older UI path) therefore
+// inherit the same ordering, the same single mutation path and the same compensating delete.
 export async function createPrefilledList(
   db: PrismaClient,
   input: CreateListInput,
 ): Promise<List> {
-  // Create the (active) list first; createList enforces the name rules and the optional client id.
-  const list = await createList(db, input);
-
-  // Compute the suggestions for the project and add each as an entry. We pass ONLY the name:
-  // add_item resolves it to the existing catalog row and INHERITS its category/unit defaults (the
-  // very values the suggestion carries), so we neither duplicate the inheritance logic nor risk a
-  // stale copy. Sequential (not Promise.all): each add_item derives the next sortIndex from the
-  // current max, so the writes must not race each other.
   const suggestions = await computeSuggestions(db, input.projectId);
-  try {
-    for (const article of suggestions) {
-      await applyOperation(db, list, {
-        op: "add_item",
-        itemId: randomUUID(), // stable entry identity, generated caller-side by convention
-        name: article.name,
-      });
-    }
-  } catch (error) {
-    // Pattern: COMPENSATING ACTION. If any entry fails, the list created above is a half-filled
-    // artifact the user never asked for — it would show up in "Listen" with an arbitrary subset of
-    // the suggestions and no indication anything went wrong. Delete it, then rethrow the ORIGINAL
-    // error so the transport still maps the real ApiError status (a swallowed error would surface as
-    // a fake success). The list->items cascade (ListItem.list, onDelete: Cascade) removes whatever
-    // entries were already written.
-    //
-    // WHY NOT db.$transaction: applyOperation, createList and getOrCreateCatalogItem all declare
-    // their first parameter as PrismaClient, while an interactive transaction hands back
-    // Omit<PrismaClient, ITXClientDenyList> — not assignable. Widening those signatures across the
-    // Slice 3/4 cores is a much larger change than this failure mode justifies. Revisit if a second
-    // multi-write orchestrator appears.
-    //
-    // .catch(): the cleanup is best-effort. If the delete ALSO fails we still want the caller to see
-    // the original cause, not a confusing secondary error from the rollback path.
-    await db.list.delete({ where: { id: list.id } }).catch(() => undefined);
-    throw error;
-  }
-  return list;
+  return createListWithArticles(db, {
+    ...input,
+    articleNames: suggestions.map((article) => article.name),
+  });
 }

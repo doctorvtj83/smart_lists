@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { addFavorite } from "@/lib/favorites/favorites";
-import { computeSuggestions, createPrefilledList } from "./suggestions";
+import { computeSuggestions, createListWithArticles, createPrefilledList } from "./suggestions";
 
 const db = new PrismaClient();
 let projectId: string;
@@ -307,5 +307,41 @@ describe("createPrefilledList", () => {
     // "Apfel" entry that had already been written before the failure.
     expect(await db.list.findMany({ where: { projectId } })).toHaveLength(0);
     expect(await db.listItem.findMany({})).toHaveLength(0);
+  });
+});
+
+describe("createListWithArticles", () => {
+  it("creates the list and adds exactly the given articles, in order", async () => {
+    const list = await createListWithArticles(db, {
+      projectId,
+      name: "Einkauf",
+      articleNames: ["Milch", "Brot"],
+    });
+
+    const created = await db.list.findUniqueOrThrow({
+      where: { id: list.id },
+      include: { items: { orderBy: { sortIndex: "asc" }, include: { catalogItem: true } } },
+    });
+    expect(created.name).toBe("Einkauf");
+    expect(created.items.map((item) => item.catalogItem.name)).toEqual(["Milch", "Brot"]);
+  });
+
+  it("creates a plain empty list when the selection is empty", async () => {
+    const list = await createListWithArticles(db, {
+      projectId,
+      name: "Leer",
+      articleNames: [],
+    });
+
+    const items = await db.listItem.findMany({ where: { listId: list.id } });
+    expect(items).toEqual([]);
+  });
+
+  it("rejects an invalid name and creates nothing", async () => {
+    await expect(
+      createListWithArticles(db, { projectId, name: "   ", articleNames: ["Milch"] }),
+    ).rejects.toThrow("Name darf nicht leer sein");
+
+    expect(await db.list.count({ where: { projectId } })).toBe(0);
   });
 });
