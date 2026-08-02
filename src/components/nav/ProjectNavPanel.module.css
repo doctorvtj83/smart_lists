@@ -1,0 +1,185 @@
+/* Handoff § Navigation + Optionen 4a. Drawer and sidebar share this content, so
+   only the container (ProjectShell) differs between mobile and desktop. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px 12px;
+  background: var(--color-bg-sidebar);
+}
+
+.switcher {
+  position: relative;
+}
+
+.switcherCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  text-align: left;
+}
+
+.switcherName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.switcherChevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 5;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-dropdown);
+}
+
+.dropdownRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--color-hairline-weak);
+}
+
+.dropdownRow:last-child {
+  border-bottom: 0;
+}
+
+.dropdownName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.dropdownCheck {
+  flex: none;
+  color: var(--color-accent);
+}
+
+/* The dashed square marks „Neues Projekt…" as the create affordance — the same
+   dashed language the inline-edit rest state uses. */
+.dropdownPlus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1.5px dashed var(--color-control-border);
+  border-radius: 7px;
+  color: var(--color-text-muted);
+}
+
+.dropdownNewLabel {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 14px;
+}
+
+.groupLabel {
+  padding: 16px 12px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--color-text-muted);
+}
+
+/* One row shape for links and the sign-out button, so the two never drift. */
+.entry,
+.signOut {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  /* 10px + 17px glyph + 10px = 37px; min-height lifts it to the 44px tap rule. */
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+/* The design's active state: a white pill with the card shadow. */
+.entry[aria-current="page"] {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.entryIcon {
+  flex: none;
+  color: var(--color-control-border);
+}
+
+.entry[aria-current="page"] .entryIcon {
+  color: var(--color-accent);
+  opacity: 0.85;
+}
+
+.entryLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  color: var(--color-text-secondary);
+}
+
+.entry[aria-current="page"] .entryLabel {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.entryCount {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+/* Pushes Verwaltung / Abmelden to the foot of the panel. */
+.spacer {
+  flex: 1;
+}
+
+.signOut .entryLabel {
+  color: var(--color-text-muted);
+}
