@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ChevronLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/http/errors";
@@ -13,7 +11,7 @@ import {
   updateCatalogArticle,
 } from "@/lib/catalog/manage";
 import { formatArticleCount } from "@/lib/format/plural";
-import { Icon } from "@/components/ui/Icon";
+import { DrawerTrigger } from "@/components/nav/DrawerTrigger";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CatalogBrowser } from "./CatalogBrowser";
 import { CATALOG_FORM_IDLE, type CatalogFormState } from "./formState";
@@ -129,13 +127,9 @@ export default async function CatalogPage({ params }: Props) {
     <>
       <PageHeader
         title="Katalog"
-        // Slice 11 replaces this back link with the ☰ drawer trigger; the slot is
-        // the same one, which is why it exists.
-        leading={
-          <Link href={`/projects/${projectId}`} aria-label="Zum Projekt" className={styles.back}>
-            <Icon icon={ChevronLeft} size={19} />
-          </Link>
-        }
+        // Slice 11: the ☰ drawer trigger replaces Slice 10's back link — the
+        // project layout now supplies navigation on every project screen.
+        leading={<DrawerTrigger />}
         trailing={<span className={styles.count}>{formatArticleCount(articles.length)}</span>}
       />
       <main className={styles.content}>
