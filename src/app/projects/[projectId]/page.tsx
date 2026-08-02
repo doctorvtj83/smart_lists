@@ -102,7 +102,9 @@ export default async function ProjectDetailPage({ params }: Props) {
     if (!name) return;
 
     await createListWithArticles(prisma, { projectId, name, articleNames: [] });
-    revalidatePath(`/projects/${projectId}`);
+    // "layout" scope: the drawer's Listen badge (activeListCount) lives in the
+    // project layout via getProjectNav — a page-only revalidate would leave it stale.
+    revalidatePath(`/projects/${projectId}`, "layout");
   }
 
   /** Inline rename. Owner-only (handoff: members see plain text). */
