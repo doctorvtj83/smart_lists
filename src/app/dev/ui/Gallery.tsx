@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Star, Trash2 } from "lucide-react";
+import { Autocomplete } from "@/components/ui/Autocomplete";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
@@ -20,6 +21,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Sheet } from "@/components/ui/Sheet";
 import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
+import { buildAutocomplete } from "@/lib/catalog/autocomplete";
 
 /**
  * A development-only gallery of every primitive from Slice 13.
@@ -40,6 +42,14 @@ export function Gallery() {
   const [favorites, setFavorites] = useState(["Milch", "Butter", "Brot"]);
   // Local state for the Toggle demo — mirrors the sheet's „Vorbefüllen" switch.
   const [prefill, setPrefill] = useState(true);
+  // Autocomplete demo: a tiny fixed catalog so the dropdown has something to show.
+  const [entryText, setEntryText] = useState("");
+  const demoCatalog = [
+    { id: "a1", name: "Milch", defaultCategory: "Molkerei" },
+    { id: "a2", name: "Milchreis", defaultCategory: null },
+    { id: "a3", name: "Butter", defaultCategory: "Molkerei" },
+  ];
+  const demoSuggestions = buildAutocomplete(demoCatalog, entryText);
 
   return (
     <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 18 }}>
@@ -196,6 +206,22 @@ export function Gallery() {
       <div style={{ display: "flex", gap: 8, color: "var(--color-text-muted)" }}>
         <Icon icon={Trash2} />
         <span style={{ fontSize: 12 }}>Icon-Set: Lucide, Stroke 1.75</span>
+      </div>
+
+      <SectionLabel>Autocomplete</SectionLabel>
+      {/* Extra bottom room: the dropdown opens upwards, so an empty row above it
+          is what makes it visible in the gallery. */}
+      <div style={{ paddingTop: 90 }}>
+        <Autocomplete
+          value={entryText}
+          onChange={setEntryText}
+          onSubmit={() => setEntryText("")}
+          options={demoSuggestions.options}
+          createName={demoSuggestions.createName}
+          placeholder="Eintrag hinzufügen"
+          inputLabel="Eintrag hinzufügen"
+          leading={<span aria-hidden="true">＋</span>}
+        />
       </div>
     </main>
   );
