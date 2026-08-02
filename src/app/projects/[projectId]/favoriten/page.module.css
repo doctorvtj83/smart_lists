@@ -1,0 +1,14 @@
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px var(--screen-padding) calc(24px + var(--safe-bottom));
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}

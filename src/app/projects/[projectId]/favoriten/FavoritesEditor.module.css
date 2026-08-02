@@ -1,0 +1,30 @@
+/* Handoff screen 3g. */
+.editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.addRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* min-width:0 defeats the flex item's min-content floor, so the button survives
+   on a 375px screen. */
+.addField {
+  flex: 1;
+  min-width: 0;
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+}
