@@ -180,6 +180,12 @@ export default async function ProjectDetailPage({ params }: Props) {
       {/* Project name as heading; project may be null if deleted concurrently, so use optional chaining. */}
       <h1>{project?.name}</h1>
       <p>Deine Rolle: {role === "owner" ? "Owner" : "Mitglied"}</p>
+      {/* Slice 10: the catalog screen. This page is still the un-restyled Slice 2/3
+          markup — Slice 11 splits it into drawer screens and this link becomes the
+          drawer's „Katalog" entry, so keep it to one line until then. */}
+      <p>
+        <Link href={`/projects/${projectId}/katalog`}>Katalog</Link>
+      </p>
 
       <h2>Mitglieder</h2>
       <ul>

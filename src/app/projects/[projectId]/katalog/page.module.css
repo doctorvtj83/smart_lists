@@ -1,0 +1,33 @@
+/* Handoff screen 3h. */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px var(--screen-padding) calc(24px + var(--safe-bottom));
+}
+
+/* The back link doubles as a tap target, hence the negative inline padding trick
+   is avoided: it simply gets the 44px box the handoff's PWA section demands. */
+.back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  color: var(--color-accent);
+}
+
+.count {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}
