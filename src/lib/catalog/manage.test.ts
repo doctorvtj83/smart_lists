@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
-import { listCatalog } from "./manage";
+import { createCatalogArticle, DUPLICATE_ARTICLE_MESSAGE, listCatalog } from "./manage";
 
 const db = new PrismaClient();
 let projectId: string;
@@ -124,5 +124,49 @@ describe("listCatalog", () => {
 
     const articles = await listCatalog(db, projectId);
     expect(articles.map((a) => a.name)).toEqual(["Milch"]);
+  });
+});
+
+describe("createCatalogArticle", () => {
+  it("creates an article with a cleaned display name and a normalized identity", async () => {
+    const article = await createCatalogArticle(db, { projectId, name: "  Rote   Paprika " });
+
+    expect(article.projectId).toBe(projectId);
+    expect(article.name).toBe("Rote Paprika"); // casing kept, whitespace cleaned
+    expect(article.normalizedName).toBe("rote paprika"); // identity key
+    expect(article.defaultCategory).toBeNull();
+    expect(article.defaultUnit).toBeNull();
+  });
+
+  // The whole point of this function vs. getOrCreateCatalogItem: here a known
+  // name is a failure, not a hit — and any spelling of it counts as known.
+  it("refuses a different spelling of an article that already exists", async () => {
+    await createCatalogArticle(db, { projectId, name: "Milch" });
+
+    await expect(
+      createCatalogArticle(db, { projectId, name: " MILCH " }),
+    ).rejects.toMatchObject({ status: 409, message: DUPLICATE_ARTICLE_MESSAGE });
+    expect(await db.catalogItem.count({ where: { projectId } })).toBe(1);
+  });
+
+  it("rejects a name that is empty after normalization with 400", async () => {
+    await expect(createCatalogArticle(db, { projectId, name: "   " })).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
+  it("rejects a name longer than 200 characters with 400", async () => {
+    await expect(
+      createCatalogArticle(db, { projectId, name: "x".repeat(201) }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("allows the same name in a different project", async () => {
+    const otherUser = await db.user.create({ data: { googleSub: "g-o2", email: "o2@example.com" } });
+    const otherProject = await db.project.create({ data: { name: "Ferien", ownerId: otherUser.id } });
+    await createCatalogArticle(db, { projectId, name: "Milch" });
+
+    const other = await createCatalogArticle(db, { projectId: otherProject.id, name: "Milch" });
+    expect(other.projectId).toBe(otherProject.id);
   });
 });
