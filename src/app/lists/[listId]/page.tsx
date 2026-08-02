@@ -17,7 +17,11 @@ import {
 import { addEntryFromRow } from "@/lib/lists/addEntry";
 import { knownCategories } from "@/lib/lists/categories";
 import { computeCursor } from "@/lib/lists/delta";
-import { applyOperation } from "@/lib/lists/operations";
+import {
+  applyOperation,
+  assertValidUpdateItemValue,
+  type UpdateItemOperation,
+} from "@/lib/lists/operations";
 import { formatGermanDate } from "@/lib/format/date";
 import { parseGermanDecimal } from "@/lib/format/quantity";
 import { Banner } from "@/components/ui/Banner";
@@ -171,6 +175,12 @@ export default async function ListDetailPage({ params }: Props) {
    * The entry sheet's „Fertig". ONE update_item per changed field — the field
    * granularity Slice 7's per-field last-writer-wins depends on. A field the
    * sheet did not send is not touched, so a concurrent remote edit survives.
+   *
+   * Validate-then-apply: parse and assert EVERY provided field before the first
+   * write. Applying in sequence without that gate left a partial update (and no
+   * revalidate) when a later field failed after an earlier one had already
+   * committed — the same "check meaning before mutating" rule add_item uses
+   * inside applyOperation, lifted to the multi-op action.
    */
   async function updateEntryAction(
     _prev: EntryFormState,
@@ -186,18 +196,19 @@ export default async function ListDetailPage({ params }: Props) {
     try {
       // Presence, not truthiness: "" is a meaningful value here — it CLEARS the
       // field, which is a legal update_item value (null on the column).
+      const pending: UpdateItemOperation[] = [];
       if (formData.has("quantity")) {
-        await applyOperation(prisma, l, {
+        pending.push({
           op: "update_item",
           itemId,
           field: "quantity",
-          // NaN survives on purpose: applyOperation answers with the German
-          // „Menge muss eine positive Zahl sein" rather than silently clearing.
+          // NaN survives on purpose: assertValidUpdateItemValue answers with the
+          // German „Menge muss eine positive Zahl sein" rather than silently clearing.
           value: parseGermanDecimal(String(formData.get("quantity"))),
         });
       }
       if (formData.has("unit")) {
-        await applyOperation(prisma, l, {
+        pending.push({
           op: "update_item",
           itemId,
           field: "unit",
@@ -205,12 +216,20 @@ export default async function ListDetailPage({ params }: Props) {
         });
       }
       if (formData.has("category")) {
-        await applyOperation(prisma, l, {
+        pending.push({
           op: "update_item",
           itemId,
           field: "category",
           value: String(formData.get("category")).trim() || null,
         });
+      }
+
+      // Fail closed before any write so one bad field cannot leave siblings committed.
+      for (const op of pending) {
+        assertValidUpdateItemValue(op.field, op.value);
+      }
+      for (const op of pending) {
+        await applyOperation(prisma, l, op);
       }
       revalidatePath(`/lists/${listId}`);
       return { error: null, ok: true, openEntryId: null, itemId };

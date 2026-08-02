@@ -91,7 +91,15 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
     }
   };
 
-  const handlePointerUp = () => {
+  /**
+   * End the swipe: snap the row back, optionally delete past the threshold.
+   *
+   * Shared by pointerup/leave (may delete) and pointercancel (never delete).
+   * pointercancel fires when the browser takes over the gesture — e.g. vertical
+   * scroll with `touch-action: pan-y` — and must reset offset the same way, or
+   * the row stays visually stuck mid-swipe with no further pointer events.
+   */
+  const endGesture = (mayDelete: boolean) => {
     const current = gesture.current;
     gesture.current = null;
     if (!current) return;
@@ -107,8 +115,11 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
     // Drop the offset first: the row snaps back under the CSS transition even in
     // the delete case, which is what it does while the server round-trip runs.
     updateOffset(null);
-    if (shouldDeleteOnRelease(released)) onDelete();
+    if (mayDelete && shouldDeleteOnRelease(released)) onDelete();
   };
+
+  const handlePointerUp = () => endGesture(true);
+  const handlePointerCancel = () => endGesture(false);
 
   const openSheet = () => {
     // A drag that ended over the row body still fires a click; swallow it.
@@ -137,6 +148,7 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onPointerLeave={handlePointerUp}
       >
         {frozen ? (

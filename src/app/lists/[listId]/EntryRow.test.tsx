@@ -114,6 +114,30 @@ describe("EntryRow", () => {
     expect(props.onDelete).not.toHaveBeenCalled();
   });
 
+  // pointercancel (scroll takeover with touch-action: pan-y) must reset the row
+  // without delete — otherwise the translate sticks with no further pointer events.
+  it("snaps back on pointercancel without deleting", () => {
+    const { props, container } = renderRow();
+    const row = container.querySelector(`[data-item-id="${milch.id}"]`) as HTMLElement;
+    const deleteSurface = row.querySelector('[aria-hidden="true"]');
+    const surface =
+      (deleteSurface?.nextElementSibling as HTMLElement | null) ??
+      (row.children[1] as HTMLElement | undefined) ??
+      row;
+
+    fireEvent(surface, new MouseEvent("pointerdown", { clientX: 200, bubbles: true }));
+    fireEvent(
+      surface,
+      new MouseEvent("pointermove", { clientX: 80, bubbles: true, buttons: 1 }),
+    );
+    expect(surface.style.transform).toBe("translateX(-120px)");
+
+    fireEvent(surface, new MouseEvent("pointercancel", { clientX: 80, bubbles: true }));
+
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(surface.style.transform).toBe("translateX(0px)");
+  });
+
   it("does not open the sheet when the gesture was a swipe", () => {
     const { props, container } = renderRow();
     const row = container.querySelector(`[data-item-id="${milch.id}"]`) as HTMLElement;

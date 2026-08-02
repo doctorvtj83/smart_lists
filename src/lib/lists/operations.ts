@@ -151,6 +151,43 @@ function assertValidTextField(value: string | null | undefined, label: string): 
   }
 }
 
+/**
+ * Per-field value rules for `update_item`, without touching the database.
+ *
+ * Why exported: the entry sheet's „Fertig" may send several fields in one Server
+ * Action. Those become separate `update_item` ops (Slice 7 LWW granularity), but
+ * the action must validate EVERY provided field BEFORE the first write — otherwise
+ * quantity can commit and unit/category then fail, leaving a partial update and
+ * skipping `revalidatePath`. Same switch as `applyOperation`'s update_item case;
+ * keep them in lockstep.
+ */
+export function assertValidUpdateItemValue(
+  field: UpdateItemOperation["field"],
+  value: UpdateItemOperation["value"],
+): void {
+  switch (field) {
+    case "quantity":
+      if (value !== null && typeof value !== "number") {
+        throw new ApiError(400, "Menge muss eine Zahl sein");
+      }
+      assertValidQuantity(value);
+      break;
+    case "sortIndex":
+      // sortIndex is structural (not user-visible text): required, integer.
+      if (typeof value !== "number" || !Number.isInteger(value)) {
+        throw new ApiError(400, "Sortierung muss eine ganze Zahl sein");
+      }
+      break;
+    case "unit":
+    case "category":
+      if (value !== null && typeof value !== "string") {
+        throw new ApiError(400, "Ungültiger Wert");
+      }
+      assertValidTextField(value, field === "unit" ? "Einheit" : "Kategorie");
+      break;
+  }
+}
+
 // Applies ONE operation to a list and returns the resulting entry (null after remove_item).
 // The caller (route handler / server action) has already authorized access to `list` via
 // requireListAccess and passes the loaded row — so this core never re-checks permissions, and the
@@ -237,28 +274,8 @@ export async function applyOperation(
       });
       if (!item) throw new ApiError(404, "Eintrag nicht gefunden");
 
-      // Per-field value validation: each field has its own type/range rules.
-      switch (operation.field) {
-        case "quantity":
-          if (operation.value !== null && typeof operation.value !== "number") {
-            throw new ApiError(400, "Menge muss eine Zahl sein");
-          }
-          assertValidQuantity(operation.value);
-          break;
-        case "sortIndex":
-          // sortIndex is structural (not user-visible text): required, integer.
-          if (typeof operation.value !== "number" || !Number.isInteger(operation.value)) {
-            throw new ApiError(400, "Sortierung muss eine ganze Zahl sein");
-          }
-          break;
-        case "unit":
-        case "category":
-          if (operation.value !== null && typeof operation.value !== "string") {
-            throw new ApiError(400, "Ungültiger Wert");
-          }
-          assertValidTextField(operation.value, operation.field === "unit" ? "Einheit" : "Kategorie");
-          break;
-      }
+      // Per-field value validation: shared with multi-field server actions (validate-then-apply).
+      assertValidUpdateItemValue(operation.field, operation.value);
 
       // Computed property name ([operation.field]) writes exactly ONE column — the field
       // granularity that Slice 7's per-field last-writer-wins depends on. @updatedAt bumps the
