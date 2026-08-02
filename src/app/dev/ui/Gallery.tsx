@@ -13,6 +13,8 @@ import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { InlineEdit } from "@/components/ui/InlineEdit";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { RowLink } from "@/components/ui/RowLink";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Sheet } from "@/components/ui/Sheet";
@@ -71,6 +73,15 @@ export function Gallery() {
           </div>
         </div>
       </Card>
+
+      <SectionLabel>Kopfzeile</SectionLabel>
+      <PageHeader title="Verwaltung" trailing={<Badge>ADMIN</Badge>} />
+      <PageHeader title="Smart Lists" hairline={false} />
+
+      <SectionLabel>Fortschritt</SectionLabel>
+      <ProgressBar value={3} max={8} label="3 von 8 erledigt" />
+      <ProgressBar value={0} max={0} label="Nichts erledigt" />
+      <ProgressBar value={8} max={8} label="Alles erledigt" />
 
       <SectionLabel>Chips</SectionLabel>
       <ChipTabs

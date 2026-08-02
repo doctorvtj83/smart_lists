@@ -1,0 +1,38 @@
+/* Screen header bar. Measurements from the handoff (screens 3d/3k):
+   padding 14px 16px 10px, 1px hairline, title 18px/700. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* The safe-area inset keeps the title clear of the iPhone notch; it collapses
+     to 0px in every other context (see globals.css). */
+  padding: calc(14px + var(--safe-top)) var(--screen-padding) 10px;
+}
+
+.hairline {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  /* Long project names must not push the trailing slot off screen. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+  .header {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+  }
+
+  /* Desktop title is heavier and larger (handoff § Typografie). */
+  .title {
+    font-size: 21px;
+    font-weight: 800;
+  }
+}
