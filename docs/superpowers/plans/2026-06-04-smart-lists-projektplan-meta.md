@@ -72,7 +72,7 @@ under the table). Each slice is working, tested software on its own.
 | 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | _to be created_ | ⬜ Open |
 | 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | _to be created_ | ⬜ Open |
 | 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | [2026-08-01-slice-13-design-foundation.md](2026-08-01-slice-13-design-foundation.md) | ✅ Done / verified |
-| 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | _to be created_ | ⬜ Open |
+| 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | [2026-08-02-slice-14-restyle-built-screens.md](2026-08-02-slice-14-restyle-built-screens.md) | ✅ Done / verified |
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | _to be created_ | ⬜ Open |
 | 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
 
@@ -162,7 +162,7 @@ under the table). Each slice is working, tested software on its own.
 > ("Liste mit 7 Einträgen anlegen"). That sheet is more than Slice 5's boolean `prefill` flag: it reads
 > `GET /suggestions` first and then creates the list from the surviving selection.
 >
-> **Slice 14 is the next open slice** (plan still to be created).
+> **Slice 10 (Katalog-Verwaltung) is the next open slice** (plan still to be created).
 
 > **Slice 16 note (2026-08-01) — why the flash is optional and last.** The design replaces the permanent
 > sync indicator with a **per-row flash** (`#eef2fc → transparent`, 1.4 s) on rows a *remote* member
@@ -292,6 +292,45 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-02 — Slice 14: Restyle the built screens — ✅ Done / verified
+- **Delivered:** Deterministic German date/number formatting (`src/lib/format/date.ts`) clearing the
+  Slice 13 hydration overlay root cause; German plural helpers; `PageHeader` + `ProgressBar`;
+  restyled Login / Zugang verweigert / Home / Projekte / Verwaltung in the Slice 13 visual language;
+  `listProjectSummaries` read model; `getContinueList` + `ContinueCard` (Weitermachen); `GoogleLogo`;
+  `RevokeSheet` with URL-driven open state and both revoke Server Actions as props. Plan file
+  `2026-08-02-slice-14-restyle-built-screens.md` already committed with the slice.
+- **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude
+  '**/.worktrees/**'` → **46 files / 328 tests** passed; `npm run lint` → 2 errors + 8 warnings, all
+  pre-existing in `docs/design/2026-08-01-ui-handoff/support.js` (`src/` clean; process exit 0);
+  `npm run build` succeeds. Manual 14-item checklist (dev server on `:3014`): **PASS** —
+  (1) `/login` accent tile + real Google G + copy; (2) `/auth/error` neutral lock, no red, back link;
+  (13) `/dev/ui` includes `PageHeader` + `ProgressBar`; (14) no horizontal scroll at 375px on those
+  three routes. **DEFERRED (Google OAuth unavailable in this environment)** — (3)–(11) signed-in
+  Home / Projekte / Verwaltung behaviours; (12) hydration console on `/projects/[projectId]` and
+  `/lists/[listId]` (format fix unit-tested; automation `data-cursor-ref` overlay on `/auth/error`
+  is a known false positive per Task 5). Domain/component tests cover Weitermachen ranking, summaries,
+  ContinueCard, and RevokeSheet close/actions.
+- **Deviations from the plan:** Task 2 — 7 vitest cases vs brief’s “8” (one `it` asserts two plural
+  values). Task 3 — `ProgressBar` JSDoc vs unclamped `aria-valuenow` (visual fill clamps; a11y reports
+  raw). Task 10 — empty-state flex centering may be soft. Task 11 — self-row shows Admin twice
+  (brief-verbatim). Task 12 — JWT honesty sentence dropped (handoff-aligned); `next/navigation` mock
+  localized in setup for jsdom. Tasks 9–12 browser smoke partly deferred (OAuth).
+- **Follow-up decisions for later slices:**
+  - `PageHeader`'s `leading` slot is where Slice 11 mounts the ☰ drawer trigger.
+  - `src/lib/format/date.ts` is now the only sanctioned way to render a date or a decimal —
+    `toLocaleDateString` / `toLocaleString` must not reappear (Task 1 Step 6 grep is the guard).
+  - "Last touched" is derived from `ListItem.updatedAt`, not stored on `List`. If a later slice ever
+    needs list-level recency for renames too, that is the moment to add `List.updatedAt` — not before.
+  - `listProjectSummaries` is the read model Slice 11's project switcher should reuse.
+  - The revoke sheet keeps the URL (`?revoke=`) as its open/closed state; any future sheet on a
+    server-rendered screen should follow that pattern rather than lifting data fetching to the client.
+- **Inherited open items:** Slice 7's minor non-blocking review notes (empty `?since=` → cursor 0;
+  overlapping polls; cancelled-before-JSON race) remain open. Locale-date hydration overlay from the
+  Slice 13 log is **closed** by Task 1 (signed-in project/list browser re-check still deferred on OAuth).
+  **Slice 10 (Katalog-Verwaltung) is next** (plan still to be created).
+- **Commit(s):** `1ee0781`…`5f6dd7b` (implementation Tasks 1–12) + this docs commit; plan file
+  `2026-08-02-slice-14-restyle-built-screens.md` landed earlier as `66cc325`.
 
 ### 2026-08-02 — Slice 13: Design foundation — ✅ Done / verified
 - **Delivered:** Design tokens + Figtree in `src/app/globals.css` / `layout.tsx`; the 14 primitives in
