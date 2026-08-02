@@ -19,6 +19,7 @@ import {
   revokeEmail,
   setAdmin,
 } from "@/lib/admin/admin";
+import { RevokeSheet } from "./RevokeSheet";
 import styles from "./page.module.css";
 
 // Next.js 16: searchParams is a Promise in server components. Typed with the framework's own wide
@@ -50,8 +51,26 @@ export default async function AdminPage({ searchParams }: Props) {
   const revokeParam = singleParam(params.revoke);
   const ownedParam = singleParam(params.owned);
 
-  // The access table itself; also the lookup for the confirmation panel below, so it is read once.
+  // The access table itself; also the lookup for the confirmation sheet below, so it is read once.
   const entries = await listAccessEntries(prisma);
+
+  // --- Two-step revoke: ?revoke=<email> opens the confirmation SHEET over the table ----------
+  // A URL parameter rather than client state keeps the data loading on the server: by the time
+  // the sheet renders, its membership list has already been read here. It also means a reload
+  // re-opens the same sheet, and closing it is a navigation (see RevokeSheet).
+  const revokeEntry = revokeParam
+    ? (entries.find((e) => e.email === normalizeEmail(revokeParam)) ?? null)
+    : null;
+
+  // A Membership needs a user id, so somebody who has never signed in cannot be in any project —
+  // the sheet then skips the project section and both intents collapse into one plain revoke.
+  const revokeProjects = revokeEntry?.user
+    ? await listProjectAccess(prisma, revokeEntry.user.id)
+    : [];
+
+  // Stale link, or already revoked in another tab: `revokeEntry` stays null and the page simply
+  // renders the table with no sheet — which is exactly the right outcome, because the thing the
+  // link pointed at no longer exists.
 
   // --- Server Actions -------------------------------------------------------------------------
   // Every action re-derives identity AND re-checks admin rights via requireAdmin (defense in depth):
@@ -108,98 +127,6 @@ export default async function AdminPage({ searchParams }: Props) {
     // surprising outcome of this flow — so the page has to say so. We pass only the user id and
     // re-read the surviving memberships on render instead of smuggling project names through the URL.
     redirect(result.ownedProjects.length > 0 ? `/admin?owned=${userId}` : "/admin");
-  }
-
-  // --- Two-step revoke: ?revoke=<email> renders a confirmation panel INSTEAD of the table --------
-  // A URL parameter rather than a dialog keeps this page free of client components, matching how the
-  // rest of the app is built. The admin has to state their INTENT here — the two revocation variants
-  // differ in whether project access ends now or is left reversible (design §6).
-  if (revokeParam) {
-    const normalized = normalizeEmail(revokeParam);
-    const entry = entries.find((e) => e.email === normalized);
-
-    // Stale link, or already revoked in another tab: say so rather than render an empty panel.
-    if (!entry) {
-      return (
-        <main style={{ padding: 24 }}>
-          <p>
-            <Link href="/admin">← Zurück zur Verwaltung</Link>
-          </p>
-          <p>Diese E-Mail steht nicht (mehr) auf der Zugangsliste.</p>
-        </main>
-      );
-    }
-
-    // A Membership needs a user id, so somebody who has never signed in cannot be in any project —
-    // the panel then skips the project section and both intents collapse into one plain revoke.
-    const projects = entry.user ? await listProjectAccess(prisma, entry.user.id) : [];
-
-    return (
-      <main style={{ padding: 24 }}>
-        <p>
-          <Link href="/admin">← Zurück zur Verwaltung</Link>
-        </p>
-        <h1>Zugang entziehen</h1>
-        <p>
-          <strong>{entry.email}</strong>
-        </p>
-        {/* Honest wording: state the JWT limitation instead of implying an instant cut-off. */}
-        <p>
-          Ein neuer Login ist danach nicht mehr möglich. Eine bereits laufende Sitzung bleibt aktiv,
-          bis sie abläuft.
-        </p>
-
-        {entry.user ? (
-          <>
-            <h2>Projekte dieser Person</h2>
-            {projects.length === 0 ? (
-              <p>Diese Person ist in keinem Projekt.</p>
-            ) : (
-              <ul>
-                {projects.map((p) => (
-                  <li key={p.projectId}>
-                    {p.name} ({p.role === "owner" ? "Owner" : "Mitglied"})
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <h2>Nur Zugang entziehen</h2>
-            <p>
-              Umkehrbar: Die Projektmitgliedschaften bleiben bestehen. Eine erneute Einladung stellt
-              die Person in ihren Projekten wieder her.
-            </p>
-            <form action={revokeOnlyAction}>
-              <input type="hidden" name="email" value={entry.email} />
-              <button type="submit">Nur Zugang entziehen</button>
-            </form>
-
-            <h2>Zugang entziehen und aus allen Projekten entfernen</h2>
-            <p>
-              Sofort wirksam: Der Zugriff auf die oben genannten Projekte endet mit der nächsten
-              Aktion dieser Person. Projekte, die ihr selbst gehören, bleiben bestehen. Nicht
-              umkehrbar – eine erneute Einladung bringt die Person ohne Projekte zurück.
-            </p>
-            <form action={revokeAndExcludeAction}>
-              <input type="hidden" name="email" value={entry.email} />
-              <input type="hidden" name="userId" value={entry.user.id} />
-              <button type="submit">Zugang entziehen und aus allen Projekten entfernen</button>
-            </form>
-          </>
-        ) : (
-          <>
-            <p>
-              Diese Person hat sich noch nie angemeldet und kann daher in keinem Projekt Mitglied
-              sein.
-            </p>
-            <form action={revokeOnlyAction}>
-              <input type="hidden" name="email" value={entry.email} />
-              <button type="submit">Zugang entziehen</button>
-            </form>
-          </>
-        )}
-      </main>
-    );
   }
 
   // --- Main view: the access table + the invite form --------------------------------------------
@@ -301,6 +228,22 @@ export default async function AdminPage({ searchParams }: Props) {
           Es wird keine Einladungs-E-Mail versendet — sag der Person selbst Bescheid.
         </p>
       </main>
+      {revokeEntry && (
+        <RevokeSheet
+          email={revokeEntry.email}
+          userId={revokeEntry.user?.id ?? null}
+          // displayName falls back to the email so the hint sentence never reads
+          // "Als Owner von „X“ behält null dort …".
+          displayName={revokeEntry.user?.displayName ?? revokeEntry.email}
+          projects={revokeProjects.map((p) => ({
+            projectId: p.projectId,
+            name: p.name,
+            role: p.role,
+          }))}
+          revokeOnlyAction={revokeOnlyAction}
+          revokeAndExcludeAction={revokeAndExcludeAction}
+        />
+      )}
     </>
   );
 }

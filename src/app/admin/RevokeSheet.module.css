@@ -1,0 +1,119 @@
+/* Handoff screen 3l. */
+.lead {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+}
+
+.projects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--color-bg-frozen);
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+
+.projectName {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.role {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Owner is the role that survives the exclusion, so it is the one that is
+   emphasised — accent-dark, not muted. */
+.roleOwner {
+  composes: role;
+  font-weight: 700;
+  color: var(--color-accent-dark);
+}
+
+/* The two options are full-width cards, not buttons: the design gives each a
+   title plus a consequence sentence, and the WHOLE card is the tap target. */
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: 12px 14px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.optionFirst {
+  composes: option;
+  margin-top: 16px;
+}
+
+/* The dangerous option is tinted AND outlined AND red-titled — three signals,
+   because this is the one action in the app that cannot be undone. */
+.optionDanger {
+  composes: option;
+  border-color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+/* display:block because these spans sit inside a <button> and must stack.
+   The two Danger variants inherit it through `composes`. */
+.optionTitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.optionTitleDanger {
+  composes: optionTitle;
+  color: var(--color-danger);
+}
+
+.optionText {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.optionTextDanger {
+  composes: optionText;
+  color: var(--color-danger-dark);
+}
+
+.ownerHint {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin-top: 10px;
+}
+
+.cancel {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  /* 12px + line box clears 44px, and the extra bottom padding is the handoff's
+     ~30px sheet gutter, plus the home-indicator inset. */
+  padding: 12px 0 calc(18px + var(--safe-bottom));
+  cursor: pointer;
+}
