@@ -1,0 +1,57 @@
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 36px;
+  text-align: center;
+}
+
+.glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+}
+
+.circle {
+  border-radius: 50%;
+}
+
+.square {
+  border-radius: 16px;
+}
+
+.accent {
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+}
+
+.neutral {
+  background: var(--color-hairline-weak);
+  color: var(--color-text-muted);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-top: 14px;
+}
+
+.description {
+  font-size: 13.5px;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+  margin-top: 5px;
+}
+
+.action {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 18px;
+}
