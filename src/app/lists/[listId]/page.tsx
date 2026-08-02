@@ -17,6 +17,7 @@ import {
 import { computeCursor } from "@/lib/lists/delta";
 import { applyOperation } from "@/lib/lists/operations";
 import ListSyncPoller from "./ListSyncPoller";
+import { formatGermanDate, formatGermanNumber } from "@/lib/format/date";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
 type Props = { params: Promise<{ listId: string }> };
@@ -193,7 +194,7 @@ export default async function ListDetailPage({ params }: Props) {
         <section>
           <p>
             ✓ Abgeschlossen
-            {list.completedAt ? ` am ${list.completedAt.toLocaleDateString("de-DE")}` : ""}
+            {list.completedAt ? ` am ${formatGermanDate(list.completedAt)}` : ""}
           </p>
           <form action={reopenListAction}>
             <button type="submit">Wieder öffnen</button>
@@ -247,7 +248,7 @@ export default async function ListDetailPage({ params }: Props) {
                   {item.catalogItem.name}
                   {/* Quantity/unit only when present — e.g. "Milch — 1,5 l". */}
                   {item.quantity !== null &&
-                    ` — ${item.quantity.toLocaleString("de-DE")}${item.unit ? ` ${item.unit}` : ""}`}
+                    ` — ${formatGermanNumber(item.quantity)}${item.unit ? ` ${item.unit}` : ""}`}
                   {item.quantity === null && item.unit ? ` — ${item.unit}` : ""}
                 </span>{" "}
                 <form action={removeItem} style={{ display: "inline" }}>

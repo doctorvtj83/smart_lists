@@ -11,6 +11,7 @@ import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
 import { addFavorite, listFavorites, removeFavorite } from "@/lib/favorites/favorites";
 import { createPrefilledList } from "@/lib/suggestions/suggestions";
+import { formatGermanDate } from "@/lib/format/date";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
 // This type reflects the new async params API introduced in Next.js 15/16.
@@ -233,7 +234,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             {archivedLists.map((l) => (
               <li key={l.id}>
                 <Link href={`/lists/${l.id}`}>{l.name}</Link>
-                {l.completedAt ? ` (${l.completedAt.toLocaleDateString("de-DE")})` : ""}
+                {l.completedAt ? ` (${formatGermanDate(l.completedAt)})` : ""}
               </li>
             ))}
           </ul>
