@@ -1,0 +1,36 @@
+/* Handoff screen 3d. */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px var(--screen-padding) calc(18px + var(--safe-bottom));
+}
+
+/* The create row: input grows, button hugs its label (handoff 3d + 5a). */
+.createRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 6px;
+}
+
+.createField {
+  flex: 1;
+}
+
+/* The empty state owns the vertical centre of the screen, and the create row
+   sits directly under its copy (handoff § Empty States: "direkt darunter die Aktion"). */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}
