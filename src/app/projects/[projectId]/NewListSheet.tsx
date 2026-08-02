@@ -121,6 +121,7 @@ export function NewListSheet({
                         <Chip
                           key={article.catalogItemId}
                           tone={favorite ? "accent" : "neutral"}
+                          selected={!dropped}
                           struck={dropped}
                           onClick={() => toggleArticle(article.catalogItemId)}
                         >

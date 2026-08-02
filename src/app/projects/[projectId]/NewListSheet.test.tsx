@@ -62,6 +62,20 @@ describe("NewListSheet", () => {
     expect(screen.getByRole("button", { name: "Liste mit 2 Einträgen anlegen" })).toBeInTheDocument();
   });
 
+  it("toggles aria-pressed when a prefill chip is clicked", async () => {
+    renderSheet();
+    await userEvent.click(screen.getByRole("button", { name: /Vorbefüllte Liste anlegen/ }));
+
+    const brotChip = screen.getByRole("button", { name: /Brot/ });
+    expect(brotChip).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(brotChip);
+    expect(brotChip).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(brotChip);
+    expect(brotChip).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("puts a dropped article back when tapped again", async () => {
     renderSheet();
     await userEvent.click(screen.getByRole("button", { name: /Vorbefüllte Liste anlegen/ }));
