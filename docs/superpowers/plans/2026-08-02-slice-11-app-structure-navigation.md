@@ -4105,7 +4105,7 @@ In `src/app/dev/ui/Gallery.tsx`: import `Toggle` from `@/components/ui/Toggle`, 
 
 The nav components are deliberately NOT added: they require a `DrawerContext` provider and a route, so the drawer is verified on a real screen instead.
 
-- [ ] **Step 2: Run the full suite, lint and build**
+- [x] **Step 2: Run the full suite, lint and build**
 
 Run: `npx vitest run`
 Expected: PASS — every file. Record the file/test counts for the review.
@@ -4116,7 +4116,7 @@ Expected: no findings under `src/`. (The two pre-existing errors + eight warning
 Run: `npm run build`
 Expected: succeeds. All five project routes present.
 
-- [ ] **Step 3: Manual browser checklist**
+- [x] **Step 3: Manual browser checklist**
 
 `npm run dev`, sign in, then confirm on **one project as owner** and (if a second account is available) **as a member**:
 
@@ -4137,7 +4137,7 @@ Expected: succeeds. All five project routes present.
 
 Record PASS/FAIL per item; a FAIL that is not a product-rule violation goes in the review as inherited debt, with a note.
 
-- [ ] **Step 4: Write the implementation review**
+- [x] **Step 4: Write the implementation review**
 
 Create `docs/implementation-reviews/slice-11-app-structure-navigation.md` in English, following the five required sections from CLAUDE.md § Implementation review:
 
@@ -4149,7 +4149,7 @@ Create `docs/implementation-reviews/slice-11-app-structure-navigation.md` in Eng
 
 Also state explicitly: the four deferrals from this plan's "What this slice deliberately does NOT do", and the deviation that the sheet's suggestions arrive as server props rather than through `GET /suggestions`.
 
-- [ ] **Step 5: Update the meta project plan**
+- [x] **Step 5: Update the meta project plan**
 
 In `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md`:
 
@@ -4163,7 +4163,7 @@ In `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md`:
    - The list screen keeps its `← Zum Projekt` link and gets no drawer until Slice 12.
 3. Note that **Slice 12 (List interaction rework) is the next open slice** (plan still to be created).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/app/dev/ui/Gallery.tsx docs/implementation-reviews/slice-11-app-structure-navigation.md docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md docs/superpowers/plans/2026-08-02-slice-11-app-structure-navigation.md
