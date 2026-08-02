@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { ChevronRight, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -36,27 +36,39 @@ type CatalogBrowserProps = {
  * Why two useActionState hooks instead of one: the create row and the edit panel
  * fail independently, and a collision while creating must not paint an error into
  * a panel (or vice versa).
+ *
+ * Why panel open/close is driven from the action wrappers (not useEffect): the
+ * React Compiler lint forbids setState synchronously inside an effect. Wrapping
+ * the Server Actions lets us adjust `openId` in the same async turn that produces
+ * the new form state — still after the await, so it is not a cascading render
+ * during the effect phase, and the create/edit error paths stay independent.
  */
 export function CatalogBrowser({ articles, createAction, editAction }: CatalogBrowserProps) {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [createState, createFormAction] = useActionState(createAction, CATALOG_FORM_IDLE);
-  const [editState, editFormAction] = useActionState(editAction, CATALOG_FORM_IDLE);
 
   // „legt an und öffnet direkt das Bearbeiten-Panel" (handoff § 8): the new
-  // article arrives via the revalidated props, and this opens its panel.
-  // The dependency is the whole state object, which is a NEW object per action
-  // result — that is what makes the effect fire once per successful create.
-  useEffect(() => {
-    if (createState.createdId) setOpenId(createState.createdId);
-  }, [createState]);
+  // article arrives via the revalidated props; opening happens here once the
+  // create action returns a createdId.
+  const [createState, createFormAction] = useActionState(
+    async (prev: CatalogFormState, formData: FormData) => {
+      const next = await createAction(prev, formData);
+      if (next.createdId) setOpenId(next.createdId);
+      return next;
+    },
+    CATALOG_FORM_IDLE,
+  );
 
   // A successful save or delete closes the panel. A failed one must NOT — the
   // user needs to see the error next to the field that caused it.
-  useEffect(() => {
-    if (editState.ok) setOpenId(null);
-  }, [editState]);
-
+  const [editState, editFormAction] = useActionState(
+    async (prev: CatalogFormState, formData: FormData) => {
+      const next = await editAction(prev, formData);
+      if (next.ok) setOpenId(null);
+      return next;
+    },
+    CATALOG_FORM_IDLE,
+  );
   // Reusing normalizeName means the filter obeys the same identity rule as the
   // catalog ("MIL" finds "Milch"). Substring rather than prefix on purpose: this
   // is a management screen, not autocomplete — searchCatalog stays prefix-only.

@@ -95,11 +95,9 @@ describe("CatalogBrowser", () => {
   });
 
   it("dispatches the edit action with the delete intent once deletion is confirmed", async () => {
-    // Typed with both parameters so mock.calls[0][1] is a FormData to TypeScript.
-    const editAction = vi.fn(
-      async (_prev: CatalogFormState, _formData: FormData): Promise<CatalogFormState> =>
-        CATALOG_FORM_IDLE,
-    );
+    // Implementation takes no parameters on purpose: the assertion reads
+    // mock.calls[0][1] (the FormData React passes into useActionState).
+    const editAction = vi.fn(async (): Promise<CatalogFormState> => CATALOG_FORM_IDLE);
     renderBrowser({ editAction });
 
     await userEvent.click(screen.getByRole("button", { name: /Milch/ }));
