@@ -38,3 +38,40 @@ export function formatOpenCount(open: number): string {
 export function formatOpenOfTotal(open: number, total: number): string {
   return `${open} von ${total} offen`;
 }
+
+/**
+ * "124 Artikel" — the trailing count in the Katalog header (handoff § 8).
+ *
+ * "Artikel" is one of the German nouns whose plural equals its singular, so only
+ * the number changes. It is still a function so no call site inlines the noun:
+ * the day the header wants different wording, it changes in one place.
+ */
+export function formatArticleCount(count: number): string {
+  return `${count} Artikel`;
+}
+
+/**
+ * "wird in 3 Listen verwendet" — the reason a catalog article cannot be deleted.
+ *
+ * Why it is shared: the same sentence is printed twice from two different places
+ * — as a note in the edit panel (from the read model) and inside the ApiError the
+ * delete guard throws when someone else put the article on a list in the meantime.
+ * They must read identically, so the wording lives here and nowhere else.
+ */
+export function formatUsedInLists(count: number): string {
+  return `wird in ${formatListCount(count)} verwendet`;
+}
+
+/**
+ * "Molkerei · l" — a catalog row's sub line (handoff § 8).
+ *
+ * Both defaults are nullable (unknown until someone sets them), so this collapses
+ * to whichever values exist. The separator is U+00B7 MIDDLE DOT surrounded by
+ * spaces, the same one formatProjectMeta uses.
+ */
+export function formatArticleDefaults(category: string | null, unit: string | null): string {
+  // The type predicate is what narrows (string | null)[] to string[] for join().
+  const parts = [category, unit].filter((part): part is string => Boolean(part));
+  if (parts.length === 0) return "Keine Vorgaben";
+  return parts.join(" · ");
+}
