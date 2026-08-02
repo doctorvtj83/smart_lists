@@ -4,17 +4,17 @@
 
 Slice 10 makes the per-project catalog **visible and editable**. Members can open `/projects/[projectId]/katalog`, browse articles (German locale sort, live substring search), create an article directly, rename with a normalized-name collision check, edit / clear default category and unit, and delete an article only when no list — active or completed — still references it. The screen is built from a server-owned read model plus client view state (search text, open panel), with mutations as Server Actions over `src/lib/catalog/manage.ts` (no new REST endpoints).
 
-The slice goal is **met in code**. Automated verification is green (numbers below). The 17-item signed-in browser checklist is **SKIPPED in this environment**: Google OAuth fails with `redirect_uri_mismatch` for `http://localhost:3010/api/auth/callback/google`, so no authenticated session could be established. Domain and component tests cover the behaviours those checklist items target; residual risk is layout/hydration and end-to-end wiring that only a signed-in pass proves.
+The slice goal is **met**. Automated verification is green (numbers below). The 17-item signed-in browser checklist was **completed later on `http://localhost:3000`** (see meta-plan entry „Manual browser verification complete"): **16 PASS**, **1 FAIL** (hydration warning on the Katalog route — Next.js overlay pointing at `katalog/page.tsx` `PageHeader` leading `Link`; same class of issue appears on other `PageHeader` screens).
 
-**Automated verification (Task 9 Step 1, this session):**
+**Automated verification (Task 9 Step 1):**
 
 | Command | Result |
 |---|---|
-| `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/.worktrees/**'` | **49 files / 382 tests** passed (exit 0; ~77–79 s). Running from this worktree, the `.worktrees` exclude did **not** hide local tests (paths are relative to the worktree cwd). |
-| `npm run lint` | **2 errors, 8 warnings**, all pre-existing in `docs/design/2026-08-01-ui-handoff/support.js`. **`src/` clean** after a Task-9 lint fix in `CatalogBrowser` (no `setState` in `useEffect`). Process exit 1 because of the handoff file. |
+| `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/.worktrees/**'` | **49 files / 382 tests** at Task 9; after the final-review fix wave **383** tests. |
+| `npm run lint` | **2 errors, 8 warnings**, all pre-existing in `docs/design/2026-08-01-ui-handoff/support.js`. **`src/` clean** after a Task-9 lint fix in `CatalogBrowser`. Process exit 1 because of the handoff file. |
 | `npm run build` | Succeeded (Next.js 16.2.9; `/projects/[projectId]/katalog` listed as dynamic). |
 
-**Manual checklist (Task 9 Step 2):** all **17 items SKIPPED (environment)** — see progress-log entry and `task-9-report.md`. Automated coverage that already pins the intended behaviour is noted per item in that report.
+**Manual checklist:** completed on port **3000** as `volkertjaden@gmail.com` (project Einkauf + empty project „Katalog Empty Test"). Earlier Task-9 attempt on `:3010` failed OAuth `redirect_uri_mismatch` and was superseded.
 
 **Out of scope (deliberately — do not hunt for these in this slice):**
 
@@ -45,7 +45,7 @@ The slice goal is **met in code**. Automated verification is green (numbers belo
 
 **Task 8 — Katalog page + project link:** Server Component page with member-level Server Actions, `PageHeader` + back link, one „Katalog" link on the project detail page.
 
-**Task 9 — Verification + docs:** Full vitest / lint / build; OAuth-blocked manual checklist documented as SKIPPED; this review; meta-plan status + progress log.
+**Task 9 — Verification + docs:** Full vitest / lint / build; initial OAuth-blocked checklist noted, then completed on `:3000`; this review; meta-plan status + progress log.
 
 ---
 

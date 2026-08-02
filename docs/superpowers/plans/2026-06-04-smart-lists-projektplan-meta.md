@@ -293,6 +293,16 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Commit(s):** <hash(es)>
 > ```
 
+### 2026-08-02 — Slice 10: Catalog management — Manual browser verification complete
+- **Delivered:** (no product-code changes) Closed the open signed-in 17-item checklist that Task 9 had skipped on `:3010`.
+- **Tested:** Dev server on **`http://localhost:3000`** (Google redirect URI matches; existing session `volkertjaden@gmail.com`). Checklist against project **Einkauf** + new empty project **Katalog Empty Test**: **16 PASS / 1 FAIL**.
+  - PASS: project „Katalog" link; header „Katalog" + „N Artikel" + back to project; German sort (Äpfel first) + defaults sub-lines; live search (MIL→Milch, substring, no-hits); row→panel; save defaults; rename collision „Artikel existiert bereits" + `aria-invalid`; clear Kategorie; Abbrechen; delete guard on active list (Milch) and **completed** list (Nudeln / Archiv „Leer Check"); unused delete via ConfirmSheet (Escape dismisses; confirm removes); favourite Kerzen note + cascade off Favoriten; create opens panel; duplicate create error; empty state without search + first create → list; unknown project id → `/projects`; 375px no horizontal scroll, panel fits.
+  - FAIL (item 17): Next.js hydration warning on `/katalog` (overlay cites `katalog/page.tsx` PageHeader leading `Link`). Same overlay class also appears on home / project pages via `PageHeader` — not Katalog-only; follow-up outside this slice’s product rules.
+- **Deviations from the plan:** None for the verification itself. Temporary test data left in the shared Neon DB (deleted Broth/Kerzen; Milch defaults → unit `l`; project „Katalog Empty Test" with Salz) — safe to clean up manually.
+- **Follow-up decisions for later slices:** Fix shared `PageHeader` / leading-slot hydration if the overlay is still present after Slice 11 drawer work.
+- **Inherited open items:** Unchanged (Slice 11 next; Slice 7 minors; delete TOCTOU follow-up).
+- **Commit(s):** (documentation-only update; no new product commits)
+
 ### 2026-08-02 — Slice 10: Catalog management — ✅ Done / verified
 - **Delivered:** Explicit catalog write path (`src/lib/catalog/manage.ts`: `listCatalog`,
   `createCatalogArticle`, `updateCatalogArticle`, `deleteCatalogArticle` /
@@ -304,22 +314,18 @@ When you have finished a slice, **before** the final commit do the following:
   Plan file `2026-08-02-slice-10-catalog-management.md` committed with the slice.
 - **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'
   --exclude '**/.worktrees/**'` (from the slice-10 worktree cwd) → **49 files /
-  382 tests** passed; `npm run lint` → 2 errors + 8 warnings, all pre-existing in
+  382 tests** at Task 9 (**383** after final-review fix); `npm run lint` → 2 errors + 8 warnings, all pre-existing in
   `docs/design/2026-08-01-ui-handoff/support.js` (`src/` clean after Task-9
   CatalogBrowser lint fix; process exit 1); `npm run build` succeeds
-  (`/projects/[projectId]/katalog` dynamic). Manual 17-item checklist: **all
-  SKIPPED (environment)** — Google OAuth `redirect_uri_mismatch` for
-  `http://localhost:3010/api/auth/callback/google`. Automated coverage already
-  pins create/update/delete guards, collision copy, search/panel/empty-state UI,
-  and membership redirect via domain + jsdom tests; residual risk is signed-in
-  layout/hydration and full Server Action wiring in a real browser session.
+  (`/projects/[projectId]/katalog` dynamic). Manual 17-item checklist: completed
+  later on `:3000` — see entry above (16 PASS / 1 hydration FAIL).
 - **Deviations from the plan:** Task 5 — delete count→delete TOCTOU without a
   transaction (deferred minor). Task 9 — CatalogBrowser panel open/close moved from
   `useEffect`+`setState` into action wrappers to satisfy `react-hooks/set-state-in-effect`
   (behaviour unchanged; create-opens-panel test passed at Task 9). Final review
   fix wave: ConfirmSheet now closes after danger `onSelect` (Gallery pattern);
   save-closes-panel jsdom coverage added (was missing despite the wrapper).
-  Manual browser pass deferred (OAuth).
+  Initial Task-9 manual pass deferred on `:3010` OAuth mismatch; finished on `:3000`.
 - **Follow-up decisions for later slices:**
   - `src/lib/catalog/manage.ts` is the **explicit** catalog path (duplicate = error,
     empty field = clear, delete is guarded); `src/lib/catalog/catalog.ts` stays the
