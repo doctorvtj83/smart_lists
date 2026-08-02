@@ -314,10 +314,11 @@ When you have finished a slice, **before** the final commit do the following:
   and membership redirect via domain + jsdom tests; residual risk is signed-in
   layout/hydration and full Server Action wiring in a real browser session.
 - **Deviations from the plan:** Task 5 — delete count→delete TOCTOU without a
-  transaction (deferred minor). Task 6 — ConfirmSheet does not auto-close after
-  `onSelect` (deferred minor). Task 9 — CatalogBrowser panel open/close moved from
+  transaction (deferred minor). Task 9 — CatalogBrowser panel open/close moved from
   `useEffect`+`setState` into action wrappers to satisfy `react-hooks/set-state-in-effect`
-  (behaviour unchanged; create-opens-panel and save-closes-panel tests still pass).
+  (behaviour unchanged; create-opens-panel test passed at Task 9). Final review
+  fix wave: ConfirmSheet now closes after danger `onSelect` (Gallery pattern);
+  save-closes-panel jsdom coverage added (was missing despite the wrapper).
   Manual browser pass deferred (OAuth).
 - **Follow-up decisions for later slices:**
   - `src/lib/catalog/manage.ts` is the **explicit** catalog path (duplicate = error,

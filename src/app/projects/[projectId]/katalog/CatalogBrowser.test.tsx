@@ -146,6 +146,27 @@ describe("CatalogBrowser", () => {
     expect(await screen.findByRole("button", { name: "Speichern" })).toBeInTheDocument();
   });
 
+  // Mirrors the edit-action wrapper: `next.ok` must clear `openId` so Speichern
+  // leaves the list, not a stuck panel. Failures keep the panel open (covered
+  // elsewhere via scoped error painting); this pins the success path only.
+  it("closes the panel when the edit action returns ok", async () => {
+    const editAction = async (): Promise<CatalogFormState> => ({
+      error: null,
+      ok: true,
+      createdId: null,
+      articleId: milch.id,
+    });
+    renderBrowser({ editAction });
+
+    await userEvent.click(screen.getByRole("button", { name: /Milch/ }));
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("button", { name: /Milch/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Speichern" })).not.toBeInTheDocument();
+  });
+
   it("shows the empty state and no search field for an empty catalog", () => {
     renderBrowser({ articles: [] });
 

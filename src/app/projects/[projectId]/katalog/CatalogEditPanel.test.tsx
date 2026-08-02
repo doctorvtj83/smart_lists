@@ -87,6 +87,9 @@ describe("CatalogEditPanel", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Artikel löschen/ }));
     expect(props.onConfirmDelete).toHaveBeenCalledTimes(1);
+    // Sheet must not linger after the danger option — matches Gallery's
+    // onSelect → setConfirmOpen(false) pattern.
+    expect(screen.queryByRole("dialog", { name: "Artikel löschen: Milch" })).not.toBeInTheDocument();
   });
 
   it("calls onCancel when Abbrechen is clicked", async () => {

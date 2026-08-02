@@ -39,9 +39,9 @@ The slice goal is **met in code**. Automated verification is green (numbers belo
 
 **Task 5 — `deleteCatalogArticle`:** Guard via `countListsUsingArticle` (active + completed); favourite row cascades with the article. Minor: count→delete TOCTOU without a transaction (deferred).
 
-**Task 6 — `CatalogEditPanel`:** Presentational inline panel with collision error on Name, guarded delete / ConfirmSheet, shared `formState.ts`. Minor: ConfirmSheet does not auto-close after `onSelect` (deferred).
+**Task 6 — `CatalogEditPanel`:** Presentational inline panel with collision error on Name, guarded delete / ConfirmSheet, shared `formState.ts`. ConfirmSheet closes after danger `onSelect` (Gallery pattern; final review fix).
 
-**Task 7 — `CatalogBrowser`:** Client body with live `normalizeName` substring search, create row, empty state 5f, panel open/close driven from action wrappers (Task 9 lint fix moved this off `useEffect`).
+**Task 7 — `CatalogBrowser`:** Client body with live `normalizeName` substring search, create row, empty state 5f, panel open/close driven from action wrappers (Task 9 lint fix moved this off `useEffect`). Final review fix: jsdom coverage for edit-`ok` → panel close (create-opens was already covered).
 
 **Task 8 — Katalog page + project link:** Server Component page with member-level Server Actions, `PageHeader` + back link, one „Katalog" link on the project detail page.
 

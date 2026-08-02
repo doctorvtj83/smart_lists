@@ -122,7 +122,13 @@ export function CatalogEditPanel({
               ? "Der Artikel verschwindet aus dem Katalog und aus den Favoriten."
               : "Der Artikel verschwindet aus dem Katalog.",
             tone: "danger",
-            onSelect: onConfirmDelete,
+            // ConfirmSheet does not close itself on select — same Gallery pattern:
+            // fire the mutation, then drop the sheet so it cannot stay open over
+            // a panel that the parent is about to unmount on a successful delete.
+            onSelect: () => {
+              onConfirmDelete();
+              setConfirmOpen(false);
+            },
           },
         ]}
       />
