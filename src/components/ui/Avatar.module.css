@@ -1,0 +1,15 @@
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--color-surface);
+  font-weight: 800;
+  /* Size, radius, font-size and background come from inline custom properties
+     set in Avatar.tsx, because they scale together and depend on props. */
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: var(--avatar-radius);
+  font-size: var(--avatar-font-size);
+  background: var(--avatar-bg);
+}
