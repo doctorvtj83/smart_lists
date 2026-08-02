@@ -1,0 +1,62 @@
+/* The shell fills the body column that globals.css sets up. */
+.shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Mobile: no sidebar at all — the drawer is the navigation. */
+.sidebar {
+  display: none;
+}
+
+/* Desktop breakpoint is 900px (see globals.css — custom properties cannot be
+   used inside a media query). */
+@media (min-width: 900px) {
+  .sidebar {
+    display: block;
+    flex: none;
+    width: var(--sidebar-width);
+    border-right: 1px solid var(--color-sidebar-border);
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--color-overlay-strong);
+  animation: sl-fade var(--motion-fade) ease-out;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 21;
+  width: 276px;
+  max-width: 84vw;
+  /* The safe-area padding sits on the drawer, not the panel, so the desktop
+     sidebar (same panel) is unaffected. */
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  background: var(--color-bg-sidebar);
+  box-shadow: var(--shadow-drawer);
+  animation: sl-drawer var(--motion-drawer) ease-out;
+}
+
+/* The drawer is navigation, and the desktop sidebar already provides it. */
+@media (min-width: 900px) {
+  .overlay,
+  .drawer {
+    display: none;
+  }
+}

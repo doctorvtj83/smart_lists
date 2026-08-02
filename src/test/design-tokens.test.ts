@@ -38,6 +38,7 @@ const EXPECTED_COLORS: Record<string, string> = {
   "--color-control-border": "#c6c6bf",
   "--color-checked-archived": "#b8bdb2",
   "--color-grabber": "#e3e3df",
+  "--color-sidebar-border": "#e7e8e4",
 };
 
 describe("design tokens", () => {
@@ -61,6 +62,7 @@ describe("design tokens", () => {
       "--shadow-hero",
       "--shadow-logo",
       "--shadow-panel-active",
+      "--shadow-drawer",
       "--motion-fade",
       "--motion-sheet",
       "--motion-drawer",

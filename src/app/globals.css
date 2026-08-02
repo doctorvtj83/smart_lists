@@ -41,6 +41,8 @@
   --color-control-border: #c6c6bf;
   --color-checked-archived: #b8bdb2;
   --color-grabber: #e3e3df;
+  /* Desktop sidebar right edge — from the handoff prototype, not the main palette table. */
+  --color-sidebar-border: #e7e8e4;
 
   /* Overlays are rgba, not hex, because they sit on top of content. */
   --color-overlay: rgba(35, 35, 34, 0.3);
@@ -62,6 +64,8 @@
   /* Login logo tile — slightly larger/spread than --shadow-hero (handoff 3a). */
   --shadow-logo: 0 6px 18px rgba(62, 99, 196, 0.25);
   --shadow-panel-active: 0 2px 8px rgba(62, 99, 196, 0.08);
+  /* Mobile nav drawer — left-edge cast (handoff § Navigation). */
+  --shadow-drawer: 4px 0 24px rgba(35, 35, 34, 0.18);
 
   /* --- Motion --------------------------------------------------------- */
   --motion-fade: 200ms;
