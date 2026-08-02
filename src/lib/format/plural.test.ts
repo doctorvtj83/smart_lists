@@ -4,6 +4,7 @@ import {
   formatArticleDefaults,
   formatListCount,
   formatMemberCount,
+  formatNewListLabel,
   formatOpenCount,
   formatOpenOfTotal,
   formatProjectMeta,
@@ -88,5 +89,21 @@ describe("formatArticleDefaults", () => {
   // dense list would alternate between two heights.
   it("falls back to a filler when nothing is set", () => {
     expect(formatArticleDefaults(null, null)).toBe("Keine Vorgaben");
+  });
+});
+
+describe("formatNewListLabel", () => {
+  it("names the empty case without a number", () => {
+    expect(formatNewListLabel(0)).toBe("Leere Liste anlegen");
+  });
+
+  it("uses the DATIVE singular for exactly one", () => {
+    expect(formatNewListLabel(1)).toBe("Liste mit 1 Eintrag anlegen");
+  });
+
+  // "mit" governs the dative, so the plural is "Einträgen", not "Einträge" —
+  // the exact trap this helper exists to keep out of the call site.
+  it("uses the dative plural for many", () => {
+    expect(formatNewListLabel(7)).toBe("Liste mit 7 Einträgen anlegen");
   });
 });

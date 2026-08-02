@@ -75,3 +75,21 @@ export function formatArticleDefaults(category: string | null, unit: string | nu
   if (parts.length === 0) return "Keine Vorgaben";
   return parts.join(" · ");
 }
+
+/**
+ * The „Neue Liste"-Sheet's submit label, which counts live as the user drops
+ * suggestions (handoff § State Management).
+ *
+ * Why the helper returns the WHOLE sentence rather than just "N Einträge": the
+ * label reads „Liste mit N Einträgen anlegen", and the preposition „mit" governs
+ * the dative — so the plural is „Einträgen", not the nominative „Einträge", while
+ * the singular „Eintrag" is unchanged. Handing the call site a nominative count
+ * to concatenate is exactly how that ungrammatical string gets shipped.
+ *
+ * 0 is not "Liste mit 0 Einträgen": the design switches to „Leere Liste anlegen",
+ * because an empty pre-fill is a different intent, not a degenerate count.
+ */
+export function formatNewListLabel(count: number): string {
+  if (count === 0) return "Leere Liste anlegen";
+  return `Liste mit ${count} ${count === 1 ? "Eintrag" : "Einträgen"} anlegen`;
+}
