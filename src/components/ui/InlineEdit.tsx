@@ -94,6 +94,9 @@ export function InlineEdit({
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
+            // Stop the browser's default so a parent <form> does not submit
+            // when the user commits an inline rename with Enter.
+            event.preventDefault();
             skipBlur.current = true;
             commit();
           } else if (event.key === "Escape") {

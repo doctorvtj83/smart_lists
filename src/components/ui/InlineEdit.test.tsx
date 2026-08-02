@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
+import type { FormEvent } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { InlineEdit } from "./InlineEdit";
@@ -31,6 +32,23 @@ describe("InlineEdit", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith("Wohnung");
+  });
+
+  it("prevents Enter from submitting a parent form", async () => {
+    const onSave = vi.fn();
+    const onSubmit = vi.fn((event: FormEvent) => event.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <InlineEdit value="Haushalt" label="Projektname" onSave={onSave} />
+      </form>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Haushalt/ }));
+    await userEvent.clear(screen.getByLabelText("Projektname"));
+    await userEvent.type(screen.getByLabelText("Projektname"), "Wohnung{Enter}");
+
+    expect(onSave).toHaveBeenCalledWith("Wohnung");
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("saves on blur", async () => {

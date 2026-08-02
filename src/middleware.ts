@@ -6,5 +6,7 @@ export const config = {
   // files with extensions reachable without a session. /dev/* is excluded because the gallery
   // is the manual verification surface for design primitives and must open unauthenticated —
   // the page itself still 404s in production via NODE_ENV.
-  matcher: ["/((?!api/auth|login|auth/error|dev|_next/static|_next/image|.*\\..*).*)"],
+  // Anchor `dev` as `dev(?:/|$)` so only `/dev` and `/dev/...` skip auth —
+  // an unanchored `dev` would also exempt `/devices`, `/developer`, etc.
+  matcher: ["/((?!api/auth|login|auth/error|dev(?:/|$)|_next/static|_next/image|.*\\..*).*)"],
 };
