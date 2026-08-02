@@ -1,6 +1,6 @@
 "use client";
 
-import { InlineEdit } from "@/components/ui/inlineEdit";
+import { InlineEdit } from "@/components/ui/InlineEdit";
 import styles from "./ProjectTitle.module.css";
 
 type ProjectTitleProps = {
