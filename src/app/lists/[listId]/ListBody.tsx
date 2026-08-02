@@ -88,7 +88,11 @@ export function ListBody({
       // A FAILED save must keep the sheet open — the user has to see the message
       // next to the field that caused it.
       if (next.ok) setOpenEntryId(null);
-      return next;
+      // Attribute the result to the entry we just tried to save (CatalogBrowser's
+      // articleId pattern). Prefer the action's echo; fall back to FormData so a
+      // missing itemId cannot leave a stale error unbound-and-everywhere.
+      const itemId = next.itemId ?? (formData.get("itemId") as string | null);
+      return { ...next, itemId };
     },
     ENTRY_FORM_IDLE,
   );
@@ -269,7 +273,9 @@ export function ListBody({
           key={openEntry.id}
           entry={openEntry}
           categories={categories}
-          error={updateState.error}
+          // Only the error that belongs to THIS entry — otherwise a failed save
+          // would follow the user to the next sheet (CatalogBrowser's articleId).
+          error={updateState.itemId === openEntry.id ? updateState.error : null}
           onClose={() => setOpenEntryId(null)}
           onSave={(changes) => saveEntry(openEntry.id, changes)}
           onDelete={() => removeEntry(openEntry.id)}

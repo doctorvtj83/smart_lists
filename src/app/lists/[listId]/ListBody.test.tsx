@@ -176,6 +176,47 @@ describe("ListBody — entry interaction", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  // A FAILED save must keep the sheet open so the inline message is visible.
+  it("keeps the sheet open and shows the error when the update fails", async () => {
+    const updateAction = vi.fn(async () => ({
+      error: "Menge muss eine positive Zahl sein",
+      ok: false,
+      openEntryId: null,
+      itemId: milch.id,
+    }));
+    renderBody({ updateAction });
+
+    await userEvent.click(screen.getByRole("button", { name: "Milch bearbeiten" }));
+    await userEvent.type(screen.getByLabelText("Menge"), "xyz");
+    await userEvent.click(screen.getByRole("button", { name: "Fertig" }));
+
+    expect(screen.getByRole("dialog", { name: "Milch" })).toBeInTheDocument();
+    expect(await screen.findByText("Menge muss eine positive Zahl sein")).toBeInTheDocument();
+  });
+
+  // CatalogBrowser paints editState.error only when articleId matches the open
+  // row — same rule here via itemId, so a failure cannot follow the user.
+  it("does not carry a failed-update error to another entry's sheet", async () => {
+    const updateAction = vi.fn(async () => ({
+      error: "Menge muss eine positive Zahl sein",
+      ok: false,
+      openEntryId: null,
+      itemId: milch.id,
+    }));
+    renderBody({ updateAction });
+
+    await userEvent.click(screen.getByRole("button", { name: "Milch bearbeiten" }));
+    await userEvent.type(screen.getByLabelText("Menge"), "xyz");
+    await userEvent.click(screen.getByRole("button", { name: "Fertig" }));
+    expect(await screen.findByText("Menge muss eine positive Zahl sein")).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "Butter bearbeiten" }));
+
+    expect(screen.getByRole("dialog", { name: "Butter" })).toBeInTheDocument();
+    expect(screen.queryByText("Menge muss eine positive Zahl sein")).not.toBeInTheDocument();
+  });
+
   it("removes an entry from the sheet", async () => {
     const removeAction = vi.fn();
     renderBody({ removeAction });
@@ -189,16 +230,35 @@ describe("ListBody — entry interaction", () => {
   });
 
   // The design's "neuer, unbekannter Artikel ohne Kategorie" rule.
+  // Couples openEntryId to the client-generated itemId and the revalidated entry.
   it("opens the sheet on the entry the action asks for", async () => {
-    const addAction = vi.fn(async () => ({
-      ...ENTRY_FORM_IDLE,
-      openEntryId: duebel.id,
-    }));
-    renderBody({ addAction });
+    let createdId: string | null = null;
+    const addAction = vi.fn(async (_prev: unknown, formData: FormData) => {
+      createdId = String(formData.get("itemId"));
+      return {
+        ...ENTRY_FORM_IDLE,
+        openEntryId: createdId,
+      };
+    });
+    const { rerender, props } = renderBody({
+      // No pre-existing "Quark" — the sheet must open for the NEW id, not a fixture.
+      entries: [milch, butter, apfel],
+      addAction,
+    });
 
-    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Dübel{Enter}");
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Quark{Enter}");
 
-    expect(await screen.findByRole("dialog", { name: "Dübel" })).toBeInTheDocument();
+    expect(createdId).toMatch(/^[0-9a-f-]{36}$/i);
+    // Stand-in for revalidatePath: the created entry arrives with that client id.
+    rerender(
+      <ListBody
+        {...props}
+        entries={[milch, butter, apfel, entry(createdId!, "Quark", null)]}
+        addAction={addAction}
+      />,
+    );
+
+    expect(await screen.findByRole("dialog", { name: "Quark" })).toBeInTheDocument();
   });
 });
 

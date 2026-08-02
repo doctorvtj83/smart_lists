@@ -19,6 +19,12 @@ export type EntryFormState = {
    * null in every other case.
    */
   openEntryId: string | null;
+  /**
+   * Which entry the result belongs to — same role as CatalogFormState.articleId.
+   * Without it, a failed save's error would still sit in useActionState and paint
+   * onto the next entry the user opens (or a needsCategory sheet after add).
+   */
+  itemId: string | null;
 };
 
 /** The initial value both useActionState hooks start from. */
@@ -26,4 +32,5 @@ export const ENTRY_FORM_IDLE: EntryFormState = {
   error: null,
   ok: false,
   openEntryId: null,
+  itemId: null,
 };
