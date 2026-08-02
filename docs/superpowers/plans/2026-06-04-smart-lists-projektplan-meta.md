@@ -68,7 +68,7 @@ under the table). Each slice is working, tested software on its own.
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
-| 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | _to be created_ | ⬜ Open |
+| 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | [2026-08-02-slice-10-catalog-management.md](2026-08-02-slice-10-catalog-management.md) | ✅ Done / verified |
 | 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | _to be created_ | ⬜ Open |
 | 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | _to be created_ | ⬜ Open |
 | 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | [2026-08-01-slice-13-design-foundation.md](2026-08-01-slice-13-design-foundation.md) | ✅ Done / verified |
@@ -162,7 +162,7 @@ under the table). Each slice is working, tested software on its own.
 > ("Liste mit 7 Einträgen anlegen"). That sheet is more than Slice 5's boolean `prefill` flag: it reads
 > `GET /suggestions` first and then creates the list from the surviving selection.
 >
-> **Slice 10 (Katalog-Verwaltung) is the next open slice** (plan still to be created).
+> **Slice 11 (App structure + navigation) is the next open slice** (plan still to be created).
 
 > **Slice 16 note (2026-08-01) — why the flash is optional and last.** The design replaces the permanent
 > sync indicator with a **per-row flash** (`#eef2fc → transparent`, 1.4 s) on rows a *remote* member
@@ -292,6 +292,59 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-02 — Slice 10: Catalog management — ✅ Done / verified
+- **Delivered:** Explicit catalog write path (`src/lib/catalog/manage.ts`: `listCatalog`,
+  `createCatalogArticle`, `updateCatalogArticle`, `deleteCatalogArticle` /
+  `countListsUsingArticle`) beside Slice 4's implicit get-or-create/flow-back;
+  German meta helpers (`formatArticleCount` / `formatUsedInLists` /
+  `formatArticleDefaults`); `/projects/[projectId]/katalog` with `CatalogBrowser` +
+  `CatalogEditPanel` (live substring search, inline edit, guarded delete, direct
+  create); member-level Server Actions + one „Katalog" link on the project page.
+  Plan file `2026-08-02-slice-10-catalog-management.md` committed with the slice.
+- **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'
+  --exclude '**/.worktrees/**'` (from the slice-10 worktree cwd) → **49 files /
+  382 tests** passed; `npm run lint` → 2 errors + 8 warnings, all pre-existing in
+  `docs/design/2026-08-01-ui-handoff/support.js` (`src/` clean after Task-9
+  CatalogBrowser lint fix; process exit 1); `npm run build` succeeds
+  (`/projects/[projectId]/katalog` dynamic). Manual 17-item checklist: **all
+  SKIPPED (environment)** — Google OAuth `redirect_uri_mismatch` for
+  `http://localhost:3010/api/auth/callback/google`. Automated coverage already
+  pins create/update/delete guards, collision copy, search/panel/empty-state UI,
+  and membership redirect via domain + jsdom tests; residual risk is signed-in
+  layout/hydration and full Server Action wiring in a real browser session.
+- **Deviations from the plan:** Task 5 — delete count→delete TOCTOU without a
+  transaction (deferred minor). Task 6 — ConfirmSheet does not auto-close after
+  `onSelect` (deferred minor). Task 9 — CatalogBrowser panel open/close moved from
+  `useEffect`+`setState` into action wrappers to satisfy `react-hooks/set-state-in-effect`
+  (behaviour unchanged; create-opens-panel and save-closes-panel tests still pass).
+  Manual browser pass deferred (OAuth).
+- **Follow-up decisions for later slices:**
+  - `src/lib/catalog/manage.ts` is the **explicit** catalog path (duplicate = error,
+    empty field = clear, delete is guarded); `src/lib/catalog/catalog.ts` stays the
+    **implicit** one (get-or-create, sparse flow-back). Do not merge them.
+  - Deleting a catalog article is guarded by **distinct list usage across active AND
+    completed lists**, because `ListItem.catalogItemId` cascades and completed lists
+    feed the suggestion statistic. Any future bulk-delete or project-cleanup feature
+    must re-use `countListsUsingArticle`.
+  - The Katalog screen is the app's first **client component holding view state while
+    the data stays server-owned** (`articles` as props + `revalidatePath`). Slices 11
+    and 12 should follow this split rather than fetching on the client.
+  - `PageHeader`'s `leading` slot on this screen currently holds a back link —
+    **Slice 11 replaces it with the ☰ drawer trigger** and removes the „Katalog"
+    link from the project page.
+  - Catalog management ships **no REST endpoints** (Slice 9 precedent).
+    `src/lib/catalog/manage.ts` is the seam if one is ever needed.
+  - `formatUsedInLists` is the single source of the „wird in N Listen verwendet"
+    wording, shared by the panel note and the delete guard's `ApiError`.
+- **Inherited open items:** Slice 7's minor non-blocking review notes (empty
+  `?since=` → cursor 0; overlapping polls; cancelled-before-JSON race) remain open.
+  Deferred minors from this slice: delete TOCTOU without transaction; ConfirmSheet
+  auto-close after `onSelect`. **Slice 11 (App structure + navigation) is next**
+  (plan still to be created).
+- **Commit(s):** `44f3faa`…`02568b3` (implementation Tasks 1–8) + Task-9
+  CatalogBrowser lint fix + this docs commit; plan file
+  `2026-08-02-slice-10-catalog-management.md` landed with the slice.
 
 ### 2026-08-02 — Slice 14: Restyle the built screens — ✅ Done / verified
 - **Delivered:** Deterministic German date/number formatting (`src/lib/format/date.ts`) clearing the
