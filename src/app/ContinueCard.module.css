@@ -1,0 +1,45 @@
+/* Handoff screen 3c: white card, 14px radius, hairline border, card shadow. */
+.card {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-panel);
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.name {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  color: var(--color-control-border);
+  /* align-items:baseline would otherwise drop the icon below the text baseline. */
+  align-self: center;
+}
+
+/* .meta and .progress are <span>s inside the <a> (a <div> there would be invalid
+   HTML), so they need display:block to stack. */
+.meta {
+  display: block;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.progress {
+  display: block;
+  margin-top: 10px;
+}
