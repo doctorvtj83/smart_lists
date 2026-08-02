@@ -1,0 +1,21 @@
+/* 44px box: the handoff's PWA rule for tap targets. The negative margin pulls
+   the glyph back to the header's 16px padding edge without shrinking the box. */
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+/* Desktop shows the permanent sidebar (900px — see globals.css). */
+@media (min-width: 900px) {
+  .trigger {
+    display: none;
+  }
+}
