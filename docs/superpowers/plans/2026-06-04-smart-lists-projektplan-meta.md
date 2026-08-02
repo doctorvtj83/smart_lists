@@ -70,7 +70,7 @@ under the table). Each slice is working, tested software on its own.
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
 | 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | [2026-08-02-slice-10-catalog-management.md](2026-08-02-slice-10-catalog-management.md) | ✅ Done / verified |
 | 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | [2026-08-02-slice-11-app-structure-navigation.md](2026-08-02-slice-11-app-structure-navigation.md) | ✅ Done / verified |
-| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | _to be created_ | ⬜ Open |
+| 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | [2026-08-02-slice-12-list-interaction-rework.md](2026-08-02-slice-12-list-interaction-rework.md) | ✅ Done / verified |
 | 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | [2026-08-01-slice-13-design-foundation.md](2026-08-01-slice-13-design-foundation.md) | ✅ Done / verified |
 | 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | [2026-08-02-slice-14-restyle-built-screens.md](2026-08-02-slice-14-restyle-built-screens.md) | ✅ Done / verified |
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | _to be created_ | ⬜ Open |
@@ -203,6 +203,11 @@ under the table). Each slice is working, tested software on its own.
 >
 > **Cheap insurance while building Slice 12:** put `data-item-id` on each entry row. Useful for tests
 > anyway, and it keeps this door open without building anything speculative.
+>
+> **Answered after Slice 12 (2026-08-02): Path B.** Slice 12 made the list body a client island over
+> **server-supplied entry props** — not a client entry store — so Path A is not cheaper. `data-item-id`
+> shipped on every `EntryRow`. Slice 16 should implement the flash via a `FlashProvider` + thin row
+> wrappers while rows stay server-rendered.
 
 ### Dependencies between slices
 
@@ -292,6 +297,18 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-02 — Slice 12: List interaction rework — ✅ Done / verified
+- **Delivered:** `/lists/[listId]` rebuilt around trailing empty row + category chips + entry detail sheet + swipe-to-delete; pure helpers (`categories`, `swipe`, `quantity`, `autocomplete`); `addEntryFromRow` (chip category + `needsCategory`); `Autocomplete` primitive reused on Favoriten; `ListBody` client island over server props; `ListMenu` (complete + ConfirmSheet list delete); `data-item-id` on every row. Plan file `2026-08-02-slice-12-list-interaction-rework.md`. Implementation review: `docs/implementation-reviews/slice-12-list-interaction-rework.md`.
+- **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'` → **72 files / 554 tests** passed (same count via `npm test` from the worktree cwd); `npm run lint` → 3 errors + 8 warnings (2+8 pre-existing in handoff `support.js`; **1 new** in `Autocomplete.tsx` `react-hooks/set-state-in-effect`); `npm run build` succeeds.
+- **Deviations from the plan / rulings:** ConfirmSheet constrained to irreversible/cascading only; never nest ConfirmSheet in Sheet; entry delete has no second confirm; Undo-banner parked for Slice 16. Option A restored `add_item` null vs undefined on category/unit (Untouched list exempted for that contract fix). Design conflict 5c/5d `☰` vs §10 `←` → `←` shipped (list outside project layout).
+- **Follow-up decisions for later slices:**
+  - **Slice 16 Path B** (flash context; rows stay server-rendered) — Path A not warranted; `data-item-id` already on rows.
+  - **Slice 15 seam:** parser between `Autocomplete.onSubmit` and add FormData; `name` stays article-only.
+  - Active category chip flows into catalog default on add (accepted product consequence).
+  - Autocomplete: no arrow-key nav (known gap); lint `setDismissed` in effect still open.
+- **Inherited open items:** Slice 7 minors; PageHeader/nav hydration overlay; Toggle <44px; member-path browser smoke. Slice 11 Favoriten-datalist item **closed**. **Slice 15 (Quantity parsing in the entry row) is the next open slice**.
+- **Commit(s):** `2bd9077`…`50ba607` (implementation Tasks 1–12) + this docs commit.
 
 ### 2026-08-02 — Slice 11: App structure + navigation — ✅ Done / verified
 - **Delivered:** Project layout + `ProjectShell` (mobile overlay drawer, desktop sidebar ≥900px) with shared `ProjectNavPanel` (project switcher, Listen/Archiv/Favoriten/Katalog/Mitglieder counts, admin Verwaltung); `getProjectNav` single nav read; `Toggle` + `NewListSheet` (de-selectable pre-fill via exclusion set + `createListWithArticles`); Listen page reduced to active lists; new `/archiv`, `/favoriten`, `/mitglieder` screens; inline `ProjectTitle` rename + `DeleteProjectButton`; Katalog header uses ☰. Plan file `2026-08-02-slice-11-app-structure-navigation.md` committed with the slice. Implementation review: `docs/implementation-reviews/slice-11-app-structure-navigation.md`.
