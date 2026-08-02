@@ -62,6 +62,14 @@ Auth + allowlist → Projects + membership → Lists + entries (operations) → 
 
 Slice 1 established the current MVP foundation: **Next.js App Router** with **TypeScript** and **npm**, **Auth.js (NextAuth v5)** with Google OAuth and JWT sessions, **Prisma ORM** against **Neon Postgres**, and **Vitest** for tests. Later slices may add client libraries, PWA tooling, or testing helpers, but they should build on this locked stack unless the meta project plan is intentionally updated.
 
+## UI layer
+
+- **Design tokens** live as CSS custom properties in [src/app/globals.css](src/app/globals.css); [src/test/design-tokens.test.ts](src/test/design-tokens.test.ts) pins the palette against the handoff.
+- **Primitives** live in [src/components/ui/](src/components/ui/) — Button, TextField/FieldError, Card, RowLink, Avatar, Badge, SectionLabel, Chip, ChipTabs, EmptyState, Sheet, ConfirmSheet, InlineEdit, Banner, Icon. Build screens out of these; do not restyle from scratch.
+- **Styling:** CSS Modules only. **Icons:** `lucide-react`, always through `Icon` (stroke 1.75). **Font:** Figtree via `next/font/google`.
+- **Component tests** put `// @vitest-environment jsdom` at the top of the file and use Testing Library; assert roles and text, never CSS-Module class names.
+- `/dev/ui` renders every primitive in development (404 in production).
+
 ## Code documentation standard
 
 All code written in this project must be **meticulously documented with inline comments**. This is a learning project and the developer reads every line to understand what is happening. Follow these rules:

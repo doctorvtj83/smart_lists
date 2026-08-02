@@ -71,7 +71,7 @@ under the table). Each slice is working, tested software on its own.
 | 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | _to be created_ | ⬜ Open |
 | 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | _to be created_ | ⬜ Open |
 | 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | _to be created_ | ⬜ Open |
-| 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | _to be created_ | ⬜ Open |
+| 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | [2026-08-01-slice-13-design-foundation.md](2026-08-01-slice-13-design-foundation.md) | ✅ Done / verified |
 | 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | _to be created_ | ⬜ Open |
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | _to be created_ | ⬜ Open |
 | 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
@@ -162,7 +162,7 @@ under the table). Each slice is working, tested software on its own.
 > ("Liste mit 7 Einträgen anlegen"). That sheet is more than Slice 5's boolean `prefill` flag: it reads
 > `GET /suggestions` first and then creates the list from the surviving selection.
 >
-> **Slice 13 is the next open slice** (plan still to be created).
+> **Slice 14 is the next open slice** (plan still to be created).
 
 > **Slice 16 note (2026-08-01) — why the flash is optional and last.** The design replaces the permanent
 > sync indicator with a **per-row flash** (`#eef2fc → transparent`, 1.4 s) on rows a *remote* member
@@ -292,6 +292,40 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-02 — Slice 13: Design foundation — ✅ Done / verified
+- **Delivered:** Design tokens + Figtree in `src/app/globals.css` / `layout.tsx`; the 14 primitives in
+  `src/components/ui/` (Button, TextField/FieldError, Card, RowLink, Avatar, Badge, SectionLabel, Chip,
+  ChipTabs, EmptyState, Sheet, ConfirmSheet, InlineEdit, Banner) plus `Icon`; development gallery at
+  `/dev/ui` (404 in production; middleware excludes `dev` so the gallery is reachable unauthenticated
+  in development).
+- **Tested:** `npx vitest run --exclude '**/node_modules/**' --exclude '**/dist/**'` → **37 files /
+  274 tests** passed; `npm run lint` → only pre-existing errors in
+  `docs/design/2026-08-01-ui-handoff/support.js` (gallery/`src` clean); `npm run build` succeeds;
+  Task 14 manual browser checklist — all **12** items PASS (Figtree, background, button weights,
+  invalid TextField, RowLink cards, ChipTabs underline, removable Chip, Sheet open/Escape/overlay/
+  scroll lock, ConfirmSheet options, InlineEdit Enter/Escape, EmptyState).
+- **Deviations from the plan:** Task 5 — human overruled plan text: TextField spreads `{...rest}`
+  **before** aria attrs so error wiring always wins (`391a658`). Task 14 — middleware `dev` exclusion
+  was required (not in the original file list) so Auth.js does not redirect `/dev/ui` → `/login`.
+- **Follow-up decisions for later slices:**
+  - Component tests opt into a DOM with `// @vitest-environment jsdom`; `src/test/setup.ts` registers
+    Testing Library cleanup and jest-dom only in that environment.
+  - `src/app/globals.css` is the single token source; `src/test/design-tokens.test.ts` pins the
+    palette, so changing a colour means changing the test too — on purpose.
+  - Only components with hooks carry `"use client"` (`Sheet`, `ConfirmSheet`, `TextField`,
+    `InlineEdit`). The rest stay server-renderable.
+  - `Chip`'s `onClick` and `onRemove` are mutually exclusive by design.
+  - `RowLink` is a whole-card `<a>`, so its slots must not contain interactive elements.
+  - `Sheet` has no focus trap and no focus restore — a deliberate MVP cut, worth revisiting when a
+    sheet grows a multi-step flow.
+  - CSS custom properties cannot be used in `@media`; the desktop breakpoint stays the literal `900px`.
+- **Inherited open items:** Slice 7's minor non-blocking review notes (empty `?since=` → cursor 0;
+  overlapping polls; cancelled-before-JSON race) remain open. The locale-date hydration overlay on
+  project/list pages is still open — **Slice 14** touches those pages and should fix the overlay while
+  it is there. **Slice 14 is next** (plan still to be created).
+- **Commit(s):** `4d11b2f`…`1758371` (implementation) + this docs commit; plan file
+  `2026-08-01-slice-13-design-foundation.md` added alongside.
 
 ### 2026-08-01 (later) — Per-row flash split out of Slice 12 into optional Slice 16
 - **Delivered:** Roadmap correction only. The per-row remote-change flash left Slice 12 and became
