@@ -1,17 +1,5 @@
 import { config } from "dotenv";
-import { afterEach, vi } from "vitest";
-
-// Client components that call useRouter() need the App Router context, which jsdom
-// tests do not mount. A module mock keeps component test files free of boilerplate.
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
-    refresh: vi.fn(),
-    prefetch: vi.fn(),
-  })),
-}));
+import { afterEach } from "vitest";
 
 // Load .env.test before Prisma opens any connection so tests never point at the
 // developer database by accident. override: true makes the test DB authoritative.

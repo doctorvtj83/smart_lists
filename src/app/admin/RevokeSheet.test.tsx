@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useRouter } from "next/navigation";
 import { RevokeSheet } from "./RevokeSheet";
+
+const mockPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(),
+}));
 
 const noop = async () => {};
 
@@ -23,6 +31,11 @@ function renderSheet(overrides: Partial<Parameters<typeof RevokeSheet>[0]> = {})
 }
 
 describe("RevokeSheet", () => {
+  beforeEach(() => {
+    mockPush.mockClear();
+    vi.mocked(useRouter).mockReturnValue({ push: mockPush } as ReturnType<typeof useRouter>);
+  });
+
   it("is an open dialog titled with the email", () => {
     renderSheet();
     expect(screen.getByRole("dialog", { name: "Zugang entziehen: ben@gmail.com" })).toBeInTheDocument();
@@ -81,5 +94,13 @@ describe("RevokeSheet", () => {
     expect(emailInputs.length).toBe(2);
     emailInputs.forEach((input) => expect(input).toHaveValue("ben@gmail.com"));
     expect(container.querySelector('input[name="userId"]')).toHaveValue("user-1");
+  });
+
+  it("navigates to /admin when Abbrechen is clicked", async () => {
+    renderSheet();
+
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(mockPush).toHaveBeenCalledWith("/admin");
   });
 });
