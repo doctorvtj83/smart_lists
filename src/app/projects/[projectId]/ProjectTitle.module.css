@@ -1,0 +1,15 @@
+/* The header title size (handoff: Screen-Titel 18px/700). InlineEdit draws the
+   dashed rest state and the focused field; only the type scale belongs here. */
+.title {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 900px) {
+  .title {
+    font-size: 21px;
+    font-weight: 800;
+  }
+}

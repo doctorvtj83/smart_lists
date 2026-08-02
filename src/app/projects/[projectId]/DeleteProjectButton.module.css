@@ -1,0 +1,12 @@
+/* Handoff § Destruktive Aktionen: 12.5–13px/600 in the destructive colour, never
+   a filled button inside a screen's content flow. */
+.trigger {
+  align-self: flex-start;
+  padding: 14px 2px 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-danger);
+  cursor: pointer;
+}
