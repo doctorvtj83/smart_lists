@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { Badge } from "@/components/ui/Badge";
+import { Banner } from "@/components/ui/Banner";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { TextField } from "@/components/ui/TextField";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
 import { normalizeEmail } from "@/lib/auth/normalize";
@@ -12,6 +19,7 @@ import {
   revokeEmail,
   setAdmin,
 } from "@/lib/admin/admin";
+import styles from "./page.module.css";
 
 // Next.js 16: searchParams is a Promise in server components. Typed with the framework's own wide
 // value type (a query key can repeat, which yields string[]) so the generated PageProps check
@@ -200,104 +208,99 @@ export default async function AdminPage({ searchParams }: Props) {
   const stillOwned = ownedParam ? await listProjectAccess(prisma, ownedParam) : [];
 
   return (
-    <main style={{ padding: 24 }}>
-      <p>
-        <Link href="/">← Zur Startseite</Link>
-      </p>
-      <h1>Verwaltung</h1>
+    <>
+      <PageHeader title="Verwaltung" trailing={<Badge>ADMIN</Badge>} />
+      <main className={styles.content}>
+        {/* Shown once, right after an exclusion that skipped owner projects: the one
+            genuinely surprising outcome of that flow (Slice 9). */}
+        {stillOwned.length > 0 && (
+          <Banner tone="info">
+            Die Person besitzt weiterhin{" "}
+            {stillOwned.map((p) => `„${p.name}“`).join(", ")} und hat dort weiter Zugriff. Löse das,
+            indem du das Projekt löschst oder es jemand anderem überträgst.
+          </Banner>
+        )}
 
-      {stillOwned.length > 0 && (
-        <section>
-          <h2>Hinweis</h2>
-          <p>
-            Die Person besitzt weiterhin folgende Projekte und hat dort weiter Zugriff. Löse das,
-            indem du das Projekt löschst oder es jemand anderem überträgst:
-          </p>
-          <ul>
-            {stillOwned.map((p) => (
-              <li key={p.projectId}>{p.name}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <h2>Zugang</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>E-Mail</th>
-            <th>Status</th>
-            <th>Admin</th>
-            <th>Aktion</th>
-          </tr>
-        </thead>
-        <tbody>
+        <SectionLabel>ZUGANG</SectionLabel>
+        <Card>
           {entries.map((entry) => {
             // The caller's own row renders without buttons. This is UI courtesy only — the
             // invariants that actually prevent a lockout live in the domain layer (design §6).
             const isSelf = entry.user?.id === callerId;
+            // No User row means: invited, but never signed in (JIT provisioning, Slice 1).
+            // displayName is nullable even for a real user, hence the second fallback.
+            const status = entry.user
+              ? (entry.user.displayName ?? "Angemeldet")
+              : "Noch nie angemeldet";
+
             return (
-              <tr key={entry.email}>
-                <td>
-                  {entry.email}
-                  {isSelf ? " (du)" : ""}
-                </td>
-                <td>
-                  {/* No User row means: invited, but never signed in (JIT provisioning, Slice 1).
-                      displayName is nullable even for a real user, hence the second fallback. */}
-                  {entry.user ? (entry.user.displayName ?? "Angemeldet") : "Noch nie angemeldet"}
-                </td>
-                <td>
-                  {entry.user ? (
-                    <>
-                      {entry.user.isAdmin ? "Ja" : "Nein"}{" "}
-                      {!isSelf && (
-                        <form action={setAdminAction} style={{ display: "inline" }}>
-                          <input type="hidden" name="userId" value={entry.user.id} />
-                          <input
-                            type="hidden"
-                            name="isAdmin"
-                            value={entry.user.isAdmin ? "false" : "true"}
-                          />
-                          <button type="submit">
-                            {entry.user.isAdmin ? "Adminrechte entziehen" : "Zum Admin machen"}
-                          </button>
-                        </form>
-                      )}
-                    </>
-                  ) : (
-                    // Admin rights live on User, not on the allowlist email — there is nothing to
-                    // flag before that person's first login.
-                    "– (muss sich zuerst einmal anmelden)"
+              <div key={entry.email} className={styles.entry}>
+                <div className={styles.entryTop}>
+                  <span className={styles.email}>
+                    {entry.email}
+                    {isSelf && <span className={styles.self}> (du)</span>}
+                  </span>
+                  {/* Admin rights live on User, not on the allowlist email — there is
+                      nothing to flag before that person's first login. */}
+                  {entry.user && !isSelf && (
+                    <form action={setAdminAction}>
+                      <input type="hidden" name="userId" value={entry.user.id} />
+                      {/* The form sends the TARGET state, not a toggle, so a stale page cannot
+                          flip the flag to the opposite of what the admin saw and clicked. */}
+                      <input
+                        type="hidden"
+                        name="isAdmin"
+                        value={entry.user.isAdmin ? "false" : "true"}
+                      />
+                      <button type="submit" className={styles.rowAction}>
+                        {entry.user.isAdmin ? "Admin entziehen" : "Admin gewähren"}
+                      </button>
+                    </form>
                   )}
-                </td>
-                <td>
+                  {isSelf && (
+                    <span className={styles.adminState}>
+                      Admin: {entry.user?.isAdmin ? "Ja" : "Nein"}
+                    </span>
+                  )}
+                </div>
+                <div className={styles.entryBottom}>
+                  <span className={styles.status}>
+                    {entry.user
+                      ? `${status} · Admin: ${entry.user.isAdmin ? "Ja" : "Nein"}`
+                      : "Noch nie angemeldet · Admin erst nach erstem Login möglich"}
+                  </span>
                   {!isSelf && (
                     // A link, not a form: revoking is a two-step flow, and this step only OPENS the
-                    // confirmation panel. encodeURIComponent because an email contains characters
+                    // confirmation sheet. encodeURIComponent because an email contains characters
                     // (+, @) that must not be reinterpreted as query syntax.
-                    <Link href={`/admin?revoke=${encodeURIComponent(entry.email)}`}>
+                    <Link
+                      href={`/admin?revoke=${encodeURIComponent(entry.email)}`}
+                      className={styles.rowActionDanger}
+                    >
                       Zugang entziehen
                     </Link>
                   )}
-                </td>
-              </tr>
+                </div>
+              </div>
             );
           })}
-        </tbody>
-      </table>
+        </Card>
 
-      <h2>E-Mail einladen</h2>
-      {/* An invitation is a database row, nothing more: the project has no mail capability, so the
-          person has to be told out of band (design §2). */}
-      <p>
-        Die eingeladene Person kann sich danach mit ihrem Google-Konto anmelden. Es wird keine E-Mail
-        verschickt – sag ihr selbst Bescheid.
-      </p>
-      <form action={inviteAction}>
-        <input name="email" placeholder="E-Mail" aria-label="E-Mail" />
-        <button type="submit">Einladen</button>
-      </form>
-    </main>
+        <div className={styles.spaced}>
+          <SectionLabel>E-MAIL EINLADEN</SectionLabel>
+        </div>
+        <form action={inviteAction} className={styles.inviteRow}>
+          <div className={styles.inviteField}>
+            <TextField name="email" type="email" placeholder="E-Mail-Adresse" aria-label="E-Mail-Adresse" />
+          </div>
+          <Button type="submit">Einladen</Button>
+        </form>
+        {/* An invitation is a database row, nothing more: the project has no mail capability, so the
+            person has to be told out of band (design §2). */}
+        <p className={styles.hint}>
+          Es wird keine Einladungs-E-Mail versendet — sag der Person selbst Bescheid.
+        </p>
+      </main>
+    </>
   );
 }

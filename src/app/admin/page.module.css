@@ -1,0 +1,102 @@
+/* Handoff screen 3k. */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px var(--screen-padding) calc(18px + var(--safe-bottom));
+}
+
+.spaced {
+  margin-top: 4px;
+}
+
+/* One allowlist entry. The Card owns the outer border/radius, so rows only carry
+   the divider — and the last row must not draw one. */
+.entry {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-hairline-weak);
+}
+
+.entry:last-child {
+  border-bottom: none;
+}
+
+.entryTop,
+.entryBottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.entryBottom {
+  margin-top: 1px;
+}
+
+.email {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* "(du)" is a lighter aside inside the email line. */
+.self {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.status {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.adminState {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* The two row actions are buttons inside forms/links, sized as text actions:
+   12px/600, never filled — filled buttons in list rows are forbidden by the
+   handoff's destructive-action pattern. */
+.rowAction {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rowActionDanger {
+  composes: rowAction;
+  color: var(--color-danger);
+}
+
+.inviteRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.inviteField {
+  flex: 1;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}
