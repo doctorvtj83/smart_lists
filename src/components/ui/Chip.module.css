@@ -1,0 +1,63 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  white-space: nowrap;
+  background: none;
+  cursor: default;
+  user-select: none;
+}
+
+.interactive {
+  cursor: pointer;
+}
+
+/* Favourites: a white pill with a visible edge, one size up. */
+.outline {
+  background: var(--color-surface);
+  border-color: var(--color-hairline);
+  color: var(--color-text-primary);
+  font-size: 13.5px;
+  padding: 7px 12px;
+}
+
+.accent {
+  background: var(--color-accent-tint);
+  color: var(--color-accent-dark);
+}
+
+.neutral {
+  background: var(--color-hairline-weak);
+  color: var(--color-text-secondary);
+}
+
+/* Wins over every tone: the chosen category in the entry sheet. */
+.selected {
+  background: var(--color-accent);
+  color: var(--color-surface);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* De-selected pre-fill preview: still readable, clearly switched off. */
+.struck {
+  background: var(--color-bg);
+  color: var(--color-text-placeholder);
+  border: 1px dashed var(--color-border-strong);
+  text-decoration: line-through;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-control-border);
+  cursor: pointer;
+}
