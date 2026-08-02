@@ -1,0 +1,43 @@
+/* Handoff §10: the screen is a column — header, chips, scrolling body. */
+.screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  /* The dropdown menu is positioned against this. */
+  position: relative;
+}
+
+/* A completed list is visibly frozen (handoff §10). */
+.frozen {
+  background: var(--color-bg-frozen);
+}
+
+.back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  /* ≥44px tap target around an 18px glyph. */
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  color: var(--color-accent);
+}
+
+.banner {
+  flex: none;
+  padding: 12px var(--screen-padding) 0;
+}
+
+/* The banner's trailing control: accent text, never a filled button. */
+.bannerAction {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 0;
+}
