@@ -1,0 +1,84 @@
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Handoff §10: the chip row sits under the header, on its own hairline. */
+.chips {
+  flex: none;
+  padding: 11px var(--screen-padding) 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 6px var(--screen-padding) calc(24px + var(--safe-bottom));
+}
+
+.groupLabel {
+  padding: 12px 0 4px;
+}
+
+.rows {
+  list-style: none;
+}
+
+.plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 21px;
+  height: 21px;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* Empty state 5c: quiet, centred, below the input row. */
+.emptyHint {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 28px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+/* Empty state 5d: fills the space so the input row is pushed to the bottom. */
+.emptyFilter {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 28px;
+}
+
+.emptyFilterTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.emptyFilterText {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.addError {
+  font-size: 12.5px;
+  color: var(--color-danger);
+  padding: 4px 0 0 33px;
+}
