@@ -342,8 +342,8 @@ When you have finished a slice, **before** the final commit do the following:
   Deferred minors from this slice: delete TOCTOU without transaction; ConfirmSheet
   auto-close after `onSelect`. **Slice 11 (App structure + navigation) is next**
   (plan still to be created).
-- **Commit(s):** `44f3faa`…`02568b3` (implementation Tasks 1–8) + Task-9
-  CatalogBrowser lint fix + this docs commit; plan file
+- **Commit(s):** `44f3faa`…`02568b3` (implementation Tasks 1–8) +
+  `50bf5cc` (CatalogBrowser lint fix) + `8ecf33a` (this docs commit); plan file
   `2026-08-02-slice-10-catalog-management.md` landed with the slice.
 
 ### 2026-08-02 — Slice 14: Restyle the built screens — ✅ Done / verified
