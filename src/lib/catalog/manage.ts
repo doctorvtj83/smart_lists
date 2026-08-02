@@ -1,6 +1,7 @@
 import type { CatalogItem, PrismaClient } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/http/errors";
+import { isUuid } from "@/lib/validate";
 import { MAX_ITEM_NAME_LENGTH } from "./catalog";
 import { normalizeName } from "./normalize";
 import { compareArticleNames } from "./sort";
@@ -149,6 +150,80 @@ export async function createCatalogArticle(
       data: { projectId: input.projectId, name: toDisplayName(input.name), normalizedName },
     });
   } catch (error) {
+    rethrowAsDuplicate(error);
+  }
+}
+
+/**
+ * Normalizes a default coming from a form field. An empty or whitespace-only
+ * string means "cleared" (null), because that is what an emptied input means on
+ * a screen that shows the current value.
+ */
+function toDefaultValue(value: string | null): string | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+export interface UpdateCatalogArticleInput {
+  projectId: string;
+  catalogItemId: string;
+  name: string;
+  category: string | null;
+  unit: string | null;
+}
+
+/**
+ * Saves the edit panel: rename plus both defaults, in ONE write.
+ *
+ * Why one function and not rename + setDefaults: the design's panel has a single
+ * „Speichern". Two calls would mean the defaults could land while the rename
+ * bounces off a collision, leaving the user with a half-applied edit and an error
+ * message. Validating first and writing once makes that impossible.
+ *
+ * IMPORTANT: this CAN clear a default (see toDefaultValue), which is the exact
+ * opposite of flowBackCatalogDefaults. Both are correct: there the null came from
+ * an entry the user cleared locally and must not wipe shared memory; here the
+ * user emptied the catalog's own field while looking at it.
+ */
+export async function updateCatalogArticle(
+  db: PrismaClient,
+  input: UpdateCatalogArticleInput,
+): Promise<CatalogItem> {
+  const { projectId, catalogItemId } = input;
+  // Shape check first: a malformed id can never match a uuid column, and Prisma
+  // would throw P2023 (a fake 500) instead of returning null. 404 = "not yours".
+  if (!isUuid(catalogItemId)) throw new ApiError(404, "Artikel nicht gefunden");
+
+  const normalizedName = assertValidArticleName(input.name);
+
+  // findFirst scoped by projectId is the enforcement point: an article id from
+  // another project must be indistinguishable from a non-existent one.
+  const article = await db.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
+  if (!article) throw new ApiError(404, "Artikel nicht gefunden");
+
+  // Only a name that resolves to a DIFFERENT identity can collide. Skipping the
+  // query when the normalized name is unchanged is what makes „milch" → „Milch"
+  // (a pure display-name fix) work instead of 409-ing against itself.
+  if (normalizedName !== article.normalizedName) {
+    const collision = await db.catalogItem.findUnique({
+      where: { projectId_normalizedName: { projectId, normalizedName } },
+    });
+    if (collision) throw new ApiError(409, DUPLICATE_ARTICLE_MESSAGE);
+  }
+
+  try {
+    return await db.catalogItem.update({
+      where: { id: catalogItemId },
+      data: {
+        name: toDisplayName(input.name),
+        normalizedName,
+        defaultCategory: toDefaultValue(input.category),
+        defaultUnit: toDefaultValue(input.unit),
+      },
+    });
+  } catch (error) {
+    // Concurrent rename onto the same target name — the unique index catches it.
     rethrowAsDuplicate(error);
   }
 }
