@@ -55,16 +55,23 @@ export async function addEntryFromRow(
       })
     : null;
 
-  // The three-way category rule. `undefined` is meaningful in add_item: it means
-  // "not supplied", which is what makes the entry inherit the catalog default.
-  const category =
-    input.activeCategory === null
-      ? undefined
-      : input.activeCategory === UNCATEGORIZED_LABEL
-        ? null
-        : input.activeCategory;
+  // „Ohne Kategorie" is an explicit clear on the ENTRY, not on the catalog. The
+  // add_item funnel treats both `null` and `undefined` as "inherit default"
+  // (`??`), so we cannot pass `category: null` on create. Instead: add without a
+  // category (inherit runs harmlessly), then clear via update_item — that path
+  // already stores null on the entry and skips flow-back for null, so catalog
+  // memory stays intact. operations.ts stays untouched (plan Untouched list).
+  const clearCategoryAfterAdd = input.activeCategory === UNCATEGORIZED_LABEL;
 
-  const item = await applyOperation(db, list, {
+  // The three-way category rule for the create step. `undefined` means "not
+  // supplied" so Alle and Ohne-Kategorie both inherit here; a real chip name
+  // overrides the catalog default on the add itself.
+  const category =
+    input.activeCategory === null || clearCategoryAfterAdd
+      ? undefined
+      : input.activeCategory;
+
+  const created = await applyOperation(db, list, {
     op: "add_item",
     itemId: input.itemId,
     name: input.name,
@@ -73,7 +80,18 @@ export async function addEntryFromRow(
 
   // applyOperation returns null only for remove_item. Asserting it loudly beats
   // a non-null assertion, which would hide a future contract change.
-  if (!item) throw new Error("add_item must return the created entry");
+  if (!created) throw new Error("add_item must return the created entry");
+
+  const item = clearCategoryAfterAdd
+    ? await applyOperation(db, list, {
+        op: "update_item",
+        itemId: input.itemId,
+        field: "category",
+        value: null,
+      })
+    : created;
+
+  if (!item) throw new Error("update_item must return the updated entry");
 
   return {
     item,

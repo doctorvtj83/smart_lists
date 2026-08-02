@@ -206,21 +206,18 @@ export async function applyOperation(
           listId: list.id,
           catalogItemId: catalogItem.id,
           quantity: operation.quantity ?? null,
-          // `undefined` = "not supplied" → inherit the catalog default. `null` = explicit empty
-          // (e.g. adding under the „Ohne Kategorie" chip) → store null on the entry. Using `??`
-          // here would wrongly collapse both and make an explicit clear impossible.
-          unit: operation.unit !== undefined ? operation.unit : catalogItem.defaultUnit,
-          category:
-            operation.category !== undefined ? operation.category : catalogItem.defaultCategory,
+          // ?? on purpose (not ||): only `undefined`/`null` inherit the catalog default; an
+          // explicit empty string would be kept (though parse/UI never send one today).
+          unit: operation.unit ?? catalogItem.defaultUnit,
+          category: operation.category ?? catalogItem.defaultCategory,
           sortIndex,
         },
       });
 
       // Flow-back (Slice 4, MVP design §4.4): a category/unit the user supplied EXPLICITLY at add
-      // time becomes the catalog default, so future lists inherit it. Inherited values arrive as
-      // undefined; explicit clears arrive as null — both are skipped by the helper (`!= null`),
-      // so this never writes a default back onto itself or erases shared catalog memory. Runs only
-      // on first creation (replays returned early above), keeping add idempotent.
+      // time becomes the catalog default, so future lists inherit it. Inherited values arrive here
+      // as undefined/null and are skipped by the helper — so this never writes a default back onto
+      // itself. Runs only on first creation (replays returned early above), keeping add idempotent.
       await flowBackCatalogDefaults(db, catalogItem.id, {
         category: operation.category,
         unit: operation.unit,
