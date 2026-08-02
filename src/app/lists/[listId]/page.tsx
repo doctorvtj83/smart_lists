@@ -39,8 +39,7 @@ type Props = { params: Promise<{ listId: string }> };
  * Only ApiError carries user-facing German copy. Anything else is a real bug and
  * is re-thrown on purpose: a crash disguised as a validation message next to a
  * text field is the worst of both worlds. (Same helper shape as the Katalog screen.)
- */
-/**
+ *
  * itemId scopes the error to the entry that produced it (Task 10 / CatalogBrowser's
  * articleId pattern) — without it a failed save would paint onto the next open sheet.
  */
