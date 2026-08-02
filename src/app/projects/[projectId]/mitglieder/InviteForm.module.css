@@ -1,0 +1,22 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.field {
+  flex: 1;
+  min-width: 0;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
