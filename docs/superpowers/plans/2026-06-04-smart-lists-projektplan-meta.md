@@ -69,7 +69,7 @@ under the table). Each slice is working, tested software on its own.
 | 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
 | 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | [2026-08-02-slice-10-catalog-management.md](2026-08-02-slice-10-catalog-management.md) | ✅ Done / verified |
-| 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | _to be created_ | ⬜ Open |
+| 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | [2026-08-02-slice-11-app-structure-navigation.md](2026-08-02-slice-11-app-structure-navigation.md) | ✅ Done / verified |
 | 12 | **List interaction rework** | Trailing empty row instead of the add-entry form; category filter chips with auto-assignment; entry detail sheet for Menge/Einheit/Kategorie; **swipe-to-delete**. Inherits Slice 7's sync unchanged | _to be created_ | ⬜ Open |
 | 13 | **Design foundation** | Design tokens, Figtree, icon set, and the shared primitives every later slice reuses: bottom sheet, chips, cards/rows, empty state, inline edit, destructive confirm, inline error | [2026-08-01-slice-13-design-foundation.md](2026-08-01-slice-13-design-foundation.md) | ✅ Done / verified |
 | 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | [2026-08-02-slice-14-restyle-built-screens.md](2026-08-02-slice-14-restyle-built-screens.md) | ✅ Done / verified |
@@ -292,6 +292,20 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-08-02 — Slice 11: App structure + navigation — ✅ Done / verified
+- **Delivered:** Project layout + `ProjectShell` (mobile overlay drawer, desktop sidebar ≥900px) with shared `ProjectNavPanel` (project switcher, Listen/Archiv/Favoriten/Katalog/Mitglieder counts, admin Verwaltung); `getProjectNav` single nav read; `Toggle` + `NewListSheet` (de-selectable pre-fill via exclusion set + `createListWithArticles`); Listen page reduced to active lists; new `/archiv`, `/favoriten`, `/mitglieder` screens; inline `ProjectTitle` rename + `DeleteProjectButton`; Katalog header uses ☰. Plan file `2026-08-02-slice-11-app-structure-navigation.md` committed with the slice. Implementation review: `docs/implementation-reviews/slice-11-app-structure-navigation.md`.
+- **Tested:** `npx vitest run` → **61 files / 444 tests** passed; `npm run lint` → 2 errors + 8 warnings, all pre-existing in `docs/design/2026-08-01-ui-handoff/support.js` (`src/` clean; exit non-zero); `npm run build` succeeds (all five project routes dynamic). Manual 14-item checklist on **`http://localhost:3000`** as owner: **PASS** on items 1–7, 9–14 and owner half of 8; member-as-second-account half of 8/11 **SKIPPED** (no second session). Hydration overlay on project screens noted as inherited debt (not a product-rule fail).
+- **Deviations from the plan:** Sheet suggestions arrive as **server props** (`computeSuggestions` on the Listen page) rather than a client `GET /suggestions` fetch — same behaviour, Slice-10 transport rule. Task 10 **PageHeader `title=""` + `ProjectTitle` in `leading`** to avoid duplicating the project name (handoff 3e). Task 3 Toggle tap target <44px parked (brief/handoff mandate). Several a11y/CSS minors deferred in the SDD ledger (switcher Escape/outside dismiss; Chip `selected` vs struck; empty h1 spacer; etc.).
+- **Follow-up decisions for later slices:**
+  - Project screens live under a layout with a `ProjectShell`; **any new project screen must put `<DrawerTrigger />` in its `PageHeader` `leading` slot** and guard itself with `getProjectNav`.
+  - `getProjectNav` is the single membership+nav read for project screens; `null` means redirect to `/projects`.
+  - `createListWithArticles` is the explicit create path; `createPrefilledList` is now a wrapper and stays the REST `prefill: true` entry point.
+  - The Favoriten autocomplete is still a native `<datalist>`; **Slice 12's trailing-row autocomplete should be built as a reusable component and adopted here.**
+  - The list screen keeps its `← Zum Projekt` link and gets no drawer until Slice 12.
+  - `revalidatePath(path, "layout")` is required when mutations change drawer name/counts.
+- **Inherited open items:** Slice 7 minors unchanged. PageHeader/nav hydration overlay still appears in the Next.js issues badge. Toggle <44px parked. Member-path browser smoke still open. **Slice 12 (List interaction rework) is the next open slice** (plan still to be created).
+- **Commit(s):** `d882c5b`…`a89864e` (implementation Tasks 1–13) + this docs/gallery commit.
 
 ### 2026-08-02 — Slice 10: Catalog management — Manual browser verification complete
 - **Delivered:** (no product-code changes) Closed the open signed-in 17-item checklist that Task 9 had skipped on `:3010`.

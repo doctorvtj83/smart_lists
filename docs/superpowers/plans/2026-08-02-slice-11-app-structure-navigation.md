@@ -4091,7 +4091,7 @@ git commit -m "feat(ui): Mitglieder screen with inline invite errors and guarded
 - Create: `docs/implementation-reviews/slice-11-app-structure-navigation.md`
 - Modify: `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md`
 
-- [ ] **Step 1: Add the `Toggle` to the dev gallery**
+- [x] **Step 1: Add the `Toggle` to the dev gallery**
 
 In `src/app/dev/ui/Gallery.tsx`: import `Toggle` from `@/components/ui/Toggle`, add `const [prefill, setPrefill] = useState(true);` beside the other state, and add a section after „Chips":
 

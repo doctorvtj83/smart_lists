@@ -19,6 +19,7 @@ import { RowLink } from "@/components/ui/RowLink";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Sheet } from "@/components/ui/Sheet";
 import { TextField } from "@/components/ui/TextField";
+import { Toggle } from "@/components/ui/Toggle";
 
 /**
  * A development-only gallery of every primitive from Slice 13.
@@ -26,6 +27,10 @@ import { TextField } from "@/components/ui/TextField";
  * It is a client component because the sheets and chips need state. It is
  * deliberately plain: its job is to show the primitives, not to demonstrate
  * screen composition — that starts in Slice 14.
+ *
+ * Nav components (drawer, sidebar, switcher) are deliberately omitted: they
+ * need a DrawerContext provider and a real project route, so they are verified
+ * on live project screens instead of in this gallery.
  */
 export function Gallery() {
   const [chip, setChip] = useState("Alle");
@@ -33,6 +38,8 @@ export function Gallery() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [name, setName] = useState("Haushalt");
   const [favorites, setFavorites] = useState(["Milch", "Butter", "Brot"]);
+  // Local state for the Toggle demo — mirrors the sheet's „Vorbefüllen" switch.
+  const [prefill, setPrefill] = useState(true);
 
   return (
     <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 18 }}>
@@ -109,6 +116,13 @@ export function Gallery() {
           Molkerei
         </Chip>
         <Chip struck>Joghurt</Chip>
+      </div>
+
+      {/* Toggle is the only Slice-11 primitive added here; nav needs DrawerContext. */}
+      <SectionLabel>Schalter</SectionLabel>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>Vorbefüllen</span>
+        <Toggle checked={prefill} onChange={setPrefill} label="Vorbefüllen" />
       </div>
 
       <SectionLabel>Banner</SectionLabel>
