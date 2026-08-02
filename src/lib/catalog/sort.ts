@@ -11,6 +11,16 @@
 // rules: "Äpfel" belongs next to "Apfel", not after "Zucker" where a code-point sort puts it.
 export const ARTICLE_NAME_LOCALE = "de";
 
+// The German collation rule itself, for any user-visible text this app sorts.
+//
+// WHY it was pulled out of compareArticleNames: Slice 12 sorts CATEGORY names
+// ("Äpfel & Co" before "Molkerei") and the same umlaut rule has to apply. Two
+// comparators would be two places to get "Ä" wrong; one named rule with a
+// domain-specific alias keeps the vocabulary while sharing the behaviour.
+export function compareGermanText(a: string, b: string): number {
+  return a.localeCompare(b, ARTICLE_NAME_LOCALE);
+}
+
 // Comparator for Array.prototype.sort over article DISPLAY names (CatalogItem.name — never
 // normalizedName, which is a lowercase identity key and not meant for humans).
 //
@@ -20,5 +30,5 @@ export const ARTICLE_NAME_LOCALE = "de";
 // properly means moving the cut client-side (a Slice 8 concern, when the datalist is replaced by a
 // fetch-on-keystroke dropdown). Do not "unify" it by adding this comparator there.
 export function compareArticleNames(a: string, b: string): number {
-  return a.localeCompare(b, ARTICLE_NAME_LOCALE);
+  return compareGermanText(a, b);
 }
