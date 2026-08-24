@@ -16,7 +16,9 @@ The repository now contains the Slice 1 Next.js App Router implementation. The h
 - Production server after a build: `npm run start`
 
 Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
-Tests additionally need `.env.test` with the `DATABASE_URL` of the Neon `test` branch.
+Tests additionally need `.env.test` with the `DATABASE_URL` of the Neon `test` branch — see `.env.test.example`.
+
+**Never copy `.env`'s `DATABASE_URL` into `.env.test` to unblock a failing `npm test`.** Every DB test truncates all core tables in `beforeEach` (`src/test/reset-db.ts`); running that against the dev branch silently destroys real data. If `.env.test` is missing in a fresh environment, get the actual Neon `test`-branch URL from the project owner or the Neon console — never reuse `.env`'s. `src/test/global-setup.ts` refuses to run migrations if the two match, so this mistake now fails loudly instead of silently.
 
 ## Language convention
 
