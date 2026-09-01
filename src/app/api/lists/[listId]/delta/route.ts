@@ -14,7 +14,7 @@ import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/auth/session";
 import { toErrorResponse } from "@/lib/http/errors";
 import { requireListAccess } from "@/lib/lists/access";
-import { getListDelta } from "@/lib/lists/delta";
+import { getListDelta, parseSince } from "@/lib/lists/delta";
 
 // Next.js 16 App Router: a dynamic route's `params` is a Promise and MUST be awaited.
 type Context = { params: Promise<{ listId: string }> };
@@ -32,12 +32,10 @@ export async function GET(request: Request, { params }: Context) {
     // Resolve the list AND check membership in its project (404 for both failure modes).
     await requireListAccess(prisma, listId, userId);
 
-    // Optional ?since cursor. Absent or non-numeric values become undefined ("baseline pull").
-    // Present numeric strings parse via Number(); note that ?since= (empty) yields since = 0 because
-    // Number("") is 0 and is finite — only NaN/Infinity fall through to undefined.
-    const sinceParam = new URL(request.url).searchParams.get("since");
-    const sinceNum = sinceParam !== null ? Number(sinceParam) : Number.NaN;
-    const since = Number.isFinite(sinceNum) ? sinceNum : undefined;
+    // Optional ?since cursor. Empty, absent, or non-numeric values are a baseline pull (undefined),
+    // NOT cursor 0 — see parseSince. Keeping this parse in a tested pure helper is why the route
+    // stays a thin adapter with no logic of its own to test.
+    const since = parseSince(new URL(request.url).searchParams.get("since"));
 
     const delta = await getListDelta(prisma, listId, since);
     return NextResponse.json(delta);

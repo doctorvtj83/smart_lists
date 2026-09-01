@@ -57,6 +57,21 @@ export function computeCursor(items: { updatedAt: Date }[], since = 0): number {
   return max;
 }
 
+// Parses the ?since cursor off the delta request's query string. The distinction that matters:
+// an ABSENT or EMPTY `since` is a baseline pull (return undefined -> getListDelta sends every body
+// once), while a present numeric string is a real cursor. The old inline `Number(param)` parse
+// turned `?since=` (empty) into 0 because Number("") === 0 is finite — a subtle "changed since the
+// epoch" query that re-serialized the whole list on every poll. Pure and synchronous so it is unit
+// tested here rather than through the route handler (this codebase tests logic, not HTTP adapters).
+export function parseSince(param: string | null): number | undefined {
+  if (param === null) return undefined; // param not present at all
+  const trimmed = param.trim();
+  if (trimmed === "") return undefined; // `?since=` with no value -> baseline, not cursor 0
+  const n = Number(trimmed);
+  // A cursor is epoch-ms: finite and never negative. Anything else is treated as "no cursor".
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
 // Reads a list's sync delta. The caller (route handler / page) has already authorized access via
 // requireListAccess, so this function does not re-check membership — it is a pure read. It always
 // loads the full list (one tiny row + its items) because it must return the complete id set for

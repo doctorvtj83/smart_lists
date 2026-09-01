@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import { applyOperation } from "./operations";
-import { computeCursor, getListDelta } from "./delta";
+import { computeCursor, getListDelta, parseSince } from "./delta";
 
 // Same DB-test setup as operations.test.ts: a real client against the Neon test branch, reset to a
 // deterministic baseline before each test, with a fresh user/project/list.
@@ -114,5 +114,29 @@ describe("getListDelta", () => {
     const delta = await getListDelta(db, list.id);
     expect(delta.list.status).toBe("completed");
     expect(delta.list.completedAt).toBe(when.getTime());
+  });
+});
+
+describe("parseSince", () => {
+  it("returns undefined for a missing param (baseline pull)", () => {
+    expect(parseSince(null)).toBeUndefined();
+  });
+
+  it("returns undefined for an empty or whitespace param instead of cursor 0", () => {
+    // The whole point of this helper: `?since=` with no value must NOT become 0,
+    // which would ask getListDelta to re-send every body on every poll.
+    expect(parseSince("")).toBeUndefined();
+    expect(parseSince("   ")).toBeUndefined();
+  });
+
+  it("parses a finite non-negative numeric cursor", () => {
+    expect(parseSince("1699999999999")).toBe(1699999999999);
+    expect(parseSince("0")).toBe(0); // an explicit 0 IS a valid cursor; only empty/absent is baseline
+  });
+
+  it("returns undefined for a non-numeric or negative param", () => {
+    expect(parseSince("abc")).toBeUndefined();
+    expect(parseSince("NaN")).toBeUndefined();
+    expect(parseSince("-5")).toBeUndefined();
   });
 });
