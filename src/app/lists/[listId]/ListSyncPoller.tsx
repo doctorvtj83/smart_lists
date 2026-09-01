@@ -50,6 +50,11 @@ export default function ListSyncPoller({
   const itemIdsRef = useRef(initialItemIds);
   const metaRef = useRef(initialList);
 
+  // Guards against a slow poll being lapped by the next interval tick: while one request is
+  // outstanding we skip new polls rather than stacking a second overlapping request. A ref (not
+  // state) because flipping it must not re-render — this component renders null.
+  const inFlightRef = useRef(false);
+
   useEffect(() => {
     // Guards against a late fetch resolving after the component unmounted (avoids a refresh on a
     // page the user already left).
@@ -59,6 +64,11 @@ export default function ListSyncPoller({
       // Don't poll a tab the user isn't looking at — saves battery/requests on iPhone. The next
       // visible tick picks up whatever changed in the meantime.
       if (typeof document !== "undefined" && document.hidden) return;
+
+      // A previous poll's request is still outstanding (slow network) — skip this tick instead of
+      // stacking a second request. The finally block below clears the flag the moment it settles.
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
 
       try {
         const res = await fetch(`/api/lists/${listId}/delta?since=${cursorRef.current}`, {
@@ -92,6 +102,10 @@ export default function ListSyncPoller({
         if (changed) router.refresh();
       } catch {
         // Network blip — swallow and let the interval retry on the next tick.
+      } finally {
+        // Release the guard whether the poll succeeded, errored, or bailed early (unmount / !res.ok /
+        // hidden-mid-flight). Every early `return` inside the try still runs this.
+        inFlightRef.current = false;
       }
     }
 
