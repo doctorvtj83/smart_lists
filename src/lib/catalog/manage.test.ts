@@ -395,4 +395,18 @@ describe("deleteCatalogArticle", () => {
       deleteCatalogArticle(db, { projectId, catalogItemId: "not-a-uuid" }),
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  // Regression for the TOCTOU fix: the guard-read and the delete now run inside one
+  // Serializable transaction (see manage.ts), but the observable 409 wording must be
+  // byte-identical to before the refactor — this pins that contract using the exact
+  // same fixture shape as "refuses an article that an active list uses" above.
+  it("keeps the exact used-in-lists 409 wording after the transactional guard", async () => {
+    const article = await makeArticle("Zwiebeln");
+    const list = await makeList("Wochenende");
+    await addEntry(list.id, article.id);
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: article.id }),
+    ).rejects.toMatchObject({ status: 409, message: "Löschen nicht möglich — wird in 1 Liste verwendet." });
+  });
 });

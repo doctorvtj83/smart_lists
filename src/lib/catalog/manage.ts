@@ -275,19 +275,40 @@ export async function deleteCatalogArticle(
   input: DeleteCatalogArticleInput,
 ): Promise<void> {
   const { projectId, catalogItemId } = input;
+  // Shape check first: a malformed id can never match a uuid column, and Prisma would throw P2023
+  // (a fake 500) instead of returning null. 404 = "not yours". Done outside the transaction — it
+  // needs no DB round-trip.
   if (!isUuid(catalogItemId)) throw new ApiError(404, "Artikel nicht gefunden");
 
-  // Project-scoped existence check first — a foreign id is a 404, never a delete.
-  const article = await db.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
-  if (!article) throw new ApiError(404, "Artikel nicht gefunden");
+  // Guard-read AND delete in ONE Serializable transaction. Without this, a concurrent add_item that
+  // puts the article on a list between the count and the delete slips past the guard, and the
+  // ListItem.catalogItemId cascade then strips that just-added entry — including from completed lists
+  // the N-of-M suggestion statistic reads (MVP design §4.3). Serializable makes the concurrent insert
+  // and this delete conflict, so one aborts (Prisma P2034) and the delete rolls back rather than
+  // quietly rewriting history. Precedent: createProject in projects.ts.
+  await db.$transaction(
+    async (tx) => {
+      // Project-scoped existence check inside the transaction snapshot — a foreign id is a 404.
+      const article = await tx.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
+      if (!article) throw new ApiError(404, "Artikel nicht gefunden");
 
-  const usedInListCount = await countListsUsingArticle(db, projectId, catalogItemId);
-  if (usedInListCount > 0) {
-    // Same sentence the panel prints from the read model — see formatUsedInLists.
-    throw new ApiError(409, `Löschen nicht möglich — ${formatUsedInLists(usedInListCount)}.`);
-  }
+      // Distinct lists (active AND completed) using the article, read against the SAME snapshot as
+      // the delete. Inlined rather than calling countListsUsingArticle because that core takes a
+      // PrismaClient and `tx` is a TransactionClient (Slice 5 typing note) — the query is identical.
+      const rows = await tx.listItem.findMany({
+        where: { catalogItemId, list: { projectId } },
+        select: { listId: true },
+        distinct: ["listId"],
+      });
+      if (rows.length > 0) {
+        // Same sentence the panel prints from the read model — see formatUsedInLists.
+        throw new ApiError(409, `Löschen nicht möglich — ${formatUsedInLists(rows.length)}.`);
+      }
 
-  // The article's Favorite row (0 or 1) goes with it via the FK cascade. That is
-  // intended: an article that no longer exists cannot stay a favourite.
-  await db.catalogItem.delete({ where: { id: catalogItemId } });
+      // The article's Favorite row (0 or 1) goes with it via the FK cascade — intended: an article
+      // that no longer exists cannot stay a favourite.
+      await tx.catalogItem.delete({ where: { id: catalogItemId } });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
 }
