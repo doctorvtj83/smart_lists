@@ -283,32 +283,63 @@ export async function deleteCatalogArticle(
   // Guard-read AND delete in ONE Serializable transaction. Without this, a concurrent add_item that
   // puts the article on a list between the count and the delete slips past the guard, and the
   // ListItem.catalogItemId cascade then strips that just-added entry — including from completed lists
-  // the N-of-M suggestion statistic reads (MVP design §4.3). Serializable makes the concurrent insert
-  // and this delete conflict, so one aborts (Prisma P2034) and the delete rolls back rather than
-  // quietly rewriting history. Precedent: createProject in projects.ts.
-  await db.$transaction(
-    async (tx) => {
-      // Project-scoped existence check inside the transaction snapshot — a foreign id is a 404.
-      const article = await tx.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
-      if (!article) throw new ApiError(404, "Artikel nicht gefunden");
+  // the N-of-M suggestion statistic reads (MVP design §4.3). The mechanism that catches this is the
+  // transaction's own snapshot plus the FK cascade's referential-integrity crosscheck at commit time:
+  // this transaction's view of the ListItem table is frozen as of its start, so if a concurrent
+  // add_item commits an INSERT that this transaction's own DELETE would now make impossible to
+  // reconcile (the cascade would have to retroactively remove a row this snapshot never saw), Postgres
+  // aborts one side with a serialization failure (Prisma P2034) rather than silently losing the write.
+  // NOTE: this is deliberately not a claim about SSI (serializable snapshot isolation) read-write
+  // conflict detection proper — SSI's dependency tracking only fires when BOTH sides of the conflict
+  // run at SERIALIZABLE, and the concurrent writer here (applyOperation's add_item path in
+  // src/lib/lists/operations.ts) runs at Prisma's default READ COMMITTED with no explicit transaction
+  // at all. The abort we rely on comes from this transaction's snapshot conflicting with the concurrent
+  // commit at commit time, not from cross-transaction SSI conflict tracking. Precedent: createProject
+  // in projects.ts.
+  try {
+    await db.$transaction(
+      async (tx) => {
+        // Project-scoped existence check inside the transaction snapshot — a foreign id is a 404.
+        const article = await tx.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
+        if (!article) throw new ApiError(404, "Artikel nicht gefunden");
 
-      // Distinct lists (active AND completed) using the article, read against the SAME snapshot as
-      // the delete. Inlined rather than calling countListsUsingArticle because that core takes a
-      // PrismaClient and `tx` is a TransactionClient (Slice 5 typing note) — the query is identical.
-      const rows = await tx.listItem.findMany({
-        where: { catalogItemId, list: { projectId } },
-        select: { listId: true },
-        distinct: ["listId"],
-      });
-      if (rows.length > 0) {
-        // Same sentence the panel prints from the read model — see formatUsedInLists.
-        throw new ApiError(409, `Löschen nicht möglich — ${formatUsedInLists(rows.length)}.`);
-      }
+        // Distinct lists (active AND completed) using the article, read against the SAME snapshot as
+        // the delete. Inlined rather than calling countListsUsingArticle because that core takes a
+        // PrismaClient and `tx` is a TransactionClient (Slice 5 typing note) — the query is identical.
+        const rows = await tx.listItem.findMany({
+          where: { catalogItemId, list: { projectId } },
+          select: { listId: true },
+          distinct: ["listId"],
+        });
+        if (rows.length > 0) {
+          // Same sentence the panel prints from the read model — see formatUsedInLists.
+          throw new ApiError(409, `Löschen nicht möglich — ${formatUsedInLists(rows.length)}.`);
+        }
 
-      // The article's Favorite row (0 or 1) goes with it via the FK cascade — intended: an article
-      // that no longer exists cannot stay a favourite.
-      await tx.catalogItem.delete({ where: { id: catalogItemId } });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+        // The article's Favorite row (0 or 1) goes with it via the FK cascade — intended: an article
+        // that no longer exists cannot stay a favourite.
+        await tx.catalogItem.delete({ where: { id: catalogItemId } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    // P2034 (serialization failure) and P2028 (transaction API error, e.g. a timeout while the
+    // conflict is being resolved) are Prisma's signal that the DB itself aborted this transaction due
+    // to the exact concurrent-write race the transaction above exists to guard against — NOT a bug in
+    // this code. Left unmapped, that raw Prisma error would propagate out of this function, past the
+    // server action in katalog/page.tsx, whose toFormState error mapper deliberately re-throws
+    // anything that isn't an ApiError (treating it as "a real bug"), producing an unhandled Server
+    // Action crash instead of the graceful German 409 this whole transaction was built to produce.
+    // Mapping it here — same shape as rethrowAsDuplicate's P2002 → ApiError translation above — closes
+    // that gap: the caller retries, exactly as the error message asks.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2034" || error.code === "P2028")
+    ) {
+      throw new ApiError(409, "Löschen gerade nicht möglich — bitte erneut versuchen.");
+    }
+    // Anything else (including the ApiError(404)/ApiError(409) thrown from inside the transaction
+    // callback above) is not a transaction-conflict — propagate unchanged.
+    throw error;
+  }
 }
