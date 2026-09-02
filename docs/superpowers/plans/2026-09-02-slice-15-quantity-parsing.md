@@ -4,7 +4,7 @@
 
 **Goal:** Typing „1,5 l Milch" or „3 Joghurt" into the trailing entry row creates an entry with Menge **1,5** / Einheit **l** / Artikel **Milch** — while the project catalog only ever learns the article name.
 
-**Architecture:** A pure, catalog-blind parser (`parseEntryInput`) peels a leading quantity and a known unit off the typed text. The parse runs **on the server**, inside `addEntryFromRow`, so it is the single source of truth for every transport (Server Action today, the Phase 2 offline queue later). Two rules make it safe: a **catalog escape hatch** — text that already names an existing article („7 Zwerge Bier") is never parsed — and a **flow-back suppression** — a *guessed* unit sets the entry but must never rewrite the project's catalog memory, which stays reserved for a unit the user chose in the entry sheet. The client re-uses the same pure function for one cosmetic job only: stripping the quantity prefix before querying the autocomplete dropdown.
+**Architecture:** A pure, catalog-blind parser (`parseEntryInput`) peels a leading quantity and a known unit off the typed text. The parse runs **on the server**, inside `addEntryFromRow`, so it is the single source of truth for every transport (Server Action today, the Phase 2 offline queue later). One rule keeps it from corrupting the catalog: a **catalog escape hatch** — text that already names an existing article („7 Zwerge Bier") is never parsed. Everything downstream of the parse is existing behaviour: the parsed name goes through `getOrCreateCatalogItem` like any typed name, and the parsed unit is an ordinary explicit unit, flow-back included. **`src/lib/lists/operations.ts` is not touched by this slice.** The client re-uses the same pure function for one cosmetic job only: stripping the quantity prefix before querying the autocomplete dropdown.
 
 **Tech Stack:** Next.js App Router (Server Actions), TypeScript, Prisma / Neon Postgres, Vitest (+ jsdom & Testing Library for the component task). No new dependencies.
 
@@ -12,8 +12,8 @@
 
 - **Implementation docs, code identifiers and code comments: English. In-app user-facing strings stay German.** (CLAUDE.md § Language convention.)
 - **Meticulous inline comments are mandatory.** Every function gets a comment saying what it does *and why it exists*; every non-obvious block gets a *why* comment. Do not remove or thin out existing comments when editing a file. (CLAUDE.md § Code documentation standard.)
-- **The catalog only ever receives the article name** — never the parsed quantity. This is the rule the meta plan says "must survive" this slice.
-- **A parsed unit never flows back into `CatalogItem.defaultUnit`.** Flow-back stays reserved for an explicit edit in the entry sheet, where the user sees the hint „Kategorie und Einheit werden als neuer Standard im Katalog gemerkt."
+- **The catalog only ever receives the article name** — never the parsed quantity. This is the rule the meta plan says "must survive" this slice. It is about **article identity**: no article named „1,5 l Milch" may ever be created.
+- **The operation contract does not change.** Nothing may be added to `Operation` that `parseOperation` cannot rebuild from JSON — an operation must fully describe its own effect, or the Phase 2 offline queue replays it differently than the online path did. (CLAUDE.md § architecture: the operation shape is what lets Phase 2 add an offline queue without changing the API contracts.)
 - **Mutations stay entry/field-granular and go through `applyOperation`.** No new write path, no direct `listItem.update` outside the operations funnel. (MVP design §4.5.)
 - **Styling: CSS Modules only. Icons: `lucide-react` through `Icon`.** No new UI primitives are needed in this slice.
 - **Component tests** start with `// @vitest-environment jsdom`, use Testing Library, and assert roles and text — never CSS-Module class names.
@@ -29,8 +29,18 @@ The handoff specifies the feature in one sentence and two examples, so four open
 |---|----------|--------|
 | 1 | Where does the parse run? | **Server, in `addEntryFromRow`.** One source of truth, survives a future offline-queue replay. The client imports the same pure function only to strip the prefix before querying autocomplete. |
 | 2 | What counts as a known unit? | **Fixed German base list ∪ the project's own `defaultUnit` values.** A project that already says „Kiste" gets it recognised for free. |
-| 3 | Does a parsed unit flow back? | **No.** A guess must not rewrite the project's shared memory. |
+| 3 | Does a parsed unit flow back? | **Yes — like any other explicit unit.** (Reversed the same day, see below.) |
 | 4 | How is ambiguity handled? | **Conservative.** Parse only when an article name survives; a raw text that already names a catalog article is never parsed. |
+
+**Ruling 3 was first answered "no, suppress flow-back" and reversed on review.** The reversal matters enough to record, because the suppressed version had already been written as a task and someone reading the git history will wonder:
+
+- **A guessed unit is not a guessed *word*.** The parser only ever emits a unit from the curated list or the project's own vocabulary. „1,5 kh Milch" does not produce the unit `kh`; it produces an article named „kh Milch". The typo risk lands on the name, which suppression would not have protected anyway.
+- **Suppression needed a field the wire could not carry.** It required an `unitIsGuess` flag on `AddItemOperation` that `parseOperation` deliberately refused to read — so a serialized replay would have flowed the unit back where the live path did not. An operation must fully describe its own effect.
+- **It contradicted shipped behaviour.** `addEntryFromRow` already flows the **active filter chip** back into `defaultCategory` (`addEntry.test.ts`, "flows an active chip back into the catalog default"). Which tab you happen to be looking at is weaker evidence of intent than a deliberately typed unit.
+- **It starved the feature the product is named for.** `createListWithArticles` pre-fills with a name-only `add_item`, so every pre-filled entry inherits `catalogItem.defaultUnit`. Under suppression a household could type „1,5 l Milch" for a year and every pre-filled list would still show Milch with no unit.
+- **Repair is two taps** on the Slice 10 Katalog screen, or one edit in the entry sheet.
+
+Accepted residual risk: „3 EL Zucker" teaches Zucker the unit „EL", which is a recipe unit on a shopping list. Last-writer-wins, exactly like any sheet edit.
 
 Rule 4 in full, as a table the parser tests mirror exactly:
 
@@ -62,8 +72,6 @@ Rule 4 in full, as a table the parser tests mirror exactly:
 |------|----------------|
 | **Create** `src/lib/lists/parseEntryInput.ts` | The whole heuristic: `BASE_UNIT_ALIASES`, `buildUnitLookup`, `parseEntryInput`. Pure and DB-free, so both the server action and the client component can import it. Lives in `lib/lists/` (not `lib/format/`) because it is list-domain vocabulary — the sibling of `categories.ts`'s `knownCategories`. |
 | **Create** `src/lib/lists/parseEntryInput.test.ts` | The rule table above, one `it` per row. Node environment, no DB. |
-| **Modify** `src/lib/lists/operations.ts` | `AddItemOperation` gains the in-process-only `unitIsGuess` flag; the `add_item` branch suppresses unit flow-back when it is set. |
-| **Modify** `src/lib/lists/operations.test.ts` | Guessed-vs-chosen unit flow-back, and proof the flag cannot arrive over the wire. |
 | **Modify** `src/lib/lists/addEntry.ts` | Wires the parser in: catalog escape hatch, project unit lookup, parsed name/quantity/unit into `add_item`. |
 | **Modify** `src/lib/lists/addEntry.test.ts` | The server-side behaviour of the whole feature. |
 | **Modify** `src/app/lists/[listId]/ListBody.tsx` | Widens the `articles` prop with `defaultUnit`; strips the prefix for the autocomplete query; re-attaches it when the user taps a dropdown row. |
@@ -71,7 +79,7 @@ Rule 4 in full, as a table the parser tests mirror exactly:
 | **Create** `docs/implementation-reviews/slice-15-quantity-parsing.md` | Definition of Done (CLAUDE.md § Implementation review). |
 | **Modify** `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md` | Status row + progress-log entry. |
 
-`src/app/lists/[listId]/page.tsx` needs **no change**: it already passes `catalog` (a `CatalogSuggestion[]`, which carries `defaultUnit`) into `ListBody`, and `addEntryAction` already forwards the raw typed text as `name`. Task 4 verifies this rather than editing it.
+`src/app/lists/[listId]/page.tsx` needs **no change**: it already passes `catalog` (a `CatalogSuggestion[]`, which carries `defaultUnit`) into `ListBody`, and `addEntryAction` already forwards the raw typed text as `name`. Task 3 verifies this rather than editing it.
 
 ---
 
@@ -222,7 +230,7 @@ describe("parseEntryInput", () => {
     expect(parseEntryInput("   ", units)).toEqual({ quantity: null, unit: null, name: "" });
   });
 
-  // The escape hatch for „7 Zwerge Bier" lives in addEntryFromRow (Task 3), not here:
+  // The escape hatch for „7 Zwerge Bier" lives in addEntryFromRow (Task 2), not here:
   // this function is deliberately catalog-blind so it stays pure and DB-free.
   it("still splits a number off a name that only looks like an article", () => {
     expect(parseEntryInput("7 Zwerge Bier", units)).toEqual({
@@ -255,7 +263,7 @@ import { parseGermanDecimal } from "@/lib/format/quantity";
  * that reads the catalog itself: the vocabulary is per-project (ruling 2), but
  * the splitting rule is not. Keeping the DB read at the caller makes every rule
  * below testable as a table without a database, and lets the client component
- * re-use the exact same rule for its dropdown query (Task 4).
+ * re-use the exact same rule for its dropdown query (Task 3).
  *
  * WHY conservative (ruling 4): this heuristic runs on EVERY add, and a wrong
  * split silently renames the user's article. Every ambiguous case therefore
@@ -347,7 +355,11 @@ export function buildUnitLookup(catalogUnits: (string | null)[]): UnitLookup {
   return { ...fromCatalog, ...BASE_UNIT_ALIASES };
 }
 
-/** What the typed text resolves to. `name` is the ONLY part the catalog sees. */
+/**
+ * What the typed text resolves to. `name` is the only part that can create a
+ * catalog ARTICLE — the quantity never reaches the catalog at all, and the unit
+ * only ever updates an existing article's default (handoff §10).
+ */
 export interface ParsedEntryInput {
   quantity: number | null;
   unit: string | null;
@@ -424,140 +436,14 @@ git commit -m "feat(lists): pure quantity parser for the trailing entry row"
 
 ---
 
-## Task 2: A guessed unit must not rewrite catalog memory
-
-Today `add_item` flows an explicitly supplied `unit` back into `CatalogItem.defaultUnit`. Task 3 will supply a *parsed* unit, and ruling 3 says a guess must not become the project's default. This task adds the opt-out — independently testable, and worth its own commit because it changes the meaning of an operation field.
-
-**Files:**
-- Modify: `src/lib/lists/operations.ts` (the `AddItemOperation` interface ~line 19–26, and the flow-back call in the `add_item` branch ~line 258–262)
-- Test: `src/lib/lists/operations.test.ts` (append to the existing `describe("catalog flow-back", …)` block at the end of the file)
-
-**Interfaces:**
-- Consumes: nothing new.
-- Produces: `AddItemOperation` gains `unitIsGuess?: boolean`. Semantics: when `true`, `unit` is still written to the entry, but the unit half of the catalog flow-back is skipped. `parseOperation` never sets it, so it cannot arrive over the wire.
-
-- [ ] **Step 1: Write the failing test**
-
-Append to `src/lib/lists/operations.test.ts`, inside the existing `describe("catalog flow-back", …)` block (add the `AddItemOperation` type import at the top of the file: `import { applyOperation, parseOperation, type AddItemOperation } from "./operations";`):
-
-```ts
-  // Slice 15: „1,5 l Milch" guesses the unit. The entry gets it, the project's
-  // shared memory does not — flow-back stays reserved for a user's own choice.
-  it("sets a GUESSED unit on the entry without touching the catalog default", async () => {
-    const item = await applyOperation(db, list, {
-      op: "add_item",
-      itemId: randomUUID(),
-      name: "Milch",
-      quantity: 1.5,
-      unit: "l",
-      unitIsGuess: true,
-    });
-
-    expect(item!.unit).toBe("l");
-    expect(item!.quantity).toBe(1.5);
-    const article = await db.catalogItem.findFirstOrThrow({ where: { projectId } });
-    expect(article.defaultUnit).toBeNull();
-  });
-
-  it("still flows a user-CHOSEN unit back into the catalog default", async () => {
-    await applyOperation(db, list, {
-      op: "add_item",
-      itemId: randomUUID(),
-      name: "Milch",
-      unit: "l",
-    });
-
-    const article = await db.catalogItem.findFirstOrThrow({ where: { projectId } });
-    expect(article.defaultUnit).toBe("l");
-  });
-
-  // The flag is an in-process hint, not part of the wire contract: a client must
-  // not be able to write a unit that quietly skips the project's catalog memory.
-  it("never accepts unitIsGuess from an untrusted body", () => {
-    const op = parseOperation({
-      op: "add_item",
-      itemId: randomUUID(),
-      name: "Milch",
-      unit: "l",
-      unitIsGuess: true,
-    }) as AddItemOperation;
-
-    expect(op.unitIsGuess).toBeUndefined();
-    expect(op.unit).toBe("l");
-  });
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `npx vitest run src/lib/lists/operations.test.ts -t "GUESSED"`
-Expected: FAIL — TypeScript rejects `unitIsGuess` as an unknown property on `AddItemOperation` (and, once that is silenced, `defaultUnit` would be `"l"` rather than `null`).
-
-- [ ] **Step 3: Write the implementation**
-
-In `src/lib/lists/operations.ts`, extend the interface:
-
-```ts
-export interface AddItemOperation {
-  op: "add_item";
-  itemId: string;
-  name: string;
-  quantity?: number | null;
-  unit?: string | null;
-  category?: string | null;
-  /**
-   * Slice 15: the unit was GUESSED by the entry-row parser, not chosen by the
-   * user. The entry still gets it, but the catalog flow-back skips the unit —
-   * the project's shared default may only be rewritten by a deliberate edit in
-   * the entry sheet, where the user reads „…werden als neuer Standard im
-   * Katalog gemerkt".
-   *
-   * IN-PROCESS ONLY: `parseOperation` builds its result from a fixed set of
-   * fields and never copies this one, so an untrusted body cannot set it. That
-   * is deliberate — over the wire, a supplied unit means "the user chose it".
-   */
-  unitIsGuess?: boolean;
-}
-```
-
-Then, in the `add_item` branch of `applyOperation`, change the flow-back call (keep the whole existing comment above it and extend it):
-
-```ts
-      // Flow-back (Slice 4, MVP design §4.4): a category/unit the user supplied EXPLICITLY at add
-      // time becomes the catalog default, so future lists inherit it. Inherited values arrive as
-      // undefined; explicit clears arrive as null — both are skipped by the helper (`!= null`),
-      // so this never writes a default back onto itself or erases shared catalog memory. Runs only
-      // on first creation (replays returned early above), keeping add idempotent.
-      await flowBackCatalogDefaults(db, catalogItem.id, {
-        category: operation.category,
-        // Slice 15: a PARSED unit is a guess about text, not a decision. Passing
-        // `undefined` makes the helper treat it exactly like an inherited value
-        // and leave the catalog default alone.
-        unit: operation.unitIsGuess ? undefined : operation.unit,
-      });
-```
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `npx vitest run src/lib/lists/operations.test.ts`
-Expected: PASS — the whole file, including the three new cases and every pre-existing flow-back test.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/lib/lists/operations.ts src/lib/lists/operations.test.ts
-git commit -m "feat(lists): add_item can mark a unit as guessed and skip flow-back"
-```
-
----
-
-## Task 3: Wire the parser into `addEntryFromRow`
+## Task 2: Wire the parser into `addEntryFromRow`
 
 **Files:**
 - Modify: `src/lib/lists/addEntry.ts` (the whole `addEntryFromRow` body, lines 44–84)
 - Test: `src/lib/lists/addEntry.test.ts` (append a new `describe` block; the existing 10 tests must keep passing untouched)
 
 **Interfaces:**
-- Consumes: `parseEntryInput`, `buildUnitLookup` (Task 1); `AddItemOperation.unitIsGuess` (Task 2); the existing `normalizeName`, `applyOperation`, `UNCATEGORIZED_LABEL`.
+- Consumes: `parseEntryInput`, `buildUnitLookup` (Task 1); the existing `normalizeName`, `applyOperation`, `UNCATEGORIZED_LABEL`. **No change to `operations.ts`** — the parsed unit is passed as an ordinary explicit unit.
 - Produces: no signature change. `addEntryFromRow(db, list, { itemId, name, activeCategory })` still returns `{ item, needsCategory }` — the parse is entirely internal, which is why `page.tsx` needs no edit.
 
 - [ ] **Step 1: Write the failing test**
@@ -582,7 +468,9 @@ describe("addEntryFromRow — quantity parsing (Slice 15)", () => {
     expect(article.name).toBe("Milch");
   });
 
-  it("does not write a parsed unit back into the catalog default", async () => {
+  // Ruling 3 (reversed): a parsed unit is an ordinary explicit unit, so Slice 4's
+  // flow-back applies unchanged and the project's next pre-filled list inherits it.
+  it("flows the parsed unit back into the catalog default", async () => {
     const { project, list } = await seed();
 
     await addEntryFromRow(db, list, {
@@ -592,7 +480,10 @@ describe("addEntryFromRow — quantity parsing (Slice 15)", () => {
     });
 
     const article = await db.catalogItem.findFirstOrThrow({ where: { projectId: project.id } });
-    expect(article.defaultUnit).toBeNull();
+    expect(article.defaultUnit).toBe("l");
+    // The QUANTITY is entry-specific and must never become catalog memory —
+    // there is no column for it, and this asserts the article stayed name-only.
+    expect(article.name).toBe("Milch");
   });
 
   it("takes a leading number without a unit as a bare count", async () => {
@@ -810,10 +701,11 @@ export async function addEntryFromRow(
     // parser means "found nothing", which is the same thing, so both collapse to
     // undefined rather than to an explicit clear.
     quantity: parsed.quantity ?? undefined,
+    // A parsed unit is passed as an ORDINARY explicit unit, so Slice 4's
+    // flow-back applies and the project learns that Milch comes in litres
+    // (ruling 3). The parser only ever emits a unit from the curated list or the
+    // project's own vocabulary, so this is a recognised word, not a guessed one.
     unit: parsed.unit ?? undefined,
-    // A parsed unit is a guess about text, so it must not become the project's
-    // default (Slice 15 ruling 3; the flag is Task 2's).
-    unitIsGuess: parsed.unit !== null,
     category,
   });
 
@@ -851,12 +743,14 @@ git commit -m "feat(lists): resolve Menge/Einheit from the typed entry text"
 
 ---
 
-## Task 4: The trailing row's dropdown and submit
+## Task 3: The trailing row's dropdown and submit
 
 Two client-side jobs, both cosmetic-but-necessary consequences of a server-side parser:
 
 1. **Search the article part.** Typing „1,5 l Mil" must still offer „Milch", and the „…neu anlegen" row must offer *Milch*, not *1,5 l Milch* — otherwise the row promises a catalog article that will never be created under that name.
 2. **Keep the quantity when a suggestion is tapped.** The dropdown hands back a bare article name; without re-attaching the typed prefix, tapping „Milch" after typing „1,5 l Mil" would silently drop the 1,5 l. The prefix is re-attached **as text**, so the server stays the only parser.
+
+The rule for (2) is *"if the user picked a name other than the one they typed, their quantity comes with it"* — a statement about values, not about which UI path fired. It falls out correctly on every path: Enter always submits `draft.trim()` itself, so nothing is re-attached; a tap submits a different name, so the prefix travels. The one case where a tap *does* equal the typed text — an article whose own name starts with a number, tapped after typing it in full — is exactly the case that must be sent raw so the server's escape hatch sees it.
 
 **Files:**
 - Modify: `src/app/lists/[listId]/ListBody.tsx`
@@ -987,6 +881,12 @@ Replace the single `suggestions` line (currently line 109) with:
   // The SAME parser the server runs (addEntryFromRow). Here it is used for two
   // cosmetic jobs only — the server remains the single source of truth for what
   // actually gets stored.
+  //
+  // The two vocabularies can differ in one edge case: this builds from the
+  // capped `articles` prop (CATALOG_DATALIST_LIMIT), while the server queries
+  // every distinct unit. In a project past that cap the dropdown might not strip
+  // a rare project unit. Harmless by construction — the server re-parses the raw
+  // text either way, so only this dropdown's query is ever affected.
   const parsedDraft = parseEntryInput(draft, unitLookup);
 
   // Raw text first: an article whose own name starts with a number („7 Zwerge
@@ -1007,10 +907,19 @@ Then, inside `addEntry`, insert the re-attach before the `FormData` is filled:
 ```tsx
   /** The trailing row's submit: one add_item with a client-generated identity. */
   const addEntry = (name: string) => {
-    // Enter hands back the raw draft (prefix included); a dropdown tap hands back
-    // a bare ARTICLE name, which would silently drop a typed „1,5 l". Re-attach
-    // it as TEXT — never as parsed fields — because addEntryFromRow is the only
-    // parser and must keep seeing exactly what a user would have typed.
+    // The rule: PICKING A NAME OTHER THAN THE ONE YOU TYPED CARRIES YOUR QUANTITY
+    // OVER TO IT. Typing „1,5 l Mil" and tapping „Milch" must not silently drop
+    // the 1,5 l — the dropdown completes the word, it does not cancel the amount.
+    //
+    // Re-attached as TEXT, never as parsed fields: addEntryFromRow is the only
+    // parser, and it must keep seeing exactly what a user could have typed.
+    // formatQuantityLabel is the inverse of the parser (German comma, canonical
+    // unit), so „1,5 l" + „Milchreis" round-trips back to 1.5 · l · Milchreis.
+    //
+    // Enter always submits `draft.trim()` itself, so the condition is false and
+    // nothing is re-attached. An article whose own name starts with a number,
+    // tapped after being typed in full, also lands here unchanged — which is
+    // required, because only the RAW text triggers the server's escape hatch.
     const prefix = formatQuantityLabel(parsedDraft.quantity, parsedDraft.unit);
     const submitted = prefix && name !== draft.trim() ? `${prefix} ${name}` : name;
 
@@ -1041,7 +950,7 @@ git commit -m "feat(lists): strip the quantity prefix for autocomplete, keep it 
 
 ---
 
-## Task 5: Full verification, review document, meta plan
+## Task 4: Full verification, review document, meta plan
 
 **Files:**
 - Create: `docs/implementation-reviews/slice-15-quantity-parsing.md`
@@ -1067,10 +976,10 @@ On a list screen, verify each of these by hand — the parser's whole value is t
 
 1. „1,5 l Milch" + ↵ → the row shows **Milch** with **1,5 l** on the right.
 2. „3 Joghurt" + ↵ → **Joghurt**, **3**, no unit.
-3. Open the Katalog screen: **Milch** exists as an article, with **no** default unit („Standard-Kategorie · Einheit" sub-line shows no unit).
+3. Open the Katalog screen: **Milch** exists as an article — named **Milch**, not „1,5 l Milch" — and its sub-line now shows **l** as the default unit (ruling 3's flow-back).
 4. „1,5 l Mil" → the dropdown offers **Milch**; tap it → the entry still has **1,5 l**.
 5. „3 l" + ↵ → an article literally named **3 l** is created (the conservative refusal). Delete it afterwards.
-6. Type „1,5 l Milch" again with Milch already in the catalog → still no `defaultUnit` written.
+6. Create a new list with pre-fill on a project where Milch is a favourite → the pre-filled Milch row carries **l**. This is the payoff of reversing ruling 3; if it does not appear, the flow-back did not happen.
 
 - [ ] **Step 3: Write the implementation review**
 
@@ -1078,8 +987,8 @@ Create `docs/implementation-reviews/slice-15-quantity-parsing.md`, in English, c
 
 1. **What was achieved** — the slice goal and whether it was fully met.
 2. **Steps taken** — the four implementation tasks and what each changed.
-3. **Core components built** — `parseEntryInput.ts` (`BASE_UNIT_ALIASES`, `buildUnitLookup`, `parseEntryInput`), the `unitIsGuess` flag on `AddItemOperation`, the rewritten `addEntryFromRow`, the `ListBody` prefix handling.
-4. **Most important lines of code** — quote and explain at least: the `LEADING_NUMBER` lookahead (why it kills „1,5,5"), the `if (!name) return unparsed` refusal (why „3 l" is not an article called „l"), `unit: operation.unitIsGuess ? undefined : operation.unit` (guess vs. decision), the escape-hatch ternary in `addEntryFromRow`, and `const submitted = prefix && name !== draft.trim() ? …` (why the client re-attaches text rather than sending parsed fields).
+3. **Core components built** — `parseEntryInput.ts` (`BASE_UNIT_ALIASES`, `buildUnitLookup`, `parseEntryInput`), the rewritten `addEntryFromRow`, the `ListBody` prefix handling. State explicitly that `operations.ts` was **not** touched, and why that is the point: everything the parser produces is an ordinary `add_item`, so an offline replay of that operation behaves identically.
+4. **Most important lines of code** — quote and explain at least: the `LEADING_NUMBER` lookahead (why it kills „1,5,5"), the `if (!name) return unparsed` refusal (why „3 l" is not an article called „l"), the escape-hatch ternary in `addEntryFromRow` (why a catalog hit beats the parser), the `parsedNormalized === rawNormalized` short-circuit (why the hot add path does not pay for a second lookup), and `const submitted = prefix && name !== draft.trim() ? …` (why the client re-attaches *text* rather than sending parsed fields).
 5. **Architecture contribution** — the entry row now carries the design's full input grammar; the catalog's article-name purity survived; the parse sits inside the operations funnel, so a Phase 2 offline replay gets it for free. What comes next: **Slice 8 (PWA polish)**, then optionally Slice 16.
 
 - [ ] **Step 4: Update the meta project plan**
@@ -1087,7 +996,7 @@ Create `docs/implementation-reviews/slice-15-quantity-parsing.md`, in English, c
 In `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md`:
 
 - Slice 15's table row: `_to be created_` → a link to this plan, and status `⬜ Open` → `✅ Done / verified`.
-- Add a progress-log entry dated 2026-09-02 in the established `### YYYY-MM-DD — Slice N: <name> — <status>` format, recording: the four rulings and who made them, the `unitIsGuess` addition to the operation contract, the deliberate cuts (plurals, „2x", the first-time „7 Zwerge Bier"), and the inherited open items carried forward unchanged (PageHeader/nav hydration overlay; Toggle <44px tap target; `middleware` → `proxy` migration; member-path browser smoke).
+- Add a progress-log entry dated 2026-09-02 in the established `### YYYY-MM-DD — Slice N: <name> — <status>` format, recording: the four rulings and who made them, **the reversal of ruling 3 and its reasons** (the entry a future reader will need most — the operation contract was deliberately left untouched), the deliberate cuts (plurals, „2x", the first-time „7 Zwerge Bier"), and the inherited open items carried forward unchanged (PageHeader/nav hydration overlay; Toggle <44px tap target; `middleware` → `proxy` migration; member-path browser smoke).
 - State plainly that **Slice 8 (PWA polish) is the next open slice**.
 
 - [ ] **Step 5: Commit**
@@ -1101,10 +1010,12 @@ git commit -m "docs: Slice 15 implementation review + meta plan progress log"
 
 ## Self-Review
 
-**Spec coverage.** The handoff's Slice 15 sentence has three clauses; each has a task. „führende Zahl + bekannte Einheit werden in Menge/Einheit gelöst" → Tasks 1 + 3. „der Katalog bekommt nur den Artikelnamen" → Task 3 (`name: parsed.name`) plus its explicit test, and Task 2's flow-back suppression, which is the *unit* half of the same rule. The trailing row wiring the meta plan calls „plus wiring" → Tasks 3 + 4. The meta plan's Slice 12 seam note („parser between `Autocomplete.onSubmit` and add FormData") is deliberately superseded by ruling 1 — Task 4 documents the client's reduced role, and Task 5 records the deviation in the progress log.
+**Spec coverage.** The handoff's Slice 15 sentence has three clauses; each has a task. „führende Zahl + bekannte Einheit werden in Menge/Einheit gelöst" → Tasks 1 + 2. „der Katalog bekommt nur den Artikelnamen" → Task 2 (`name: parsed.name`, plus the escape hatch) and its explicit tests that the created article is named „Milch" and that the count stays 1 for „7 Zwerge Bier". The trailing row wiring the meta plan calls „plus wiring" → Tasks 2 + 3. The meta plan's Slice 12 seam note („parser between `Autocomplete.onSubmit` and add FormData") is deliberately superseded by ruling 1 — Task 3 documents the client's reduced role, and Task 4 records the deviation in the progress log.
 
 **Placeholder scan.** No task says "add validation" or "handle edge cases": every refusal rule is a named test row in Task 1, and the one validation this slice does *not* add (empty name, quantity > 0) is explicitly delegated to `getOrCreateCatalogItem` and `assertValidQuantity` with a comment saying so.
 
-**Type consistency.** `ParsedEntryInput` is `{ quantity, unit, name }` in Tasks 1, 3 and 4. `UnitLookup` is produced by `buildUnitLookup` and consumed by `parseEntryInput` in both the server and client tasks. `unitIsGuess` is defined in Task 2 and set in Task 3 only. `ListBodyArticle` is defined in Task 4 and matches `CatalogSuggestion`'s four fields. The escape hatch's stand-in object `{ quantity: null, unit: null, name: input.name }` matches `ParsedEntryInput` exactly.
+**Type consistency.** `ParsedEntryInput` is `{ quantity, unit, name }` in Tasks 1, 2 and 3. `UnitLookup` is produced by `buildUnitLookup` and consumed by `parseEntryInput` in both the server and client tasks. `ListBodyArticle` is defined in Task 3 and matches `CatalogSuggestion`'s four fields. The escape hatch's stand-in object `{ quantity: null, unit: null, name: input.name }` matches `ParsedEntryInput` exactly. No type in `operations.ts` changes, so `AddItemOperation` is consumed exactly as it ships today.
 
-**One risk worth naming for the executor:** Task 3 changes the *name* that reaches `getOrCreateCatalogItem`, which is the catalog's identity function. If a test in `src/lib/catalog` or `src/lib/suggestions` starts failing after Task 3, the cause is almost certainly a fixture that adds an entry whose name begins with a digit — read the fixture before changing any production code.
+**One risk worth naming for the executor:** Task 2 changes the *name* that reaches `getOrCreateCatalogItem`, which is the catalog's identity function. If a test in `src/lib/catalog` or `src/lib/suggestions` starts failing after Task 2, the cause is almost certainly a fixture that adds an entry whose name begins with a digit — read the fixture before changing any production code.
+
+**Deliberately not in this plan:** an `unitIsGuess`-style opt-out of catalog flow-back. It was written as a task and removed after review; the reasoning is recorded under "Decisions" above so it does not get reinvented.
