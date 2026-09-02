@@ -11,8 +11,9 @@ describe("buildUnitLookup", () => {
   });
 
   it("adds the project's own catalog units and ignores blanks", () => {
-    const lookup = buildUnitLookup(["Kiste", null, "   "]);
-    expect(lookup["kiste"]).toBe("Kiste");
+    const lookup = buildUnitLookup(["Palette", null, "   "]);
+    expect(lookup["palette"]).toBe("Palette");
+    expect(Object.hasOwn(lookup, "")).toBe(false);
   });
 
   // A project whose catalog happens to hold „Liter" must still render „1,5 l" (handoff §2).
@@ -124,6 +125,30 @@ describe("parseEntryInput", () => {
       quantity: null,
       unit: null,
       name: "1,5,5 Milch",
+    });
+  });
+
+  it("does not parse punctuation glued to a leading number", () => {
+    expect(parseEntryInput("1,5% Milch", units)).toEqual({
+      quantity: null,
+      unit: null,
+      name: "1,5% Milch",
+    });
+  });
+
+  it("does not parse a word suffix glued to a leading number", () => {
+    expect(parseEntryInput("6er Pack Bier", units)).toEqual({
+      quantity: null,
+      unit: null,
+      name: "6er Pack Bier",
+    });
+  });
+
+  it("does not treat a glued unknown multiplier as an article prefix", () => {
+    expect(parseEntryInput("2x Milch", units)).toEqual({
+      quantity: null,
+      unit: null,
+      name: "2x Milch",
     });
   });
 

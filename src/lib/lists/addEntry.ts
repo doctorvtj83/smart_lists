@@ -56,7 +56,8 @@ export async function addEntryFromRow(
   const rawNormalized = normalizeName(input.name);
 
   // Two independent reads → Promise.all: the add path runs on a phone, so this
-  // stays ONE round-trip rather than two sequential ones.
+  // pays one round-trip of latency rather than waiting for two sequential query
+  // round-trips. Prisma still executes two concurrent database queries.
   const [rawArticle, catalogUnits] = await Promise.all([
     // The RAW text may itself name an article („7 Zwerge Bier"). Reading this
     // BEFORE anything else serves two purposes: it is the parser's escape hatch,

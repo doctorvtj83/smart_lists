@@ -114,14 +114,15 @@ export interface ParsedEntryInput {
 }
 
 /**
- * A leading number, optionally glued to what follows.
+ * A leading number, the exact whitespace gap after it, and the remainder.
  *
  * The lookahead is the load-bearing part: it forbids another digit, comma or dot
  * right after the number, so „1,5,5 Milch" fails to match instead of yielding a
- * quantity of 1,5 and an article named „,5 Milch". `\s*` makes the space
- * optional so „500g Mehl" parses exactly like „500 g Mehl".
+ * quantity of 1,5 and an article named „,5 Milch". Capturing `\s*` separately
+ * preserves whether the next token was glued to the number; only a known unit
+ * may safely occupy that position, as in „500g Mehl".
  */
-const LEADING_NUMBER = /^(\d+(?:[.,]\d+)?)\s*(?=[^\d.,]|$)(.*)$/;
+const LEADING_NUMBER = /^(\d+(?:[.,]\d+)?)(\s*)(?=[^\s\d.,])(.*)$/;
 
 /**
  * Splits typed text into quantity, unit and article name.
@@ -139,7 +140,7 @@ export function parseEntryInput(raw: string, units: UnitLookup): ParsedEntryInpu
 
   const match = LEADING_NUMBER.exec(text);
   if (!match) return unparsed;
-  const [, numberText, rest] = match;
+  const [, numberText, gap, rest] = match;
 
   // parseGermanDecimal is the SAME reader the entry sheet's MENGE field uses, so
   // „1,5" means one-and-a-half in both places (DRY, and no second comma rule).
@@ -158,6 +159,13 @@ export function parseEntryInput(raw: string, units: UnitLookup): ParsedEntryInpu
   // Own-property check only: plain `units[key]` would inherit Object.prototype
   // names like "constructor" and yield a function as the unit string.
   const unit = Object.hasOwn(units, unitKey) ? units[unitKey] : null;
+
+  // A suffix glued directly to the number is safe only when its first token is
+  // a known unit. Otherwise accepting it would silently shred real names such
+  // as „6er Pack Bier" or punctuation-led text such as „1,5% Milch". This also
+  // deliberately refuses „2x Milch": `x` is not part of the supported unit
+  // vocabulary, so the conservative invariant keeps the whole input as a name.
+  if (gap === "" && unit === null) return unparsed;
 
   // No known unit → a bare count („3 Joghurt"). The rest is the article name.
   if (unit === null) return { quantity, unit: null, name: rest };

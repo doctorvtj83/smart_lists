@@ -63,11 +63,13 @@ the same as the online write and requires no parser-specific operation flag.
 ### Reject malformed decimal continuations
 
 ```ts
-const LEADING_NUMBER = /^(\d+(?:[.,]\d+)?)\s*(?=[^\d.,]|$)(.*)$/;
+const LEADING_NUMBER = /^(\d+(?:[.,]\d+)?)(\s*)(?=[^\s\d.,])(.*)$/;
 ```
 
 The lookahead requires the next character after the captured number to be neither a digit nor another
-decimal separator. Therefore `1,5,5 Milch` cannot be partially accepted as `1,5` plus `,5 Milch`.
+decimal separator. The separately captured whitespace gap also lets the parser distinguish a glued
+known unit such as `500g` from an unknown suffix such as `6er` or `1,5%`; the latter inputs are refused
+in full rather than silently losing part of their article name.
 
 ### Refuse a unit with no surviving article name
 
@@ -157,6 +159,10 @@ The parser is pure and shared for presentation, but storage interpretation remai
 `addEntryFromRow` immediately before the established operations funnel. No parallel mutation path and
 no parser-only wire state were introduced, which keeps polling, idempotency, and a future offline replay
 aligned.
+
+**Deliberate cut:** glued text is accepted only when its first token is a known unit. Consequently,
+`2x Milch` is deliberately refused and retained as the whole article name; multiplier syntax remains
+outside Slice 15 rather than weakening the parser's conservative invariant.
 
 **Next:** Slice 8 (PWA polish) is the next open slice. Slice 16 (per-row remote-change flash) remains an
 optional follow-up after real-world use.
