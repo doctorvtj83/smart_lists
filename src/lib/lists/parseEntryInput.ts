@@ -154,7 +154,10 @@ export function parseEntryInput(raw: string, units: UnitLookup): ParsedEntryInpu
   // The unit can only be the FIRST token of the remainder — „1,5 Milch l" is not
   // a thing anyone types, and scanning further would invite false positives.
   const [firstToken, ...others] = rest.split(" ");
-  const unit = units[firstToken.toLowerCase()] ?? null;
+  const unitKey = firstToken.toLowerCase();
+  // Own-property check only: plain `units[key]` would inherit Object.prototype
+  // names like "constructor" and yield a function as the unit string.
+  const unit = Object.hasOwn(units, unitKey) ? units[unitKey] : null;
 
   // No known unit → a bare count („3 Joghurt"). The rest is the article name.
   if (unit === null) return { quantity, unit: null, name: rest };

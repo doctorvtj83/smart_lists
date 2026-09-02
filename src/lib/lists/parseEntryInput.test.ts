@@ -106,6 +106,19 @@ describe("parseEntryInput", () => {
     });
   });
 
+  it("does not treat Object.prototype keys as known units", () => {
+    expect(parseEntryInput("1 constructor Milch", units)).toEqual({
+      quantity: 1,
+      unit: null,
+      name: "constructor Milch",
+    });
+    expect(parseEntryInput("1 toString Milch", units)).toEqual({
+      quantity: 1,
+      unit: null,
+      name: "toString Milch",
+    });
+  });
+
   it("does not parse a malformed decimal", () => {
     expect(parseEntryInput("1,5,5 Milch", units)).toEqual({
       quantity: null,
