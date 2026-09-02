@@ -138,10 +138,16 @@ export function ListBody({
   // just as importantly, makes the „…neu anlegen" row promise the name the
   // catalog will really get.
   const rawSuggestions = buildAutocomplete(articles, draft);
-  const suggestions =
-    parsedDraft.quantity === null || rawSuggestions.options.length > 0
-      ? rawSuggestions
-      : buildAutocomplete(articles, parsedDraft.name);
+  // Remember WHICH query produced the visible dropdown, because submit behavior
+  // must follow that choice. A raw match such as „7 Zwerge Bier" is already a
+  // complete article name and must never receive the parser's leading 7 again.
+  // Only a dropdown reached through the stripped query represents completion of
+  // an article name after a genuine quantity prefix.
+  const usedParsedSearch =
+    parsedDraft.quantity !== null && rawSuggestions.options.length === 0;
+  const suggestions = usedParsedSearch
+    ? buildAutocomplete(articles, parsedDraft.name)
+    : rawSuggestions;
   const openEntry = entries.find((item) => item.id === openEntryId) ?? null;
 
   /** The trailing row's submit: one add_item with a client-generated identity. */
@@ -156,11 +162,13 @@ export function ListBody({
     // unit), so „1,5 l" + „Milchreis" round-trips back to 1.5 · l · Milchreis.
     //
     // Enter always submits `draft.trim()` itself, so the condition is false and
-    // nothing is re-attached. An article whose own name starts with a number,
-    // tapped after being typed in full, also lands here unchanged — which is
-    // required, because only the RAW text triggers the server's escape hatch.
+    // nothing is re-attached. Suggestions produced by the RAW search also stay
+    // bare, even when the tapped completion differs from the partial draft:
+    // otherwise „7 Zwe" → „7 Zwerge Bier" would become „7 7 Zwerge Bier" and
+    // bypass the server's numeric-article escape hatch.
     const prefix = formatQuantityLabel(parsedDraft.quantity, parsedDraft.unit);
-    const submitted = prefix && name !== draft.trim() ? `${prefix} ${name}` : name;
+    const submitted =
+      usedParsedSearch && prefix && name !== draft.trim() ? `${prefix} ${name}` : name;
 
     const formData = new FormData();
     // Client-generated UUID (MVP design §3): stable identity across retries, and

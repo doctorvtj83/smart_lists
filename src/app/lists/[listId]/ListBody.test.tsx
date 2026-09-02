@@ -339,4 +339,20 @@ describe("ListBody — quantity prefix (Slice 15)", () => {
 
     expect(screen.getByRole("button", { name: /7 Zwerge Bier/ })).toBeInTheDocument();
   });
+
+  it("submits a tapped numeric article name without duplicating its number", async () => {
+    const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
+    renderBody({
+      addAction,
+      articles: [
+        { id: "a1", name: "7 Zwerge Bier", defaultCategory: null, defaultUnit: null },
+      ],
+    });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "7 Zwe");
+    await userEvent.click(screen.getByRole("button", { name: /7 Zwerge Bier/ }));
+
+    const formData = addAction.mock.calls[0][1] as FormData;
+    expect(formData.get("name")).toBe("7 Zwerge Bier");
+  });
 });
