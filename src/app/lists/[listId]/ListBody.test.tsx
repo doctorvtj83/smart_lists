@@ -24,8 +24,8 @@ function renderBody(overrides: Partial<Parameters<typeof ListBody>[0]> = {}) {
   const props = {
     entries: [milch, butter, apfel, duebel],
     articles: [
-      { id: "a1", name: "Milch", defaultCategory: "Molkerei" },
-      { id: "a2", name: "Milchreis", defaultCategory: null },
+      { id: "a1", name: "Milch", defaultCategory: "Molkerei", defaultUnit: null },
+      { id: "a2", name: "Milchreis", defaultCategory: null, defaultUnit: null },
     ],
     categories: ["Molkerei", "Obst & Gemüse"],
     frozen: false,
@@ -95,7 +95,7 @@ describe("ListBody — trailing row", () => {
   });
 
   it("adds the typed name with a client-generated id", async () => {
-    const addAction = vi.fn(async () => ENTRY_FORM_IDLE);
+    const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
     renderBody({ addAction });
 
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Dübel{Enter}");
@@ -109,7 +109,7 @@ describe("ListBody — trailing row", () => {
   });
 
   it("posts the active chip as the category", async () => {
-    const addAction = vi.fn(async () => ENTRY_FORM_IDLE);
+    const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
     renderBody({ addAction });
 
     await userEvent.click(screen.getByRole("tab", { name: "Molkerei" }));
@@ -161,7 +161,10 @@ describe("ListBody — entry interaction", () => {
   // Mirrors CatalogBrowser: the sheet closes only when the action returns ok.
   // ENTRY_FORM_IDLE has ok:false, so a success stub must set ok:true explicitly.
   it("sends one field per change and closes the sheet", async () => {
-    const updateAction = vi.fn(async () => ({ ...ENTRY_FORM_IDLE, ok: true }));
+    const updateAction = vi.fn(async (_prev: unknown, _formData: FormData) => ({
+      ...ENTRY_FORM_IDLE,
+      ok: true,
+    }));
     renderBody({ updateAction });
 
     await userEvent.click(screen.getByRole("button", { name: "Milch bearbeiten" }));
@@ -275,5 +278,65 @@ describe("ListBody — completed list", () => {
 
     expect(screen.getByText("Milch")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Molkerei" })).toBeInTheDocument();
+  });
+});
+
+describe("ListBody — quantity prefix (Slice 15)", () => {
+  it("searches the catalog with the quantity prefix stripped", async () => {
+    renderBody();
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "1,5 l Mil");
+
+    // The dropdown found the ARTICLE part…
+    expect(screen.getByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
+    // …and the create row promises the name the catalog will actually get.
+    expect(screen.getByRole("button", { name: "„Mil“ neu anlegen" })).toBeInTheDocument();
+  });
+
+  it("sends the raw text on Enter so the server can parse it", async () => {
+    const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
+    renderBody({ addAction });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "1,5 l Milch{Enter}");
+
+    const formData = addAction.mock.calls[0][1] as FormData;
+    expect(formData.get("name")).toBe("1,5 l Milch");
+  });
+
+  // Tapping a suggestion must not throw the typed quantity away.
+  it("re-attaches the typed quantity when a suggestion is tapped", async () => {
+    const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
+    renderBody({ addAction });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "1,5 l Mil");
+    await userEvent.click(screen.getByRole("button", { name: /Milchreis/ }));
+
+    const formData = addAction.mock.calls[0][1] as FormData;
+    expect(formData.get("name")).toBe("1,5 l Milchreis");
+  });
+
+  it("leaves a suggestion alone when nothing was parsed", async () => {
+    const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
+    renderBody({ addAction });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Milc");
+    await userEvent.click(screen.getByRole("button", { name: /Milchreis/ }));
+
+    const formData = addAction.mock.calls[0][1] as FormData;
+    expect(formData.get("name")).toBe("Milchreis");
+  });
+
+  // The raw text is searched FIRST, so an article whose own name starts with a
+  // number still finds itself (the server-side escape hatch's client half).
+  it("keeps searching the raw text for an article that starts with a number", async () => {
+    renderBody({
+      articles: [
+        { id: "a1", name: "7 Zwerge Bier", defaultCategory: null, defaultUnit: null },
+      ],
+    });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "7 Zwerge");
+
+    expect(screen.getByRole("button", { name: /7 Zwerge Bier/ })).toBeInTheDocument();
   });
 });

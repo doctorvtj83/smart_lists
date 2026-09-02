@@ -5,12 +5,14 @@ import { Autocomplete } from "@/components/ui/Autocomplete";
 import { ChipTabs } from "@/components/ui/ChipTabs";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { buildAutocomplete, type AutocompleteArticle } from "@/lib/catalog/autocomplete";
+import { formatQuantityLabel } from "@/lib/format/quantity";
 import {
   ALL_CATEGORIES_LABEL,
   categoryChipOptions,
   categoryLabel,
   groupItemsByCategory,
 } from "@/lib/lists/categories";
+import { buildUnitLookup, parseEntryInput } from "@/lib/lists/parseEntryInput";
 import { EntryRow, type ListEntry } from "./EntryRow";
 import { EntrySheet, type EntryChanges } from "./EntrySheet";
 import { ENTRY_FORM_IDLE, type EntryFormState } from "./formState";
@@ -21,11 +23,19 @@ type EntryAction = (prev: EntryFormState, formData: FormData) => Promise<EntryFo
 /** Check and remove need no inline error, so they stay plain Server Actions. */
 type FireAndForgetAction = (formData: FormData) => void | Promise<void>;
 
+/**
+ * The catalog shape this screen needs: what the dropdown ranks, plus the unit —
+ * the trailing row has to know the project's own unit vocabulary to strip a
+ * typed „2 Kisten" prefix off the autocomplete query (Slice 15). `page.tsx`
+ * already passes `searchCatalog`'s rows, which carry all four fields.
+ */
+export type ListBodyArticle = AutocompleteArticle & { defaultUnit: string | null };
+
 type ListBodyProps = {
   /** Every entry, in sortIndex order, straight from the server on every render. */
   entries: ListEntry[];
   /** The project's catalog, for the trailing row's autocomplete. */
-  articles: AutocompleteArticle[];
+  articles: ListBodyArticle[];
   /** Every category the project knows, for the entry sheet's chips. */
   categories: string[];
   /** A completed list: read-only, no chips, no input row (handoff §10). */
@@ -106,16 +116,57 @@ export function ListBody({
       : entries.filter((item) => categoryLabel(item.category) === activeChip);
   const groups = activeChip === ALL_CATEGORIES_LABEL ? groupItemsByCategory(visible) : [];
 
-  const suggestions = buildAutocomplete(articles, draft);
+  // The project's unit vocabulary, rebuilt per render like `buildAutocomplete`
+  // below it: both are cheap pure functions over an array the server already
+  // handed us, and memoising them would only add a dependency array to get wrong.
+  const unitLookup = buildUnitLookup(articles.map((article) => article.defaultUnit));
+  // The SAME parser the server runs (addEntryFromRow). Here it is used for two
+  // cosmetic jobs only — the server remains the single source of truth for what
+  // actually gets stored.
+  //
+  // The two vocabularies can differ in one edge case: this builds from the
+  // capped `articles` prop (CATALOG_DATALIST_LIMIT), while the server queries
+  // every distinct unit. In a project past that cap the dropdown might not strip
+  // a rare project unit. Harmless by construction — the server re-parses the raw
+  // text either way, so only this dropdown's query is ever affected.
+  const parsedDraft = parseEntryInput(draft, unitLookup);
+
+  // Raw text first: an article whose own name starts with a number („7 Zwerge
+  // Bier") must still find itself, which mirrors the server's escape hatch. Only
+  // when the raw text finds nothing AND the parser peeled a quantity off do we
+  // search the article part — that is what makes „1,5 l Mil" offer „Milch" and,
+  // just as importantly, makes the „…neu anlegen" row promise the name the
+  // catalog will really get.
+  const rawSuggestions = buildAutocomplete(articles, draft);
+  const suggestions =
+    parsedDraft.quantity === null || rawSuggestions.options.length > 0
+      ? rawSuggestions
+      : buildAutocomplete(articles, parsedDraft.name);
   const openEntry = entries.find((item) => item.id === openEntryId) ?? null;
 
   /** The trailing row's submit: one add_item with a client-generated identity. */
   const addEntry = (name: string) => {
+    // The rule: PICKING A NAME OTHER THAN THE ONE YOU TYPED CARRIES YOUR QUANTITY
+    // OVER TO IT. Typing „1,5 l Mil" and tapping „Milch" must not silently drop
+    // the 1,5 l — the dropdown completes the word, it does not cancel the amount.
+    //
+    // Re-attached as TEXT, never as parsed fields: addEntryFromRow is the only
+    // parser, and it must keep seeing exactly what a user could have typed.
+    // formatQuantityLabel is the inverse of the parser (German comma, canonical
+    // unit), so „1,5 l" + „Milchreis" round-trips back to 1.5 · l · Milchreis.
+    //
+    // Enter always submits `draft.trim()` itself, so the condition is false and
+    // nothing is re-attached. An article whose own name starts with a number,
+    // tapped after being typed in full, also lands here unchanged — which is
+    // required, because only the RAW text triggers the server's escape hatch.
+    const prefix = formatQuantityLabel(parsedDraft.quantity, parsedDraft.unit);
+    const submitted = prefix && name !== draft.trim() ? `${prefix} ${name}` : name;
+
     const formData = new FormData();
     // Client-generated UUID (MVP design §3): stable identity across retries, and
     // it is what lets the action tell us WHICH entry to open the sheet on.
     formData.set("itemId", crypto.randomUUID());
-    formData.set("name", name);
+    formData.set("name", submitted);
     // Absent means „Alle" — inherit the catalog default (see addEntryFromRow).
     if (activeChip !== ALL_CATEGORIES_LABEL) formData.set("category", activeChip);
 
