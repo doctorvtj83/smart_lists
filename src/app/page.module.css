@@ -43,10 +43,28 @@
 /* Footer "Verwaltung" — 13px/600 secondary, per handoff 3c. Padding, not margin,
    so the tap target reaches 44px. */
 .adminLink {
+  position: relative;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
   padding: 12px 2px;
+}
+
+/*
+ * Hit-area expander for Home's Verwaltung link. At 13px text plus 12px padding
+ * it lands on ~42px — two pixels short, which is exactly the kind of miss the
+ * audit test exists to catch.
+ */
+.adminLink::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 @media (min-width: 900px) {

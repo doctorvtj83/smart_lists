@@ -55,6 +55,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  /* Pre-fill preview chips are tappable and carry a 44px hit-area expander; a
+     plain .chip is 27px tall, so the rows need a 17px supplement (27 + 17 = 44). */
+  row-gap: 17px;
   margin-top: 11px;
 }
 

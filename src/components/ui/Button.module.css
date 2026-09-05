@@ -39,8 +39,15 @@
  * admin table's "Zugang entziehen"). They deliberately have no min-height: the
  * handoff makes the row height guarantee the 44px tap target, and forcing it
  * here would blow those rows up.
+ *
+ * Slice 8 amendment: the ROW being 44px tall does not make the BUTTON a 44px
+ * target — only the button element receives the tap, and it is ~21px. The
+ * min-height stays off for the reason above; the ≥44px guarantee now comes from
+ * the transparent ::after expander below, which grows the hit area inside the
+ * row without changing a single drawn pixel.
  */
 .text {
+  position: relative;
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
@@ -48,10 +55,35 @@
 }
 
 .danger {
+  position: relative;
   color: var(--color-danger);
   font-size: 13px;
   font-weight: 600;
   padding: 2px 6px;
+}
+
+.text::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.danger::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* The full-width call to action at the bottom of a sheet. */

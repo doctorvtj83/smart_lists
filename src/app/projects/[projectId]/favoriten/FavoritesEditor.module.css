@@ -10,6 +10,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+  /* The ✕ inside each chip carries a 44px hit-area expander. An .outline chip is
+     32px tall, so the rows need a 12px pitch supplement for two rows of
+     expanders to stay clear of each other (32 + 12 = 44). */
+  row-gap: 12px;
 }
 
 /* Wrapper only — the shared Autocomplete owns its own layout (no side button). */

@@ -64,13 +64,40 @@ function hasHitArea(css: string, selector: string): boolean {
 }
 
 // Every interactive control in the app whose drawn box is smaller than 44px.
-// Task 9 extends this list; a new control that needs a finger belongs here.
+// A new control that needs a finger belongs here. Controls already at 44px
+// (Button .primary/.secondary, RowLink .row, Autocomplete .row, EntryRow .row,
+// DrawerTrigger .trigger, ListMenu .trigger) are compliant by their own
+// min-height and are deliberately absent.
 const CONTROLS: Array<{ file: string; selector: string }> = [
   { file: "src/components/ui/Toggle.module.css", selector: ".track" },
+  { file: "src/app/lists/[listId]/EntryRow.module.css", selector: ".check" },
+  { file: "src/components/ui/Chip.module.css", selector: ".remove" },
+  { file: "src/components/ui/Chip.module.css", selector: ".interactive" },
+  { file: "src/components/ui/ChipTabs.module.css", selector: ".tab" },
+  { file: "src/components/ui/Button.module.css", selector: ".text" },
+  { file: "src/components/ui/Button.module.css", selector: ".danger" },
+  { file: "src/app/admin/page.module.css", selector: ".rowAction" },
+  { file: "src/app/lists/[listId]/page.module.css", selector: ".bannerAction" },
+  { file: "src/app/page.module.css", selector: ".adminLink" },
 ];
 
 describe("touch targets", () => {
   it.each(CONTROLS)("$file $selector offers a ≥44px hit area", ({ file, selector }) => {
     expect(hasHitArea(readCss(file), selector)).toBe(true);
+  });
+
+  // Wrapped rows of expanded chips must not overlap: with a 44px hit area, two
+  // rows whose pitch is smaller than 44px let the upper chip swallow taps meant
+  // for the lower one. chip height + row-gap ≥ 44px is what prevents that.
+  it.each([
+    "src/app/projects/[projectId]/favoriten/FavoritesEditor.module.css",
+    "src/app/lists/[listId]/EntrySheet.module.css",
+    "src/app/projects/[projectId]/NewListSheet.module.css",
+  ])("%s gives wrapped chip rows enough pitch for the expanders", (file) => {
+    const body = ruleBody(readCss(file), ".chips");
+    expect(body).not.toBeNull();
+    const rowGap = /row-gap:\s*(\d+)px/.exec(body as string);
+    expect(rowGap, "no explicit row-gap on .chips").not.toBeNull();
+    expect(Number(rowGap?.[1])).toBeGreaterThanOrEqual(12);
   });
 });

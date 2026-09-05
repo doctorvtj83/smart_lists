@@ -62,6 +62,7 @@
    12px/600, never filled — filled buttons in list rows are forbidden by the
    handoff's destructive-action pattern. */
 .rowAction {
+  position: relative;
   font-size: 12px;
   font-weight: 600;
   color: var(--color-accent);
@@ -70,6 +71,22 @@
   padding: 6px 2px;
   cursor: pointer;
   white-space: nowrap;
+}
+
+/*
+ * Hit-area expander for the admin table's inline actions (handoff ≥44px).
+ * `.rowActionDanger` composes `.rowAction`, so it inherits this for free.
+ */
+.rowAction::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .rowActionDanger {
