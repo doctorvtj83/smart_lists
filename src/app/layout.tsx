@@ -1,4 +1,5 @@
 import { Figtree } from "next/font/google";
+import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import { appMetadata, appViewport } from "@/lib/pwa/app-metadata";
 import "./globals.css";
 
@@ -27,7 +28,11 @@ export default function RootLayout({
   // and screen-reader pronunciation.
   return (
     <html lang="de" className={figtree.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Renders nothing; registers /sw.js in production after hydration. */}
+        <ServiceWorkerRegistrar />
+      </body>
     </html>
   );
 }
