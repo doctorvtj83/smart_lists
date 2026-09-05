@@ -23,6 +23,23 @@ describe("middleware matcher", () => {
     expect(middlewareApplies("/developer")).toBe(true);
   });
 
+  it("excludes only /offline — not /offline-mode", () => {
+    // The service worker precaches this route at install time, before any user
+    // has signed in. Without the exemption it would cache a /login redirect and
+    // every offline navigation would show the login screen instead.
+    expect(middlewareApplies("/offline")).toBe(false);
+    expect(middlewareApplies("/offline-mode")).toBe(true);
+  });
+
+  it("leaves the PWA files reachable without a session", () => {
+    // These pass through the matcher's `.*\..*` dot exclusion, not a named rule —
+    // pinned here so a future matcher edit cannot break installability silently.
+    expect(middlewareApplies("/sw.js")).toBe(false);
+    expect(middlewareApplies("/manifest.webmanifest")).toBe(false);
+    expect(middlewareApplies("/icons/icon-192.png")).toBe(false);
+    expect(middlewareApplies("/apple-touch-icon.png")).toBe(false);
+  });
+
   it("still excludes auth pages and static assets", () => {
     expect(middlewareApplies("/login")).toBe(false);
     expect(middlewareApplies("/api/auth/callback/google")).toBe(false);
