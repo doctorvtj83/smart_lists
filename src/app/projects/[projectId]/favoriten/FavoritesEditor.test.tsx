@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FavoriteArticle } from "@/lib/favorites/favorites";
@@ -18,21 +18,41 @@ const brot: FavoriteArticle = {
   defaultUnit: null,
 };
 
-function renderEditor(overrides: Partial<Parameters<typeof FavoritesEditor>[0]> = {}) {
-  const props = {
+// Keeps every render on the new project-addressed prop contract while allowing
+// individual tests to replace only the action or favorite data they exercise.
+function props(overrides: Partial<Parameters<typeof FavoritesEditor>[0]> = {}) {
+  return {
     favorites: [milch, brot],
-    articles: [
-      { id: "c1", name: "Milch", defaultCategory: "Molkerei" },
-      { id: "c2", name: "Milchreis", defaultCategory: null },
-    ],
+    projectId: "project-1",
     addAction: vi.fn(),
     removeAction: vi.fn(),
     ...overrides,
   };
-  return { ...render(<FavoritesEditor {...props} />), props };
+}
+
+// Centralizes the routine component render so behavior tests stay focused on
+// their user-visible assertion rather than repeating setup details.
+function renderEditor(overrides: Partial<Parameters<typeof FavoritesEditor>[0]> = {}) {
+  const componentProps = props(overrides);
+  return { ...render(<FavoritesEditor {...componentProps} />), props: componentProps };
 }
 
 describe("FavoritesEditor", () => {
+  beforeEach(() => {
+    // Preserve the catalog fixture the pre-Slice-8 tests used to receive as a
+    // prop; those tests should now exercise the same rows through the endpoint.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { id: "c1", name: "Milch", defaultCategory: "Molkerei", defaultUnit: "l" },
+          { id: "c2", name: "Milchreis", defaultCategory: null, defaultUnit: null },
+        ],
+      }),
+    );
+  });
+
   it("explains what favourites do", () => {
     renderEditor();
 
@@ -79,7 +99,25 @@ describe("FavoritesEditor", () => {
 
     await userEvent.type(screen.getByLabelText("Artikelname"), "Milc");
 
-    expect(screen.getByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
+  });
+
+  it("offers suggestions fetched for the typed query", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { id: "c1", name: "Milch", defaultCategory: "Molkerei", defaultUnit: "l" },
+        ],
+      }),
+    );
+
+    render(<FavoritesEditor {...props()} />);
+    await user.type(screen.getByLabelText("Artikelname"), "mil");
+
+    expect(await screen.findByRole("button", { name: /Milch/ })).toBeDefined();
   });
 
   it("adds the picked article as a favourite", async () => {
@@ -87,7 +125,7 @@ describe("FavoritesEditor", () => {
     renderEditor({ addAction });
 
     await userEvent.type(screen.getByLabelText("Artikelname"), "Milc");
-    await userEvent.click(screen.getByRole("button", { name: /Milchreis/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Milchreis/ }));
 
     const formData = addAction.mock.calls[0][0] as FormData;
     expect(formData.get("name")).toBe("Milchreis");

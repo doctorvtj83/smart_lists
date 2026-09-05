@@ -6,7 +6,6 @@ import { getProjectNav } from "@/lib/projects/nav";
 import { requireMembership } from "@/lib/projects/guard";
 import { addFavorite, listFavorites, removeFavorite } from "@/lib/favorites/favorites";
 import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
-import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DrawerTrigger } from "@/components/nav/DrawerTrigger";
 import { FavoritesEditor } from "./FavoritesEditor";
@@ -31,13 +30,9 @@ export default async function FavoritesPage({ params }: Props) {
   const nav = await getProjectNav(prisma, projectId, userId);
   if (!nav) redirect("/projects");
 
-  // Two independent reads → one round-trip of latency. CATALOG_DATALIST_LIMIT
-  // (not searchCatalog's short default) seeds the Autocomplete catalog; the
-  // browser filters that array with buildAutocomplete on every keystroke.
-  const [favorites, catalogItems] = await Promise.all([
-    listFavorites(prisma, projectId),
-    searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
-  ]);
+  // One read now, not two: the add row's dropdown fetches the catalog per
+  // keystroke (useCatalogSearch), so this page no longer loads it at all.
+  const favorites = await listFavorites(prisma, projectId);
 
   /**
    * Favourites by NAME, not by id: it is friendlier, and it lets a member
@@ -77,9 +72,7 @@ export default async function FavoritesPage({ params }: Props) {
       <main className={styles.content}>
         <FavoritesEditor
           favorites={favorites}
-          // The whole catalog row, not just the name: the dropdown shows each
-          // article's default category as its sub-label.
-          articles={catalogItems}
+          projectId={projectId}
           addAction={addFavoriteAction}
           removeAction={removeFavoriteAction}
         />
