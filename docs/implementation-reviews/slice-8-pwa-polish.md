@@ -7,11 +7,19 @@ the MVP supports offline data editing. It adds app metadata and generated icons,
 service worker with a static German navigation fallback, a repository-wide 44px touch-target audit,
 and fetch-on-keystroke catalog autocomplete shared by list entries and favorites.
 
-The slice is complete within its intended scope. The worker deliberately never caches API responses or
-mutations; real offline collaboration remains a Phase 2 operation-queue feature. The complete automated
-suite passes with **84 test files / 659 tests**. The production browser checklist passed items 1–3 and
-5–12. Item 4 was **SKIPPED** because the available Cursor/Electron embed cannot apply CDP Offline to the
-service-worker network target and paints its own interstitial when the origin is killed. Item 13 was
+The implementation is complete within its intended scope, with two explicit manual-verification
+caveats. The worker deliberately never caches API responses or mutations; real offline collaboration
+remains a Phase 2 operation-queue feature. Vitest passes with **84 test files / 659 tests**, but the
+repository-wide verification is not wholly green: full lint fails on generated leftover
+`.worktrees/.next` output, and standalone `tsc` reports inherited test-mock errors. The production
+browser checklist passed items 1–3 and 5–12.
+
+Item 4 was **SKIPPED**, not passed: the available Cursor/Electron embed cannot apply page-level CDP
+Offline to the service-worker network target and paints its own main-frame interstitial when localhost
+is unreachable. Installability, an activated and controlling `/sw.js`, the populated
+`smart-lists-v1` cache with German `/offline` HTML, and the real-worker `sw.test.ts` rejected-navigation
+case stand in as coverage of the prerequisites and fallback branch; they do **not** replace the missing
+browser end-to-end observation of the German page and its “Erneut versuchen” action. Item 13 was also
 **SKIPPED** because no iPhone or iOS Simulator was available on the LAN.
 
 Verification details:
@@ -227,7 +235,9 @@ rather than broadening `sw.js` into an unsafe API cache.
 verification. The inherited `middleware` → `proxy` migration and member-path browser smoke remain open.
 Autocomplete arrow-key navigation remains a deliberate design cut. The Slice 8 minor that
 `search.test.ts` still describes the behavior as “starts with” although the implementation is substring
-matching is left for later cleanup.
+matching is left for later cleanup. A real Chrome/DevTools run should still exercise live offline
+navigation and the retry action when that environment is available; this is a verification follow-up,
+not reopened service-worker product debt.
 
 ## Hydration overlay investigation
 
