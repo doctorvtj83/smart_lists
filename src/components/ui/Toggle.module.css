@@ -29,3 +29,27 @@
 .track[data-checked="true"] .knob {
   left: 19.5px;
 }
+
+/*
+ * Hit-area expander (handoff § PWA / Mobil: "Tap-Targets ≥44px").
+ *
+ * The design draws a 42×25 track and that measurement is binding, so the target
+ * cannot be grown by resizing the control. A transparent ::after centred on the
+ * track with a 44px minimum on both axes gives the finger a full target while
+ * every drawn pixel stays exactly where the handoff put it. `.track` is already
+ * position: relative, so the absolute child has the right containing block.
+ *
+ * This is the same pattern every other sub-44px control in the app uses; see
+ * src/test/touch-targets.test.ts for the enforced list.
+ */
+.track::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
+}
