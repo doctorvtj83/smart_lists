@@ -1,5 +1,5 @@
-import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
+import { appMetadata, appViewport } from "@/lib/pwa/app-metadata";
 import "./globals.css";
 
 // next/font self-hosts the font at build time (no request to Google at runtime)
@@ -12,19 +12,11 @@ const figtree = Figtree({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Smart Lists",
-  description: "Gemeinsame Listen für Haushalt, Einkauf und Reisen.",
-};
-
-// viewportFit: "cover" is what makes env(safe-area-inset-*) report real values
-// on an iPhone — without it the safe-area tokens in globals.css are always 0.
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#fcfcfb",
-};
+// Re-exported, not defined here: Next.js only requires the named exports to
+// exist on the layout module. The objects live in src/lib/pwa/app-metadata.ts so
+// a test can import them without pulling in globals.css and next/font.
+export const metadata = appMetadata;
+export const viewport = appViewport;
 
 export default function RootLayout({
   children,
