@@ -3,7 +3,7 @@
  * article catalog (MVP design §4.4, §5).
  *
  * Pattern: thin HTTP adapter — identity → membership guard → core function → response. All the real
- * logic (prefix match, lean shape, cap) lives in searchCatalog, so this file stays trivial and the
+ * logic (substring match, lean shape, cap) lives in searchCatalog, so this file stays trivial and the
  * behavior is unit-tested at the core, not here.
  */
 
@@ -18,7 +18,7 @@ import { searchCatalog } from "@/lib/catalog/search";
 type Context = { params: Promise<{ projectId: string }> };
 
 /**
- * GET /api/projects/:projectId/catalog?q=<prefix>
+ * GET /api/projects/:projectId/catalog?q=<query>
  * Autocomplete suggestions for the project's catalog. Member-level.
  * `q` is optional: blank/absent returns the first CATALOG_SEARCH_LIMIT articles alphabetically.
  * Response: 200 CatalogSuggestion[]

@@ -21,7 +21,7 @@ describe("buildAutocomplete", () => {
   });
 
   // Substring, not prefix: the design's dropdown finds "Buttermilch" for "milch".
-  // searchCatalog stays prefix-only — see the implementation comment.
+  // searchCatalog uses the same rule so server paging cannot discard that match.
   it("matches anywhere in the name, case-insensitively", () => {
     const { options } = buildAutocomplete(catalog, "MILCH");
     expect(options.map((option) => option.name)).toEqual(["Milch", "Milchreis", "Buttermilch"]);

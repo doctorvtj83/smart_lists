@@ -1,31 +1,18 @@
 import { normalizeName } from "./normalize";
 
 /**
- * What the trailing entry row's dropdown offers for a typed prefix
+ * What the trailing entry row's dropdown offers for a typed query
  * (handoff §10: "Autocomplete-Dropdown über der Zeile").
  *
- * WHY this filters in the browser instead of calling GET /catalog per keystroke:
- * the screen already has the project's whole catalog as a prop (the page reads it
- * with CATALOG_DATALIST_LIMIT), a household catalog is at most a few hundred
- * articles, and a request per keystroke on a phone is the one thing this row
- * cannot afford. The server endpoint stays for any future caller.
+ * The screens do not receive the whole catalog as a prop. `useCatalogSearch`
+ * fetches a debounced page of at most CATALOG_SEARCH_LIMIT substring matches per
+ * query, and this pure function ranks that page for the compact dropdown.
+ * `searchCatalog` deliberately uses the same substring rule, so "milch" can find
+ * "Buttermilch" before the server has a chance to discard that valid match.
  *
- * SLICE 8 AMENDMENT: the premise above changed. The screens no longer receive
- * the catalog as a prop — useCatalogSearch fetches a debounced page of at most
- * CATALOG_SEARCH_LIMIT matches per keystroke, and this function now ranks THAT
- * page. Everything below is unchanged and still pure; only the provenance of
- * `articles` moved. Two consequences worth knowing: the substring rule below is
- * why searchCatalog had to switch from `startsWith` to `contains` (otherwise the
- * server would pre-filter away the very matches this function looks for), and if
- * the server ever truncates at the limit, the `exists` check can offer a
- * „neu anlegen" row for an article that does exist — harmless, because
+ * If the server ever truncates at the limit, the `exists` check can offer a
+ * „neu anlegen" row for an article that does exist. That is harmless because
  * getOrCreateCatalogItem is idempotent on the normalized name and simply finds it.
- *
- * WHY substring matching while `searchCatalog` uses a prefix: they answer
- * different questions. searchCatalog pages the catalog in the database and must
- * use an indexable prefix; this function ranks an already-loaded array, where
- * "milch" finding "Buttermilch" is exactly what the design's dropdown shows.
- * (`CatalogBrowser`'s search made the same call for the same reason.)
  */
 
 /** How many articles the dropdown shows. Three, per the prototype. */

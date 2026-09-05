@@ -71,7 +71,7 @@ export function CatalogBrowser({ articles, createAction, editAction }: CatalogBr
   );
   // Reusing normalizeName means the filter obeys the same identity rule as the
   // catalog ("MIL" finds "Milch"). Substring rather than prefix on purpose: this
-  // is a management screen, not autocomplete — searchCatalog stays prefix-only.
+  // management screen and searchCatalog share the same find-anywhere behavior.
   const needle = normalizeName(query);
   const visible = needle
     ? articles.filter((article) => normalizeName(article.name).includes(needle))

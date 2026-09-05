@@ -32,7 +32,7 @@ async function seedProjectWithCatalog(names: string[]): Promise<string> {
 }
 
 describe("searchCatalog", () => {
-  it("returns items whose normalized name starts with the query (case-insensitive)", async () => {
+  it("returns items whose normalized name contains the query (case-insensitive)", async () => {
     await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
     await getOrCreateCatalogItem(db, { projectId, name: "Milchreis" });
     await getOrCreateCatalogItem(db, { projectId, name: "Brot" });

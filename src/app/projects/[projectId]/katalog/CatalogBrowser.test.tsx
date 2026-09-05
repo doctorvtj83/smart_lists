@@ -58,7 +58,7 @@ describe("CatalogBrowser", () => {
   });
 
   // Substring, not prefix: on a management screen "nudel" should find "Vollkorn-
-  // nudeln". (searchCatalog stays prefix-only — that is autocomplete.)
+  // nudeln". The server-side catalog search follows the same find-anywhere rule.
   it("matches anywhere in the name, not only at the start", async () => {
     renderBrowser();
 
