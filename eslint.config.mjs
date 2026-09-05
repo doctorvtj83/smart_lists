@@ -19,6 +19,21 @@ const eslintConfig = defineConfig([
     "docs/design/**",
     ".remember/**",
   ]),
+  // public/sw.js runs in a ServiceWorkerGlobalScope, not a window: `self`,
+  // `caches` and `fetch` are its ambient globals. Declaring them here is what
+  // keeps `npm run lint` meaningful for that file instead of a wall of no-undef.
+  {
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: {
+        self: "readonly",
+        caches: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+        Promise: "readonly",
+      },
+    },
+  },
 ]);
 
 export default eslintConfig;
