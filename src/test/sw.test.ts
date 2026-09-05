@@ -86,6 +86,9 @@ describe("service worker", () => {
     const cachedCopy = { body: "cached copy" };
     const networkResponse = {
       body: "network response",
+      // This test exercises the successful-response cache path; the explicit
+      // flag keeps the stub faithful now that the worker rejects non-OK writes.
+      ok: true,
       clone: vi.fn(() => cachedCopy),
     };
 
@@ -124,6 +127,39 @@ describe("service worker", () => {
 
     finishCacheWrite();
     await expect(responded).resolves.toBe(networkResponse);
+    vi.unstubAllGlobals();
+  });
+
+  it("does not persist a non-OK cache-first response", async () => {
+    const { listeners } = loadServiceWorker();
+    const request = {
+      url: "https://x.test/_next/static/chunks/main.js",
+      method: "GET",
+      mode: "no-cors",
+    };
+    // A real Response pins the platform's `ok` semantics: deploy-time 404/502
+    // responses must reach the page without becoming permanent cache entries.
+    const networkResponse = new Response("Bad Gateway", { status: 502 });
+    const put = vi.fn();
+    vi.stubGlobal("caches", {
+      match: vi.fn().mockResolvedValue(undefined),
+      open: vi.fn().mockResolvedValue({ put }),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(networkResponse));
+
+    let responded: unknown;
+    const handler = listeners.fetch as FetchHandler;
+    handler({
+      request,
+      // Capture respondWith's Promise so the test observes the real worker path
+      // through fetch rather than duplicating its cache decision.
+      respondWith: (response) => {
+        responded = response;
+      },
+    });
+
+    await expect(responded).resolves.toBe(networkResponse);
+    expect(put).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 

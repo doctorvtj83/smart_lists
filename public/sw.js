@@ -96,6 +96,10 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
+          // Never pin a deploy-time 404/502 under an immutable chunk URL: return
+          // the network error as-is so a later request can recover.
+          if (!response.ok) return response;
+
           // Clone before returning: a Response body can only be read once, and
           // the cache write and the page both need it.
           const copy = response.clone();
