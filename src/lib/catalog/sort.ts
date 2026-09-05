@@ -24,11 +24,12 @@ export function compareGermanText(a: string, b: string): number {
 // Comparator for Array.prototype.sort over article DISPLAY names (CatalogItem.name — never
 // normalizedName, which is a lowercase identity key and not meant for humans).
 //
-// NOTE: searchCatalog deliberately does NOT use this and keeps its Postgres `orderBy: { name: "asc" }`.
-// It applies `take: limit` in the query, so sorting in JS afterwards would only reorder an
-// already-truncated page — and worse, it could change WHICH articles survive the cut. Fixing that
-// properly means moving the cut client-side (a Slice 8 concern, when the datalist is replaced by a
-// fetch-on-keystroke dropdown). Do not "unify" it by adding this comparator there.
+// NOTE (updated in Slice 8): searchCatalog now DOES use this comparator. It previously kept Postgres'
+// `orderBy: { name: "asc" }` with `take: limit` in the query, which meant a JS sort afterwards would
+// only reorder an already-truncated page — and could change WHICH articles survived the cut. Slice 8
+// removed the SQL `take` and moved both the sort and the cut into JS, in that order, which is exactly
+// the fix this note asked for. Any new article list must still use this comparator; there is no longer
+// an exception.
 export function compareArticleNames(a: string, b: string): number {
   return compareGermanText(a, b);
 }

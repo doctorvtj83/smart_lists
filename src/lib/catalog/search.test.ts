@@ -21,6 +21,16 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+// Seeds the current test project's catalog from display names so ordering-focused tests can keep
+// their setup concise while still exercising the real catalog creation and normalization path.
+async function seedProjectWithCatalog(names: string[]): Promise<string> {
+  for (const name of names) {
+    await getOrCreateCatalogItem(db, { projectId, name });
+  }
+
+  return projectId;
+}
+
 describe("searchCatalog", () => {
   it("returns items whose normalized name starts with the query (case-insensitive)", async () => {
     await getOrCreateCatalogItem(db, { projectId, name: "Milch" });
@@ -67,5 +77,28 @@ describe("searchCatalog", () => {
     await getOrCreateCatalogItem(db, { projectId: other.id, name: "Milch" });
     const results = await searchCatalog(db, projectId, "Milch");
     expect(results).toHaveLength(0);
+  });
+
+  it("matches a substring, not only a prefix", async () => {
+    // The dropdown has always found "Buttermilch" from "milch" — that behaviour
+    // used to come from buildAutocomplete filtering a fully-loaded catalog in
+    // the browser. Once the dropdown fetches per keystroke, the SERVER has to
+    // answer the same question or the behaviour silently disappears.
+    const projectId = await seedProjectWithCatalog(["Milch", "Buttermilch", "Brot"]);
+
+    const results = await searchCatalog(db, projectId, "milch");
+
+    expect(results.map((item) => item.name)).toEqual(["Buttermilch", "Milch"]);
+  });
+
+  it("applies the German order BEFORE the cut, not after", async () => {
+    // "Äpfel" sorts next to "Apfel" in German but after "Zucker" by code point.
+    // With the cut in SQL under the database collation, a limit of 2 could drop
+    // "Äpfel" entirely; ordering in JS first is what makes the cut correct.
+    const projectId = await seedProjectWithCatalog(["Zucker", "Äpfel", "Apfel"]);
+
+    const results = await searchCatalog(db, projectId, "", 2);
+
+    expect(results.map((item) => item.name)).toEqual(["Apfel", "Äpfel"]);
   });
 });
