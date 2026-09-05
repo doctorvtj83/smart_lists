@@ -66,7 +66,7 @@ under the table). Each slice is working, tested software on its own.
 | 5 | **Favorites + Suggestions** | Per-project favorites, pure suggestion read function (favorites ∪ N-of-M statistic), pre-fill | [2026-07-20-slice-5-favorites-suggestions.md](2026-07-20-slice-5-favorites-suggestions.md) | ✅ Done / verified |
 | 6 | **Completion + Archive** | Complete a list (manual + auto-suggest when "all checked"), archive view | [2026-07-20-slice-6-completion-archive.md](2026-07-20-slice-6-completion-archive.md) | ✅ Done / verified |
 | 7 | **Polling / Sync** | Cursor-based delta endpoint, client polling (1–3 s), last-writer-wins merge | [2026-07-20-slice-7-polling-sync.md](2026-07-20-slice-7-polling-sync.md) | ✅ Done / verified |
-| 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | _to be created_ | ⬜ Open |
+| 8 | **PWA polish** | Manifest, service worker, iPhone optimization (safe areas, home screen, touch) | [2026-09-05-slice-8-pwa-polish.md](2026-09-05-slice-8-pwa-polish.md) | ✅ Done / verified |
 | 9 | **Admin area (allowlist + admin rights)** | `/admin` page: invite/revoke allowlist emails, grant/revoke `is_admin`, remove a revoked person from all projects | [2026-07-26-slice-9-admin-area.md](2026-07-26-slice-9-admin-area.md) | ✅ Done / verified |
 | 10 | **Catalog management** | Catalog edit operations (rename with normalized-name collision check, edit default category/unit, delete guarded by list usage, **create an article directly**) + `/projects/[id]/katalog` screen with search and inline edit panel | [2026-08-02-slice-10-catalog-management.md](2026-08-02-slice-10-catalog-management.md) | ✅ Done / verified |
 | 11 | **App structure + navigation** | Project drawer + desktop sidebar incl. **project switcher**; split the project screen into `/archiv`, `/favoriten`, `/mitglieder`; inline project rename; **new-list sheet with de-selectable pre-fill preview** | [2026-08-02-slice-11-app-structure-navigation.md](2026-08-02-slice-11-app-structure-navigation.md) | ✅ Done / verified |
@@ -78,7 +78,7 @@ under the table). Each slice is working, tested software on its own.
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
-**Build order for what is left: Slice 8 (PWA polish)**, then Slice 16 only if real use asks for it.
+**Build order for what is left: Slice 16 (optional)**, only if real use asks for it.
 
 > **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
 > Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
@@ -228,7 +228,7 @@ UI rework + design (2026-08-01):
 
 8 PWA polish: final polish at the end, AFTER 10–15.
 
-Build order for what is left:  13 → 14 → 10 → 11 → 12 → 15 → 8   ·   16 only if real use asks for it
+Build order for what is left: Slice 16 (optional), only if real use asks for it
 ```
 
 - Slice 2 needs 1 (auth identity for membership checks).
@@ -297,6 +297,15 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-09-05 — Slice 8: PWA polish — ✅ Done / verified
+- **Delivered:** Installable PWA metadata and generated standard/maskable/Apple icons; a production-only root service worker with versioned shell precaching and a static German navigation fallback; repository-wide ≥44px touch targets with wrapped-row spacing; lean category/unit vocabulary reads; and shared, abortable fetch-on-keystroke autocomplete on list and Favoriten screens. The full architectural review is in `docs/implementation-reviews/slice-8-pwa-polish.md`.
+- **Tested:** `npm test` → after one transient Prisma advisory-lock timeout, clean retry **84 files / 659 tests passed**. `npm run lint` → exit 1 with **374 errors / 4,536 warnings**, from generated `.worktrees/slice-15-quantity-parsing/.next/**`; targeted ESLint over every changed Slice 8 `src/` file → exit 0, **0 errors / 14 inherited `ListBody.test.tsx` warnings**. `npx tsc --noEmit` → exit 2 from the five inherited test-mock typing errors in `RevokeSheet.test.tsx`, `CatalogBrowser.test.tsx`, and `InviteForm.test.tsx`; no Slice 8 file reported. `npm run build` → exit 0 under Next.js 16.2.9, with the inherited `middleware` deprecation warning. Authenticated production browser checklist on `:3000` → **11 PASS / 2 SKIPPED**: item 4 skipped because Cursor/Electron cannot apply page-level CDP Offline to the service-worker target and paints its own interstitial when localhost is killed; item 13 skipped because no iPhone/iOS Simulator was available. Manifest/icons, active controlling worker, `smart-lists-v1`, online network-only APIs, six 375px layouts, touch targets, wrapped-chip removal, one-request debounce, quantity completion, substring search, and Favoriten suggestions all passed.
+- **Deviations from the plan:** The worker stays intentionally shell-only: no API response cache and no offline mutation queue (Phase 2). Local authenticated `next start` verification required `trustHost: true` in `src/auth.ts`, which was not in the original Slice 8 plan; Auth.js otherwise rejects localhost as `UntrustedHost` in production. True DevTools-Network-Offline and physical iPhone installation could not be observed in this environment and were recorded as skips, not passes. Minor leftover: `search.test.ts` still describes the search as “starts with” although behavior is now substring matching.
+- **Follow-up decisions for later slices:** `public/sw.js` remains a navigation-shell worker; real offline writes must replay stable-ID entry operations rather than cache APIs. `getCatalogVocabulary` is the category/unit read seam, while `useCatalogSearch` + `searchCatalog` own remote suggestions. Autocomplete arrow-key navigation remains a deliberate design cut. Slice 16's remote-change flash remains optional and last.
+- **Inherited open items:** **Closed in Slice 8:** Toggle <44px debt; the native-datalist / `CATALOG_DATALIST_LIMIT` debt; and the `PageHeader` hydration overlay, confirmed as an external Cursor `data-cursor-ref` artefact by clean-profile development and authenticated production controls. **Carried forward:** Slice 7's remaining minor review notes; Autocomplete arrow-key navigation (deliberate cut); Next.js `middleware` → `proxy` migration; and member-path browser smoke requiring a second Google account.
+- **Next open slice:** **Slice 16 (per-row remote-change flash, optional)**, only if real use asks for it.
+- **Commit(s):** `6d4a179`, `33273c8`, `eaf5de9`, `3539b86`, `1b80157`, `a74a757`, `fb8b362`, `9d372ed`, `7949d3e`, `d7e9e5a`, `7d1c391`, `e80d03e`, `94d0494`, `001f128`, `60cb763`, `ec8504d`, `300349b`, `bfa2007`, `ca622da`, `468de5b`, `1eb12a5`, plus this documentation commit.
 
 ### 2026-09-02 — Slice 15: Quantity parsing in the entry row — ✅ Done / verified
 - **Delivered:** A pure, catalog-blind `parseEntryInput` with a fixed German base-unit vocabulary plus project `defaultUnit` values; server-side integration in `addEntryFromRow`; quantity-aware autocomplete and text-prefix re-attachment in `ListBody`; conservative refusals and the existing-article escape hatch. The catalog receives only the effective article name, while quantity/unit travel through the unchanged ordinary `add_item` operation. Implementation review: `docs/implementation-reviews/slice-15-quantity-parsing.md`.
