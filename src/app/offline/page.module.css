@@ -1,0 +1,10 @@
+/* Centres the empty state in the viewport: this screen has no header and no
+   navigation, so the safe-area padding lives here instead of on a PageHeader. */
+.screen {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + var(--safe-top)) var(--screen-padding)
+    calc(24px + var(--safe-bottom));
+}
