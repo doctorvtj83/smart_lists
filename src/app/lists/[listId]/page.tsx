@@ -5,7 +5,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/http/errors";
-import { CATALOG_DATALIST_LIMIT, searchCatalog } from "@/lib/catalog/search";
+import { getCatalogVocabulary } from "@/lib/catalog/vocabulary";
 import { requireListAccess } from "@/lib/lists/access";
 import {
   allItemsChecked,
@@ -88,12 +88,13 @@ export default async function ListDetailPage({ params }: Props) {
   }
 
   // Two independent reads → Promise.all: one round-trip of latency, not two.
-  const [list, catalog] = await Promise.all([
+  const [list, vocabulary] = await Promise.all([
     getListWithItems(prisma, listId),
-    // "" = browse mode with the large cap: the trailing row filters this array in
-    // the browser (buildAutocomplete), so anything not sent here is never
-    // suggestable. See CATALOG_DATALIST_LIMIT.
-    searchCatalog(prisma, projectId, "", CATALOG_DATALIST_LIMIT),
+    // The category chips and the parser's unit vocabulary — two short string
+    // arrays. Before Slice 8 this read the whole catalog (CATALOG_DATALIST_LIMIT)
+    // because the dropdown filtered it in the browser; the dropdown now fetches
+    // per keystroke, so the rows themselves have no reader here any more.
+    getCatalogVocabulary(prisma, projectId),
   ]);
   // Deleted between guard and read (rare race) — same redirect as an unknown list.
   if (!list) redirect("/projects");
@@ -112,7 +113,7 @@ export default async function ListDetailPage({ params }: Props) {
 
   // The entry sheet's chips: what the catalog remembers ∪ what this list uses.
   const categories = knownCategories(
-    catalog.map((article) => article.defaultCategory),
+    vocabulary.categories,
     entries.map((entry) => entry.category),
   );
 
@@ -380,7 +381,8 @@ export default async function ListDetailPage({ params }: Props) {
 
       <ListBody
         entries={entries}
-        articles={catalog}
+        projectId={projectId}
+        units={vocabulary.units}
         categories={categories}
         frozen={isCompleted}
         addAction={addEntryAction}

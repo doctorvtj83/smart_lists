@@ -10,6 +10,17 @@ import { normalizeName } from "./normalize";
  * articles, and a request per keystroke on a phone is the one thing this row
  * cannot afford. The server endpoint stays for any future caller.
  *
+ * SLICE 8 AMENDMENT: the premise above changed. The screens no longer receive
+ * the catalog as a prop — useCatalogSearch fetches a debounced page of at most
+ * CATALOG_SEARCH_LIMIT matches per keystroke, and this function now ranks THAT
+ * page. Everything below is unchanged and still pure; only the provenance of
+ * `articles` moved. Two consequences worth knowing: the substring rule below is
+ * why searchCatalog had to switch from `startsWith` to `contains` (otherwise the
+ * server would pre-filter away the very matches this function looks for), and if
+ * the server ever truncates at the limit, the `exists` check can offer a
+ * „neu anlegen" row for an article that does exist — harmless, because
+ * getOrCreateCatalogItem is idempotent on the normalized name and simply finds it.
+ *
  * WHY substring matching while `searchCatalog` uses a prefix: they answer
  * different questions. searchCatalog pages the catalog in the database and must
  * use an indexable prefix; this function ranks an already-loaded array, where

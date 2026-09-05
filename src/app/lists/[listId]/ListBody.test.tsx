@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ListEntry } from "./EntryRow";
 import { ListBody } from "./ListBody";
@@ -20,13 +20,17 @@ const butter = entry("22222222-2222-4222-8222-222222222222", "Butter", "Molkerei
 const apfel = entry("33333333-3333-4333-8333-333333333333", "Apfel", "Obst & Gemüse");
 const duebel = entry("44444444-4444-4444-8444-444444444444", "Dübel", null);
 
-function renderBody(overrides: Partial<Parameters<typeof ListBody>[0]> = {}) {
-  const props = {
+const defaultCatalog = [
+  { id: "a1", name: "Milch", defaultCategory: "Molkerei", defaultUnit: null },
+  { id: "a2", name: "Milchreis", defaultCategory: null, defaultUnit: null },
+];
+
+/** Supplies the complete ListBody contract while letting each test override one concern. */
+function props(overrides: Partial<Parameters<typeof ListBody>[0]> = {}) {
+  return {
     entries: [milch, butter, apfel, duebel],
-    articles: [
-      { id: "a1", name: "Milch", defaultCategory: "Molkerei", defaultUnit: null },
-      { id: "a2", name: "Milchreis", defaultCategory: null, defaultUnit: null },
-    ],
+    projectId: "p1",
+    units: ["l"],
     categories: ["Molkerei", "Obst & Gemüse"],
     frozen: false,
     addAction: vi.fn(async () => ENTRY_FORM_IDLE),
@@ -35,8 +39,27 @@ function renderBody(overrides: Partial<Parameters<typeof ListBody>[0]> = {}) {
     removeAction: vi.fn(),
     ...overrides,
   };
-  return { ...render(<ListBody {...props} />), props };
 }
+
+/** Renders the shared contract and returns it for tests that emulate a server refresh. */
+function renderBody(overrides: Partial<Parameters<typeof ListBody>[0]> = {}) {
+  const listBodyProps = props(overrides);
+  return { ...render(<ListBody {...listBodyProps} />), props: listBodyProps };
+}
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => defaultCatalog,
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("ListBody — chips", () => {
   it("derives the chip row from the entries, Alle first and Ohne Kategorie last", () => {
@@ -133,8 +156,47 @@ describe("ListBody — trailing row", () => {
 
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Milc");
 
-    expect(screen.getByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "„Milc“ neu anlegen" })).toBeInTheDocument();
+  });
+
+  it("offers suggestions fetched for the typed query", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { id: "c1", name: "Milch", defaultCategory: "Molkerei", defaultUnit: "l" },
+        ],
+      }),
+    );
+
+    // Keep the fixture list empty so `/Milch/` identifies the fetched dropdown
+    // button rather than the existing "Milch bearbeiten" entry-row button.
+    render(<ListBody {...props({ entries: [] })} />);
+    await user.type(screen.getByLabelText("Eintrag hinzufügen"), "mil");
+
+    expect(await screen.findByRole("button", { name: /Milch/ })).toBeDefined();
+  });
+
+  it("searches the parsed article name when a quantity was typed", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // "l" is in the project's unit vocabulary, so the parser peels "1,5 l" off
+    // and the request must ask about "Mil" — asking about the raw text would
+    // find nothing and the dropdown would go silent mid-word.
+    render(<ListBody {...props({ units: ["l"] })} />);
+    await user.type(screen.getByLabelText("Eintrag hinzufügen"), "1,5 l Mil");
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/projects/p1/catalog?q=Mil",
+        expect.anything(),
+      ),
+    );
   });
 });
 
@@ -288,7 +350,7 @@ describe("ListBody — quantity prefix (Slice 15)", () => {
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "1,5 l Mil");
 
     // The dropdown found the ARTICLE part…
-    expect(screen.getByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Milchreis/ })).toBeInTheDocument();
     // …and the create row promises the name the catalog will actually get.
     expect(screen.getByRole("button", { name: "„Mil“ neu anlegen" })).toBeInTheDocument();
   });
@@ -309,7 +371,7 @@ describe("ListBody — quantity prefix (Slice 15)", () => {
     renderBody({ addAction });
 
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "1,5 l Mil");
-    await userEvent.click(screen.getByRole("button", { name: /Milchreis/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Milchreis/ }));
 
     const formData = addAction.mock.calls[0][1] as FormData;
     expect(formData.get("name")).toBe("1,5 l Milchreis");
@@ -320,7 +382,7 @@ describe("ListBody — quantity prefix (Slice 15)", () => {
     renderBody({ addAction });
 
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Milc");
-    await userEvent.click(screen.getByRole("button", { name: /Milchreis/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Milchreis/ }));
 
     const formData = addAction.mock.calls[0][1] as FormData;
     expect(formData.get("name")).toBe("Milchreis");
@@ -329,28 +391,37 @@ describe("ListBody — quantity prefix (Slice 15)", () => {
   // The raw text is searched FIRST, so an article whose own name starts with a
   // number still finds itself (the server-side escape hatch's client half).
   it("keeps searching the raw text for an article that starts with a number", async () => {
-    renderBody({
-      articles: [
-        { id: "a1", name: "7 Zwerge Bier", defaultCategory: null, defaultUnit: null },
-      ],
-    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { id: "a1", name: "7 Zwerge Bier", defaultCategory: null, defaultUnit: null },
+        ],
+      }),
+    );
+    renderBody();
 
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "7 Zwerge");
 
-    expect(screen.getByRole("button", { name: /7 Zwerge Bier/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /7 Zwerge Bier/ })).toBeInTheDocument();
   });
 
   it("submits a tapped numeric article name without duplicating its number", async () => {
     const addAction = vi.fn(async (_prev: unknown, _formData: FormData) => ENTRY_FORM_IDLE);
-    renderBody({
-      addAction,
-      articles: [
-        { id: "a1", name: "7 Zwerge Bier", defaultCategory: null, defaultUnit: null },
-      ],
-    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { id: "a1", name: "7 Zwerge Bier", defaultCategory: null, defaultUnit: null },
+        ],
+      }),
+    );
+    renderBody({ addAction });
 
     await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "7 Zwe");
-    await userEvent.click(screen.getByRole("button", { name: /7 Zwerge Bier/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /7 Zwerge Bier/ }));
 
     const formData = addAction.mock.calls[0][1] as FormData;
     expect(formData.get("name")).toBe("7 Zwerge Bier");

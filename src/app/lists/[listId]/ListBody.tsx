@@ -4,7 +4,8 @@ import { startTransition, useActionState, useRef, useState } from "react";
 import { Autocomplete } from "@/components/ui/Autocomplete";
 import { ChipTabs } from "@/components/ui/ChipTabs";
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import { buildAutocomplete, type AutocompleteArticle } from "@/lib/catalog/autocomplete";
+import { useCatalogSearch } from "@/components/ui/useCatalogSearch";
+import { buildAutocomplete } from "@/lib/catalog/autocomplete";
 import { formatQuantityLabel } from "@/lib/format/quantity";
 import {
   ALL_CATEGORIES_LABEL,
@@ -23,19 +24,17 @@ type EntryAction = (prev: EntryFormState, formData: FormData) => Promise<EntryFo
 /** Check and remove need no inline error, so they stay plain Server Actions. */
 type FireAndForgetAction = (formData: FormData) => void | Promise<void>;
 
-/**
- * The catalog shape this screen needs: what the dropdown ranks, plus the unit —
- * the trailing row has to know the project's own unit vocabulary to strip a
- * typed „2 Kisten" prefix off the autocomplete query (Slice 15). `page.tsx`
- * already passes `searchCatalog`'s rows, which carry all four fields.
- */
-export type ListBodyArticle = AutocompleteArticle & { defaultUnit: string | null };
-
 type ListBodyProps = {
   /** Every entry, in sortIndex order, straight from the server on every render. */
   entries: ListEntry[];
-  /** The project's catalog, for the trailing row's autocomplete. */
-  articles: ListBodyArticle[];
+  /** Needed to address the catalog endpoint the suggestion dropdown fetches from. */
+  projectId: string;
+  /**
+   * The project's distinct default units, for the quantity parser's vocabulary.
+   * Before Slice 8 this was derived from a full catalog prop; getCatalogVocabulary
+   * now reads exactly these strings instead of a thousand rows.
+   */
+  units: string[];
   /** Every category the project knows, for the entry sheet's chips. */
   categories: string[];
   /** A completed list: read-only, no chips, no input row (handoff §10). */
@@ -54,8 +53,9 @@ type ListBodyProps = {
  * chips, the typed text in the trailing row and the swipe gesture are all view
  * state that changes many times per second. A server round-trip per keystroke is
  * exactly what the design's "trailing empty row" cannot afford. The DATA is still
- * server-owned: `entries`, `articles` and `categories` are props, so after every
- * mutation `revalidatePath` hands this component a fresh array while its own
+ * server-owned: `entries`, `units` and `categories` are props, while autocomplete
+ * pages come from the catalog endpoint. After every mutation `revalidatePath`
+ * hands this component fresh server data while its own
  * state (active chip, typed text, open sheet) survives — the same split
  * `CatalogBrowser` established, and the reason `ListSyncPoller`'s
  * `router.refresh()` keeps working untouched.
@@ -67,7 +67,8 @@ type ListBodyProps = {
  */
 export function ListBody({
   entries,
-  articles,
+  projectId,
+  units,
   categories,
   frozen,
   addAction,
@@ -116,20 +117,24 @@ export function ListBody({
       : entries.filter((item) => categoryLabel(item.category) === activeChip);
   const groups = activeChip === ALL_CATEGORIES_LABEL ? groupItemsByCategory(visible) : [];
 
-  // The project's unit vocabulary, rebuilt per render like `buildAutocomplete`
-  // below it: both are cheap pure functions over an array the server already
-  // handed us, and memoising them would only add a dependency array to get wrong.
-  const unitLookup = buildUnitLookup(articles.map((article) => article.defaultUnit));
+  // The project's unit vocabulary. It used to be derived from the full catalog
+  // prop; the server now sends exactly the distinct units, so the edge case the
+  // old comment described (a project past CATALOG_DATALIST_LIMIT missing a rare
+  // unit) is gone — this vocabulary is complete by construction.
+  const unitLookup = buildUnitLookup(units);
   // The SAME parser the server runs (addEntryFromRow). Here it is used for two
   // cosmetic jobs only — the server remains the single source of truth for what
   // actually gets stored.
-  //
-  // The two vocabularies can differ in one edge case: this builds from the
-  // capped `articles` prop (CATALOG_DATALIST_LIMIT), while the server queries
-  // every distinct unit. In a project past that cap the dropdown might not strip
-  // a rare project unit. Harmless by construction — the server re-parses the raw
-  // text either way, so only this dropdown's query is ever affected.
   const parsedDraft = parseEntryInput(draft, unitLookup);
+
+  // ONE request, keyed on the parsed article name when the parser peeled a
+  // quantity off. That is enough for BOTH local searches below: the parsed name
+  // is always a substring of the raw draft, and searchCatalog matches on
+  // substrings, so this page is a superset of what a raw-draft query returns.
+  // Fetching twice would double the requests to answer a question one already
+  // covers.
+  const searchQuery = parsedDraft.quantity !== null ? parsedDraft.name : draft;
+  const articles = useCatalogSearch(projectId, searchQuery);
 
   // Raw text first: an article whose own name starts with a number („7 Zwerge
   // Bier") must still find itself, which mirrors the server's escape hatch. Only
@@ -137,6 +142,9 @@ export function ListBody({
   // search the article part — that is what makes „1,5 l Mil" offer „Milch" and,
   // just as importantly, makes the „…neu anlegen" row promise the name the
   // catalog will really get.
+  // Slice 8: `articles` is now a fetched page of at most CATALOG_SEARCH_LIMIT
+  // matches rather than the whole catalog. Both searches below still run
+  // locally and unchanged; only where the array came from moved.
   const rawSuggestions = buildAutocomplete(articles, draft);
   // Remember WHICH query produced the visible dropdown, because submit behavior
   // must follow that choice. A raw match such as „7 Zwerge Bier" is already a
