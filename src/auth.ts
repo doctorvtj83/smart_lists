@@ -9,6 +9,13 @@ import {
 } from "@/lib/auth/callbacks";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Auth.js rejects unknown hosts in NODE_ENV=production (UntrustedHost) before
+  // the allowlist callback even runs. `next dev` is lenient; `next start` is not,
+  // so a local production login on localhost:3000 would otherwise land on
+  // /auth/error ("Zugang nicht freigeschaltet") despite a valid allowlist row.
+  // Vercel sets this implicitly via VERCEL=1; we set it here so local `next start`
+  // and any reverse-proxy host behave the same.
+  trustHost: true,
   providers: [
     // Auth.js defaults to AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET, but the project plan standardizes on these names.
     Google({
