@@ -40,6 +40,14 @@ function ruleBody(css: string, selector: string): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * Returns whether a selector satisfies the handoff's ≥44px tap-target rule.
+ *
+ * A drawn box smaller than 44px can comply in two ways: the control itself
+ * declares a 44px height, or it carries a ::after hit-area expander. This
+ * function checks both paths so CONTROLS entries stay enforceable in CI
+ * without jsdom layout.
+ */
 function hasHitArea(css: string, selector: string): boolean {
   const own = ruleBody(css, selector);
   if (own && /(?:min-)?height:\s*44px/.test(own)) return true;
