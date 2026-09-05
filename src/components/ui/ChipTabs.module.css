@@ -13,8 +13,20 @@
   display: none;
 }
 
+/*
+ * Direct 44px hit area for the filter tabs (handoff § PWA / Mobil).
+ *
+ * The strip scrolls horizontally, so CSS computes its vertical overflow to
+ * `auto` and clips anything outside the scrollport. A transparent ::after
+ * expander would therefore look correct to a text audit while losing its lower
+ * hit area in the browser. Giving the button itself a 44px minimum keeps the
+ * complete target inside the scrollport.
+ *
+ * The existing 9px bottom padding and 2px active border stay at the button's
+ * bottom edge, directly on the strip hairline. The extra height grows above
+ * that edge, so the underline does not move away from the hairline.
+ */
 .tab {
-  position: relative;
   flex: none;
   border: none;
   background: none;
@@ -24,29 +36,9 @@
   padding: 0 0 9px;
   /* 2px of transparent border keeps inactive and active tabs the same height. */
   border-bottom: 2px solid transparent;
+  min-height: 44px;
   white-space: nowrap;
   cursor: pointer;
-}
-
-/*
- * Hit-area expander for the filter tabs (handoff § PWA / Mobil).
- *
- * The tab is ~25px tall and its 2px bottom border is the active marker, so it
- * cannot simply grow: a min-height would push the underline away from the
- * strip's hairline. A centred transparent box leaves the underline where the
- * design put it. The tabs sit 18px apart, so a 44px-wide minimum on a short
- * label ("Alle") stays clear of its neighbours.
- */
-.tab::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  height: 100%;
-  min-width: 44px;
-  min-height: 44px;
 }
 
 .active {

@@ -86,6 +86,16 @@ describe("touch targets", () => {
     expect(hasHitArea(readCss(file), selector)).toBe(true);
   });
 
+  // ChipTabs scrolls horizontally, which makes vertical overflow compute to
+  // `auto` and clips any pseudo-element extending beyond the strip. Requiring
+  // the tab itself to be 44px keeps its full hit area inside that scrollport.
+  it("keeps the ChipTabs hit area inside its horizontal scrollport", () => {
+    const css = readCss("src/components/ui/ChipTabs.module.css");
+    const tab = ruleBody(css, ".tab");
+    expect(tab).not.toBeNull();
+    expect(tab).toMatch(/min-height:\s*44px/);
+  });
+
   // Wrapped rows of expanded chips must not overlap: with a 44px hit area, two
   // rows whose pitch is smaller than 44px let the upper chip swallow taps meant
   // for the lower one. chip height + row-gap ≥ 44px is what prevents that.
