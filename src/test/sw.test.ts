@@ -76,6 +76,57 @@ describe("service worker", () => {
     );
   });
 
+  it("keeps a cache-first fetch alive until the cache write finishes", async () => {
+    const { listeners } = loadServiceWorker();
+    const request = {
+      url: "https://x.test/_next/static/chunks/main.js",
+      method: "GET",
+      mode: "no-cors",
+    };
+    const cachedCopy = { body: "cached copy" };
+    const networkResponse = {
+      body: "network response",
+      clone: vi.fn(() => cachedCopy),
+    };
+
+    // A manually controlled Promise makes the cache write remain pending long
+    // enough to prove that respondWith is bound to its lifetime.
+    let finishCacheWrite!: () => void;
+    const pendingCacheWrite = new Promise<void>((resolveWrite) => {
+      finishCacheWrite = resolveWrite;
+    });
+    const put = vi.fn(() => pendingCacheWrite);
+    vi.stubGlobal("caches", {
+      match: vi.fn().mockResolvedValue(undefined),
+      open: vi.fn().mockResolvedValue({ put }),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(networkResponse));
+
+    let responded: unknown;
+    const handler = listeners.fetch as FetchHandler;
+    handler({
+      request,
+      respondWith: (response) => {
+        responded = response;
+      },
+    });
+
+    let responseSettled = false;
+    Promise.resolve(responded).then(() => {
+      responseSettled = true;
+    });
+
+    // Wait until the worker has started cache.put before checking whether the
+    // response incorrectly settled while that write is still pending.
+    await vi.waitFor(() => expect(put).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(responseSettled).toBe(false);
+
+    finishCacheWrite();
+    await expect(responded).resolves.toBe(networkResponse);
+    vi.unstubAllGlobals();
+  });
+
   it("falls back to the offline page only for navigations", () => {
     const { pickStrategy } = loadServiceWorker();
     expect(pickStrategy("https://x.test/projects", "navigate")).toBe("network-then-offline");

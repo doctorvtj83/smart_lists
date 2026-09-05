@@ -99,8 +99,17 @@ self.addEventListener("fetch", (event) => {
           // Clone before returning: a Response body can only be read once, and
           // the cache write and the page both need it.
           const copy = response.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy));
-          return response;
+          return caches
+            .open(CACHE_VERSION)
+            .then((cache) => cache.put(request, copy))
+            .then(
+              // Keep respondWith pending until the write settles, so the worker
+              // cannot be terminated before the chunk reaches the cache.
+              () => response,
+              // A cache failure must not discard a valid network response; it
+              // only means this chunk will need the network again next time.
+              () => response,
+            );
         });
       }),
     );
