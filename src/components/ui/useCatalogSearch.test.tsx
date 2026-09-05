@@ -19,6 +19,10 @@ describe("useCatalogSearch", () => {
     vi.unstubAllGlobals();
   });
 
+  /**
+   * Replaces the browser transport with a successful deterministic response so
+   * each test can verify hook behavior without making a real network request.
+   */
   function stubFetch(payload: unknown) {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
