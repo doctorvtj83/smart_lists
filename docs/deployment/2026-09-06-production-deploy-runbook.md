@@ -26,7 +26,11 @@ Phase C done 2026-09-06: deploy `smart-lists-9v8mb0dot` is Ready, functions in `
 122.83 KB, Deployment Protection off for production. Production alias:
 **https://smart-lists-jade.vercel.app**. Verified over HTTP: `/` → 307 to `/login`, `/login` 200,
 `/manifest.webmanifest` 200, `/sw.js` 200, `/offline` 200, both icons 200, `/dev/ui` **404**,
-`/api/auth/providers` 200. Phases D–G outstanding.
+`/api/auth/providers` 200. Phase D done: the production OAuth client is the same one dev uses
+(`349563812777-hhfia7fej…`), confirmed by reading `client_id` out of the live sign-in redirect;
+sign-in from the phone worked. Phase E done: production went from 2 users / 2 projects / 9 lists /
+18 items to **0 users, 0 projects, 1 allowlist entry** (`volkertjaden@gmail.com`). Phases F–G
+outstanding.
 
 **Owner-only steps** are marked 🔑 — they need a login (Neon, Vercel, Google Cloud) that an agent
 does not have.
@@ -157,16 +161,22 @@ the pooler causes trouble.
    The endpoint id must be the **production** one — not the `dev` endpoint from `.env`, not the
    `test` endpoint from `.env.test`.
 
-2. **Wipe and rebuild the schema** (this is the "leeren" step; it drops everything and replays all
-   four migrations, so `_prisma_migrations` ends up consistent — a manual `TRUNCATE` would leave
-   stale schema objects behind):
+2. **Check for schema drift first** — it decides which wipe you need:
 
    ```bash
-   DATABASE_URL="$PROD_URL" npx prisma migrate reset --force --skip-seed
+   DATABASE_URL="$PROD_URL" npx prisma migrate status
    ```
 
-   `--skip-seed` keeps seeding a separate, explicit step. For all later deploys the command is
-   `npx prisma migrate deploy` — `reset` is a one-time bootstrap only.
+   This branch reported `Database schema is up to date!`, which is expected: it *was* the branch the
+   four migrations were developed against. With no drift there is nothing to rebuild, so the wipe is
+   data-only — `TRUNCATE` over the eight core tables, reusing `src/test/reset-db.ts` so the table
+   list cannot drift from the one every DB test relies on. That is a much smaller operation than
+   dropping and replaying the schema.
+
+   Only if `migrate status` reports drift or missing migrations is `prisma migrate reset --force
+   --skip-seed` the right tool — and note that Prisma refuses to run it when it detects an AI agent,
+   by design. It is for development databases; against anything named production it needs a human's
+   explicit, informed consent. For all later deploys the command is `npx prisma migrate deploy`.
 
 3. **Seed the allowlist:**
 
