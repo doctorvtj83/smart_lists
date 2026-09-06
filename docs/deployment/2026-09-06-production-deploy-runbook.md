@@ -29,8 +29,16 @@ Phase C done 2026-09-06: deploy `smart-lists-9v8mb0dot` is Ready, functions in `
 `/api/auth/providers` 200. Phase D done: the production OAuth client is the same one dev uses
 (`349563812777-hhfia7fej…`), confirmed by reading `client_id` out of the live sign-in redirect;
 sign-in from the phone worked. Phase E done: production went from 2 users / 2 projects / 9 lists /
-18 items to **0 users, 0 projects, 1 allowlist entry** (`volkertjaden@gmail.com`). Phases F–G
-outstanding.
+18 items to **0 users, 0 projects, 1 allowlist entry** (`volkertjaden@gmail.com`). Phase F done:
+sign-in provisioned the user, the second seed run set `is_admin = true`, verified end state is
+**1 user (admin), 1 allowlist entry, 0 projects**. Phase G (iPhone) outstanding.
+
+> **Wiping data invalidates live sessions in a way the middleware does not catch.** After the
+> truncate, the phone still held a JWT naming a user id that no longer existed. `requireUserId`
+> trusts the JWT deliberately (only `/admin` pays for a live DB check), so the app would have let the
+> request through and then failed on a foreign key when creating a project. Sign out and back in
+> after any wipe — and again after the admin promotion, since `is_admin` is minted into the token at
+> login.
 
 **Owner-only steps** are marked 🔑 — they need a login (Neon, Vercel, Google Cloud) that an agent
 does not have.
