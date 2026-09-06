@@ -7,6 +7,21 @@ database that contains **no projects** and exactly **one user** — `volkertjade
 **Status before this runbook:** no Vercel project, no `vercel.json`, no CI workflow, no production
 database. Everything below is a one-time setup; afterwards a push to `main` deploys automatically.
 
+**Progress:** Phase A done 2026-09-06 — `dev` branch created and verified, `.env` points at it
+(`ep-fragrant-night-…`); `production` (`ep-ancient-king-…`) still holds the old development data and
+is wiped in Phase E. Phase B done in commit `66ecd8a`. Phase C: project `smart-lists` created; the
+first two deploys failed **after** a green build with
+`The Edge Function "_middleware" size is 1.02 MB and your plan size limit is 1 MB` — fixed by the
+auth split described below.
+
+> **The Edge-bundle trap.** `src/middleware.ts` used to re-export `auth` from `src/auth.ts`, which
+> imports the Prisma singleton. Middleware compiles to an Edge Function capped at 1 MB on Hobby, and
+> the chain `middleware → auth → lib/db → @prisma/client` pulled the Prisma query-engine WASM in —
+> for a function that never runs a query. The config is now split: `src/auth.config.ts` holds the
+> database-free half (providers, session strategy, pages, `authorized` + `session` callbacks), and
+> the middleware builds its own NextAuth instance from it. Bundle: **1.02 MB → 316 KB**.
+> `src/test/middleware-edge-bundle.test.ts` walks the import graph and fails if the chain returns.
+
 **Owner-only steps** are marked 🔑 — they need a login (Neon, Vercel, Google Cloud) that an agent
 does not have.
 

@@ -1,42 +1,27 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/db";
-import {
-  handleSignIn,
-  enrichToken,
-  enrichSession,
-  isRequestAuthorized,
-} from "@/lib/auth/callbacks";
+import { authConfig } from "@/auth.config";
+import { handleSignIn, enrichToken } from "@/lib/auth/callbacks";
 
+/**
+ * The full Auth.js instance used by the app: route handlers, server components
+ * and `getSessionUserId`. It is the edge-safe `authConfig` plus the two
+ * callbacks that need database access.
+ *
+ * Why the config is split across two files: importing this module pulls in the
+ * Prisma client, which is far too large for an Edge Function. `middleware.ts`
+ * therefore builds its own, leaner instance from `@/auth.config` — see the
+ * comment there and in auth.config.ts. Nothing outside the middleware needs the
+ * lean instance; everything else runs on Node.js and should import from here.
+ */
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Auth.js rejects unknown hosts in NODE_ENV=production (UntrustedHost) before
-  // the allowlist callback even runs. `next dev` is lenient; `next start` is not,
-  // so a local production login on localhost:3000 would otherwise land on
-  // /auth/error ("Zugang nicht freigeschaltet") despite a valid allowlist row.
-  // Vercel sets this implicitly via VERCEL=1; we set it here so local `next start`
-  // and any reverse-proxy host behave the same.
-  trustHost: true,
-  providers: [
-    // Auth.js defaults to AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET, but the project plan standardizes on these names.
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-  ],
-  // JWT sessions keep the MVP schema small: Auth.js does not need its own session table.
-  session: { strategy: "jwt" },
-  pages: {
-    // The product owns the visible auth screens; Task 8 adds these pages.
-    signIn: "/login",
-    error: "/auth/error",
-  },
+  ...authConfig,
   // The callback bodies live in @/lib/auth/callbacks so they can be unit-tested
   // in isolation; here we only bind them to the production Prisma singleton.
+  // Spreading authConfig.callbacks first keeps `authorized` and `session` —
+  // overwriting the whole object instead of merging it would silently drop them.
   callbacks: {
-    // Auth.js v5 only blocks middleware-matched routes when this callback says the request is authorized.
-    authorized({ auth }) {
-      return isRequestAuthorized(auth);
-    },
+    ...authConfig.callbacks,
 
     // This callback is the OAuth gate: returning false rejects users before app access is created.
     signIn({ profile }) {
@@ -46,11 +31,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // The JWT carries app-specific user facts so every later request can authorize without a session table.
     jwt({ token, profile }) {
       return enrichToken(prisma, token, profile);
-    },
-
-    // Mirroring token fields into the session gives server and client code a typed app user identity.
-    session({ session, token }) {
-      return enrichSession(session, token);
     },
   },
 });

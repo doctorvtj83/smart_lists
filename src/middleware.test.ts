@@ -1,7 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Auth.js pulls Prisma and Google OAuth env; this file only asserts the matcher.
-vi.mock("@/auth", () => ({ auth: () => undefined }));
+// This file only asserts the matcher, but importing ./middleware evaluates
+// `NextAuth(authConfig)` at module scope, and next-auth's env helper imports
+// "next/server", which Vitest's node resolver cannot load outside a Next.js
+// runtime. Stubbing the NextAuth factory keeps the import side-effect-free.
+// (Before the edge split this mocked "@/auth" instead — the middleware no
+// longer imports it, so the mock had to move down a level with it.)
+vi.mock("next-auth", () => ({ default: () => ({ auth: () => undefined }) }));
 
 import { config } from "./middleware";
 
