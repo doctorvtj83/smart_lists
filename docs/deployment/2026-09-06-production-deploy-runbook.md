@@ -22,6 +22,12 @@ auth split described below.
 > the middleware builds its own NextAuth instance from it. Bundle: **1.02 MB → 316 KB**.
 > `src/test/middleware-edge-bundle.test.ts` walks the import graph and fails if the chain returns.
 
+Phase C done 2026-09-06: deploy `smart-lists-9v8mb0dot` is Ready, functions in `fra1`, middleware
+122.83 KB, Deployment Protection off for production. Production alias:
+**https://smart-lists-jade.vercel.app**. Verified over HTTP: `/` → 307 to `/login`, `/login` 200,
+`/manifest.webmanifest` 200, `/sw.js` 200, `/offline` 200, both icons 200, `/dev/ui` **404**,
+`/api/auth/providers` 200. Phases D–G outstanding.
+
 **Owner-only steps** are marked 🔑 — they need a login (Neon, Vercel, Google Cloud) that an agent
 does not have.
 
