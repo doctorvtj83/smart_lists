@@ -6,6 +6,7 @@ import { createProject } from "@/lib/projects/projects";
 import { listProjectSummaries } from "@/lib/projects/summaries";
 import { formatProjectMeta } from "@/lib/format/plural";
 import { Avatar } from "@/components/ui/Avatar";
+import { BackLink } from "@/components/ui/BackLink";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -62,7 +63,9 @@ export default async function ProjectsPage() {
 
   return (
     <>
-      <PageHeader title="Projekte" />
+      {/* Same reason as /admin: no drawer on this screen. It matters more here,
+          because Home's empty state now sends every new account straight to it. */}
+      <PageHeader title="Projekte" leading={<BackLink href="/" label="Zur Startseite" />} />
       <main className={styles.content}>
         {projects.length === 0 ? (
           // Empty state 5a. The action sits directly beneath the copy, which is the

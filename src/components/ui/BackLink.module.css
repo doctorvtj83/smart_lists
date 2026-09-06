@@ -1,0 +1,15 @@
+.back {
+  /* Grid rather than inline padding: it centres the glyph inside a box whose
+     size is set explicitly, which is what guarantees the 44px tap target the
+     handoff requires for every touch affordance. */
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  /* Pulled left by the header's own padding so the arrow optically aligns with
+     the title's left edge instead of sitting 44px inside it. */
+  margin-left: -10px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-accent);
+}

@@ -22,6 +22,39 @@
   margin-top: 6px;
 }
 
+/* The PROJEKTE label and the "Alle Projekte" link share one baseline row.
+   The label is the section's heading; the link is the way out of Home into the
+   screen that owns creating and managing projects. */
+.sectionRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Same weight as the footer's "Verwaltung", but accent-coloured: this is a
+   forward action, not a quiet secondary destination. Padding, not margin, so
+   the tap target reaches 44px. */
+.allProjects {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-accent);
+  white-space: nowrap;
+  padding: 10px 2px;
+}
+
+/* The empty state's single call to action (handoff §Empty States: the action
+   sits directly beneath the sentence). A link and not a Button, because the
+   create form lives on /projects — duplicating it here would mean two server
+   actions that can drift apart. */
+.emptyAction {
+  display: inline-block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-accent);
+  padding: 12px 8px;
+}
+
 /* Trailing list count on a project row: 12px muted (handoff 3c). */
 .rowCount {
   font-size: 12px;

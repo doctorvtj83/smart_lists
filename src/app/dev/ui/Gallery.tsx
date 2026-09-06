@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Star, Trash2 } from "lucide-react";
 import { Autocomplete } from "@/components/ui/Autocomplete";
 import { Avatar } from "@/components/ui/Avatar";
+import { BackLink } from "@/components/ui/BackLink";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -93,6 +94,13 @@ export function Gallery() {
 
       <SectionLabel>Kopfzeile</SectionLabel>
       <PageHeader title="Verwaltung" trailing={<Badge>ADMIN</Badge>} />
+      {/* The leading slot with a back arrow — how /admin and /projekte escape to
+          Home, since neither screen carries the project drawer. */}
+      <PageHeader
+        title="Projekte"
+        leading={<BackLink href="/" label="Zur Startseite" />}
+        trailing={<Badge>ADMIN</Badge>}
+      />
       <PageHeader title="Smart Lists" hairline={false} />
 
       <SectionLabel>Fortschritt</SectionLabel>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { BackLink } from "@/components/ui/BackLink";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -136,7 +137,13 @@ export default async function AdminPage({ searchParams }: Props) {
 
   return (
     <>
-      <PageHeader title="Verwaltung" trailing={<Badge>ADMIN</Badge>} />
+      {/* /admin sits outside the project drawer, so without this arrow the screen
+          is reachable but not leavable — you would have to edit the URL. */}
+      <PageHeader
+        title="Verwaltung"
+        leading={<BackLink href="/" label="Zur Startseite" />}
+        trailing={<Badge>ADMIN</Badge>}
+      />
       <main className={styles.content}>
         {/* Shown once, right after an exclusion that skipped owner projects: the one
             genuinely surprising outcome of that flow (Slice 9). */}
