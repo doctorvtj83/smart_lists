@@ -243,6 +243,17 @@ This also closes the two checks Slice 8 had to skip for lack of a device
   then run `DATABASE_URL="$PROD_URL" npx prisma migrate deploy` **before or right after** the deploy
   that needs it. This is deliberately not wired into the build command: an automatic migration on
   every build makes a failed deploy able to damage production data.
+- **Getting `$PROD_URL` again.** It is not kept on disk, and `vercel env pull` cannot recover it —
+  the Vercel variables are marked Sensitive, so they read back as `[SENSITIVE]`. Copy it from the
+  Neon console (branch `production`, pooling off) into a file outside the repo, without leaving it
+  in shell history:
+
+  ```bash
+  read -rs PROD_URL && printf '%s' "$PROD_URL" > ~/.prod-db-url && chmod 600 ~/.prod-db-url && unset PROD_URL
+  ```
+
+  Delete it again when the migration is done. It must never land in `.env` — that file points at
+  `dev`, and every DB test truncates what `.env.test` points at.
 - **Inviting more people** = `/admin` in the running app (Slice 9). Never the seed script again.
 - **Break-glass** (revoke every session immediately): rotate `AUTH_SECRET` in Vercel and redeploy —
   every existing JWT becomes invalid.
