@@ -66,9 +66,11 @@ The wipe of `production` happens later, in Phase E — after `dev` has been prov
   `node_modules` between builds, so `@prisma/client`'s `postinstall` hook does not reliably re-run;
   without an explicit `prisma generate` the deployed bundle can carry a Prisma Client generated from
   an older schema. Running it in `build` is the pattern Prisma documents for cached CI environments.
-- No `vercel.json` is added. The only project-level setting that matters (function region) is set in
-  the dashboard in Phase C; committing a `vercel.ts` would pull in `@vercel/config` as a dependency
-  for a single value.
+- `vercel.json` pins `"regions": ["fra1"]`. Neon runs in `eu-central-1`; Vercel's default is US East,
+  which puts an Atlantic crossing on every query. This started as a dashboard setting, but the first
+  successful deploy still placed every function in `iad1` — in the repo it is reproducible and cannot
+  be lost. Plain JSON and not `vercel.ts`, which would pull in `@vercel/config` for a single value.
+  (JSON has no comments, which is why the rationale lives here.)
 - Nothing about secrets changes: `.gitignore` already excludes every `.env*` except the examples.
 
 Commit and push these changes to `main` before creating the Vercel project.
@@ -92,10 +94,15 @@ Commit and push these changes to `main` before creating the Vercel project.
    is exactly what Neon's pooler exists for.
 3. 🔑 Deploy. The first build should succeed even though the database is still empty — no page in
    this app is statically prerendered from the database.
-4. 🔑 **Settings → Functions → Function Region → Frankfurt (`fra1`)**, then redeploy. Neon runs in
-   `eu-central-1`; the Vercel default region is US East, which would put an Atlantic crossing on
-   every single query. This is the highest-leverage setting on the whole page.
-5. 🔑 Note the production URL (`https://<project>.vercel.app`). Phase D needs it.
+4. 🔑 **Settings → Deployment Protection → Vercel Authentication → "Only Preview Deployments".**
+   With the default "Standard Protection" every production request — including `/login`,
+   `/manifest.webmanifest` and the Google OAuth callback — is 302'd to `vercel.com/sso-api`, so the
+   app is unreachable from a phone and the PWA cannot install. The app's own gate is the allowlist
+   plus Google sign-in; the Vercel layer in front of it only blocks the intended users.
+5. The function region comes from `vercel.json` (`fra1`), not the dashboard — see Phase B.
+6. 🔑 Note the production alias. Vercel assigns a short one (here:
+   `https://smart-lists-jade.vercel.app`) plus `…-<team-slug>.vercel.app`. Use the short one
+   everywhere; Phase D needs it.
 
 Node version: `engines` requires `>= 22`, Vercel's default is Node 24 — nothing to change.
 
