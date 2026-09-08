@@ -12,6 +12,7 @@ import {
   completeList,
   deleteList,
   getListWithItems,
+  renameList,
   reopenList,
 } from "@/lib/lists/lists";
 import { addEntryFromRow } from "@/lib/lists/addEntry";
@@ -30,6 +31,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import ListSyncPoller from "./ListSyncPoller";
 import { ListBody } from "./ListBody";
 import { ListMenu } from "./ListMenu";
+import { ListTitle } from "./ListTitle";
 import type { ListEntry } from "./EntryRow";
 import { ENTRY_FORM_IDLE, type EntryFormState } from "./formState";
 import styles from "./page.module.css";
@@ -294,6 +296,27 @@ export default async function ListDetailPage({ params }: Props) {
     revalidatePath(`/projects/${l.projectId}`, "layout");
   }
 
+  /**
+   * F3 fix: inline rename, member-level (MVP design §6 groups list rename with
+   * create/complete/delete — all ✓ for Mitglied — unlike the project's name,
+   * which is owner-only). `renameList`/`PATCH /api/lists/[listId]` already
+   * existed and were tested; only the UI wiring was missing.
+   */
+  async function renameListAction(name: string) {
+    "use server";
+    const s = await auth();
+    const { list: l } = await requireListAccess(prisma, listId, s!.user.id);
+
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    await renameList(prisma, l.id, trimmed);
+    revalidatePath(`/lists/${listId}`);
+    // The project screen's AKTIVE LISTEN row shows this list by name and lives
+    // above this route — "layout" scope, same reasoning as checkEntryAction.
+    revalidatePath(`/projects/${l.projectId}`, "layout");
+  }
+
   /** Delete the whole list (member-level per the permission matrix). */
   async function deleteListAction() {
     "use server";
@@ -322,13 +345,19 @@ export default async function ListDetailPage({ params }: Props) {
       />
 
       <PageHeader
-        title={list.name}
+        // F3 fix, same trick as the project page's PageHeader (see ProjectTitle):
+        // an empty title lets the flex:1 <h1> act as a spacer, and the actual
+        // (editable) name moves into `leading`, next to the back arrow.
+        title=""
         // No drawer here: /lists/[listId] sits outside the project layout, so
         // handoff §10's back arrow is the navigation (see the plan's scope note).
         leading={
-          <Link href={`/projects/${list.projectId}`} className={styles.back} aria-label="Zum Projekt">
-            <Icon icon={ArrowLeft} size={18} />
-          </Link>
+          <>
+            <Link href={`/projects/${list.projectId}`} className={styles.back} aria-label="Zum Projekt">
+              <Icon icon={ArrowLeft} size={18} />
+            </Link>
+            <ListTitle name={list.name} renameAction={renameListAction} />
+          </>
         }
         trailing={
           <ListMenu

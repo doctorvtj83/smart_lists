@@ -7,6 +7,7 @@ import {
   Archive,
   Check,
   ChevronDown,
+  Home,
   Library,
   ListChecks,
   LogOut,
@@ -134,6 +135,26 @@ export function ProjectNavPanel({
 
         {switcherOpen && (
           <div className={styles.dropdown}>
+            {/* F2 fix: the drawer/sidebar otherwise never leaves the project
+                context (handoff §Navigation has no Home entry at all — it assumes
+                the switcher covers it, but the switcher used to only list other
+                projects). Without this row, Home's own content — the
+                "Weitermachen" card, Verwaltung, Abmelden — was reachable only via
+                the indirect, mislabeled path switcher → "＋ Neues Projekt…" →
+                /projects → that page's BackLink → /. */}
+            <Link
+              href="/"
+              className={styles.dropdownRow}
+              onClick={() => {
+                setSwitcherOpen(false);
+                onNavigate?.();
+              }}
+            >
+              <span className={styles.dropdownHomeIcon} aria-hidden="true">
+                <Icon icon={Home} size={14} />
+              </span>
+              <span className={styles.dropdownName}>Startseite</span>
+            </Link>
             {projects.map((project) => (
               <Link
                 key={project.id}

@@ -98,6 +98,18 @@
   color: var(--color-text-muted);
 }
 
+/* Plain square (no dashed border) so "Startseite" doesn't read as a second
+   create affordance next to .dropdownPlus. */
+.dropdownHomeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--color-text-muted);
+}
+
 .dropdownNewLabel {
   flex: 1;
   font-size: 14px;
