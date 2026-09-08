@@ -91,6 +91,18 @@ describe("ProjectNavPanel", () => {
     );
   });
 
+  // F2: opening the switcher was the only place a user inside a project could
+  // reach a project list at all, and even that only pointed at /projects, never
+  // at Home ("/") itself — a dead end for the "Weitermachen" card and Home's own
+  // admin/sign-out row. The switcher gets an explicit Startseite entry.
+  it("offers a way back to Home from inside the project switcher", async () => {
+    renderPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: /Projekt wechseln/ }));
+
+    expect(screen.getByRole("link", { name: "Startseite" })).toHaveAttribute("href", "/");
+  });
+
   it("hides Verwaltung from non-admins and shows it to admins", () => {
     const { unmount } = renderPanel({ isAdmin: false });
     expect(screen.queryByRole("link", { name: "Verwaltung" })).not.toBeInTheDocument();
