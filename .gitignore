@@ -44,3 +44,8 @@ next-env.d.ts
 
 # Git worktrees used by agent workflows; ignored so nested checkouts are never tracked.
 .worktrees/
+
+# One-off admin script inputs/outputs (e.g. scripts/backfill/): personal data (receipts,
+# reviewed spreadsheets), not source — never belongs in git history.
+scripts/**/*.csv
+scripts/**/*.xlsx
