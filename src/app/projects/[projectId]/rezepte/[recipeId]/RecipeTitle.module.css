@@ -1,0 +1,17 @@
+/* Mirrors ProjectTitle.module.css: PageHeader's own .title breakpoint (900px)
+   never applies here because the <h1> is emptied out in favor of this slot (see
+   the PageHeader title="" note in page.tsx), so the desktop weight has to be
+   repeated rather than inherited. */
+.title {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 900px) {
+  .title {
+    font-size: 21px;
+    font-weight: 800;
+  }
+}

@@ -1,0 +1,15 @@
+/* The recipe detail shares the Katalog and recipe index screens' content frame. */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px var(--screen-padding) calc(24px + var(--safe-bottom));
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding-left: var(--screen-padding-desktop);
+    padding-right: var(--screen-padding-desktop);
+    max-width: calc(var(--content-max-width) + 2 * var(--screen-padding-desktop));
+  }
+}

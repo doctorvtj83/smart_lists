@@ -1,0 +1,47 @@
+.screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* Recipe lines are structural; browser list markers and spacing would fight the designed rows. */
+.lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 4px;
+  text-align: left;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  border: none;
+  border-bottom: 1px solid var(--color-hairline-weak);
+  cursor: pointer;
+}
+
+/* A fixed quantity column keeps article names aligned even when a line has no amount. */
+.quantity {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The add control is deliberately last, mirroring the list screen's trailing entry row. */
+.addRow {
+  margin-top: var(--space-3);
+}
