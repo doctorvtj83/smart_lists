@@ -15,9 +15,9 @@ client's `itemId`; the inline banner and 1.4-second row flash make the otherwise
 Fresh verification on 2026-09-13 produced **89 test files / 722 tests passed**. `npm run lint` exited
 0 with **0 errors / 14 warnings**, all unused typed mock parameters in `ListBody.test.tsx`.
 `npx tsc --noEmit` exited 2 with **5 inherited test-only diagnostics** in `RevokeSheet.test.tsx`,
-`CatalogBrowser.test.tsx`, and `InviteForm.test.tsx`. The two Slice 17 `ListBody.test.tsx` stubs
-missing `merge: null` were closed in a follow-up fix. The runtime suite is green; a fully clean
-standalone TypeScript check still depends on clearing those inherited test diagnostics.
+`CatalogBrowser.test.tsx`, and `InviteForm.test.tsx`; no Slice 17 file appears in the compiler
+output. The ListBody failure stubs were corrected in commit `3b28a04`. The runtime suite is green;
+a fully clean standalone TypeScript check still depends on clearing those inherited test diagnostics.
 
 ---
 
@@ -198,8 +198,3 @@ The approved Task 3 deviation strengthened concurrent writes: the merge uses ato
 than writing a stale absolute sum. The remaining known MVP limit is self-revealing rather than silent:
 two parallel first adds can both miss a target and create two rows. Closing that needs a partial unique
 index plus retry and has no concurrency test in this slice.
-
-Minor deferred polish: `addEntry.ts` still describes itself at file level as a thin wrapper around
-`applyOperation`, although it now calls `applyOperationDetailed`. The architecture statement remains
-correct—the operations funnel is still the only write path—but the named function in that comment is
-stale.
