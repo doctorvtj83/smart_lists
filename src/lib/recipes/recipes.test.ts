@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/http/errors";
 import { recipeLabels } from "./labels";
 import {
   addRecipeItem,
+  addRecipeItemFromRow,
   createRecipe,
   deleteRecipe,
   getRecipeWithItems,
@@ -414,5 +415,90 @@ describe("removeRecipeItem", () => {
         labels,
       ),
     ).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe("addRecipeItemFromRow", () => {
+  it("splits a leading quantity and known unit off the typed text", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+
+    const line = await addRecipeItemFromRow(
+      db,
+      { projectId, recipeId: recipe.id, text: "500 g Hackfleisch" },
+      labels,
+    );
+
+    expect(line.quantity).toBe(500);
+    expect(line.unit).toBe("g");
+    // ONLY the article name reaches the catalog — the rule Slice 15 exists to preserve.
+    const article = await db.catalogItem.findUnique({ where: { id: line.catalogItemId } });
+    expect(article!.name).toBe("Hackfleisch");
+  });
+
+  it("creates the article when nobody has used the name before", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+
+    await addRecipeItemFromRow(db, { projectId, recipeId: recipe.id, text: "Béchamel" }, labels);
+
+    expect(await db.catalogItem.count({ where: { projectId } })).toBe(1);
+  });
+
+  it("does not parse when the raw text already names an article", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Grillen" }, labels);
+    await makeArticle("7 Zwerge Bier");
+
+    const line = await addRecipeItemFromRow(
+      db,
+      { projectId, recipeId: recipe.id, text: "7 Zwerge Bier" },
+      labels,
+    );
+
+    // The escape hatch: parsing would shred this into 7 x "Zwerge Bier" and split the catalog.
+    expect(line.quantity).toBeNull();
+    const article = await db.catalogItem.findUnique({ where: { id: line.catalogItemId } });
+    expect(article!.name).toBe("7 Zwerge Bier");
+  });
+
+  it("stores a bare name as a line without a quantity", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+
+    const line = await addRecipeItemFromRow(db, { projectId, recipeId: recipe.id, text: "Salz" }, labels);
+
+    expect(line.quantity).toBeNull();
+    expect(line.unit).toBeNull();
+  });
+
+  it("does NOT flow the parsed unit back into the catalog default", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+    const milch = await makeArticle("Milch"); // defaultUnit is null
+
+    await addRecipeItemFromRow(db, { projectId, recipeId: recipe.id, text: "1 l Milch" }, labels);
+
+    // Ruling R5: flow-back means "the project learned this from real use". A recipe is a plan
+    // somebody typed once and must not rewrite shared catalog memory.
+    const after = await db.catalogItem.findUnique({ where: { id: milch.id } });
+    expect(after!.defaultUnit).toBeNull();
+  });
+
+  it("updates the existing line when the same article is typed twice", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+
+    await addRecipeItemFromRow(db, { projectId, recipeId: recipe.id, text: "1 l Milch" }, labels);
+    const again = await addRecipeItemFromRow(
+      db,
+      { projectId, recipeId: recipe.id, text: "2 l Milch" },
+      labels,
+    );
+
+    expect(again.quantity).toBe(2);
+    expect(await db.recipeItem.count({ where: { recipeId: recipe.id } })).toBe(1);
+  });
+
+  it("rejects an empty text", async () => {
+    const recipe = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+
+    await expect(
+      addRecipeItemFromRow(db, { projectId, recipeId: recipe.id, text: "   " }, labels),
+    ).rejects.toMatchObject({ status: 400, message: "Name darf nicht leer sein" });
   });
 });

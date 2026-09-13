@@ -1,8 +1,10 @@
 import type { CatalogItem, PrismaClient, Recipe, RecipeItem } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { normalizeName } from "@/lib/catalog/normalize";
 import { compareArticleNames } from "@/lib/catalog/sort";
 import { ApiError } from "@/lib/http/errors";
+import { buildUnitLookup, parseEntryInput } from "@/lib/lists/parseEntryInput";
 import { isUuid } from "@/lib/validate";
 import type { RecipeLabels } from "./labels";
 
@@ -432,4 +434,82 @@ export async function removeRecipeItem(
     labels,
   );
   await db.recipeItem.delete({ where: { id: item.id } });
+}
+
+export interface AddRecipeItemFromRowInput {
+  projectId: string;
+  recipeId: string;
+  /** Exactly what the user typed into "Artikel hinzufügen…", quantity and unit included. */
+  text: string;
+}
+
+/**
+ * The recipe detail screen's trailing row, server-side — the twin of lists/addEntry.ts's
+ * addEntryFromRow.
+ *
+ * Why it exists at all: spec §5 makes reuse the point. The recipe row IS the list's trailing row
+ * minus the category chips, so "500 g Hackfleisch" has to split exactly as it does on a list, and
+ * an unknown article has to become a catalog row the same way. Re-implementing the split on the
+ * client would guarantee the two drift.
+ *
+ * Three things it deliberately does NOT inherit from addEntryFromRow:
+ *  1. The CATEGORY rule. A recipe line has no category of its own — it inherits the article's at
+ *     apply time (spec §2), so there is no active chip to honour and no `needsCategory` cue.
+ *  2. The CATALOG FLOW-BACK (ruling R5). addEntryFromRow passes its parsed unit as an explicit
+ *     unit so the project LEARNS that Milch comes in litres. That inference is earned by real
+ *     shopping; a hypothetical dish must not silently re-unit an article for every future list.
+ *  3. `applyOperation`. Recipes are not part of the operations funnel (spec §5).
+ */
+export async function addRecipeItemFromRow(
+  db: PrismaClient,
+  input: AddRecipeItemFromRowInput,
+  labels: RecipeLabels,
+): Promise<RecipeItem> {
+  const { projectId, recipeId } = input;
+  // Fail before any catalog write if the row was submitted empty. getOrCreateCatalogItem owns this
+  // message; checking here keeps an empty submit from creating nothing and 500-ing later.
+  if (!normalizeName(input.text)) throw new ApiError(400, "Name darf nicht leer sein");
+  await requireRecipe(db, projectId, recipeId, labels);
+
+  const rawNormalized = normalizeName(input.text);
+
+  // Two independent reads -> Promise.all: this runs on a phone, so it pays one round-trip of
+  // latency rather than two sequential ones (the same shape addEntryFromRow uses).
+  const [rawArticle, catalogUnits] = await Promise.all([
+    // The RAW text may itself name an article ("7 Zwerge Bier"). Reading it first is the parser's
+    // escape hatch — without it the parser shreds that name and splits the project's catalog in two.
+    db.catalogItem.findUnique({
+      where: { projectId_normalizedName: { projectId, normalizedName: rawNormalized } },
+    }),
+    // The project's own unit vocabulary (Slice 15 ruling 2). `distinct` keeps this proportional to
+    // the number of DIFFERENT units, not to catalog size.
+    db.catalogItem.findMany({
+      where: { projectId, defaultUnit: { not: null } },
+      select: { defaultUnit: true },
+      distinct: ["defaultUnit"],
+    }),
+  ]);
+
+  const parsed = rawArticle
+    ? { quantity: null, unit: null, name: input.text }
+    : parseEntryInput(input.text, buildUnitLookup(catalogUnits.map((row) => row.defaultUnit)));
+
+  // ONLY the article name reaches the catalog. getOrCreateCatalogItem resolves a known name to its
+  // existing row and creates one for a name nobody has used — the implicit catalog path (Slice 4),
+  // which is exactly right here: the user is naming an article, not managing the catalog.
+  const article = await getOrCreateCatalogItem(db, { projectId, name: parsed.name });
+
+  // addRecipeItem's upsert does the rest, so typing the same article twice corrects its quantity
+  // instead of failing on the @@unique.
+  return addRecipeItem(
+    db,
+    {
+      projectId,
+      recipeId,
+      catalogItemId: article.id,
+      quantity: parsed.quantity,
+      unit: parsed.unit,
+    },
+    labels,
+  );
 }
