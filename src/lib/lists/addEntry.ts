@@ -1,7 +1,8 @@
 import type { List, ListItem, PrismaClient } from "@prisma/client";
 import { normalizeName } from "@/lib/catalog/normalize";
 import { UNCATEGORIZED_LABEL } from "./categories";
-import { applyOperation } from "./operations";
+import type { MergeOutcome } from "./merge";
+import { applyOperationDetailed } from "./operations";
 import { buildUnitLookup, parseEntryInput } from "./parseEntryInput";
 
 /**
@@ -21,7 +22,7 @@ import { buildUnitLookup, parseEntryInput } from "./parseEntryInput";
  *     unit vocabulary and a raw-name catalog escape hatch, so the server remains
  *     the single source of truth for the entry and the catalog article name.
  *
- * Deliberately a thin wrapper around `applyOperation` rather than its own write:
+ * Deliberately a thin wrapper around `applyOperationDetailed` rather than its own write:
  * the operations funnel stays the only way entries are created, so idempotent
  * replay, catalog get-or-create and flow-back all still apply (MVP design §4.5).
  */
@@ -46,6 +47,12 @@ export interface AddEntryFromRowResult {
   item: ListItem;
   /** The cue for the UI to open the entry sheet on the category chips. */
   needsCategory: boolean;
+  /**
+   * Non-null when this add was absorbed by a row that was already on the list (Slice 17). Carries
+   * what the banner needs — the target's name and its quantity before and after — because only the
+   * funnel saw the previous value. `merge !== null` is the "did it merge?" answer.
+   */
+  merge: MergeOutcome | null;
 }
 
 export async function addEntryFromRow(
@@ -105,10 +112,10 @@ export async function addEntryFromRow(
         ? null
         : input.activeCategory;
 
-  const item = await applyOperation(db, list, {
+  const { item, merge } = await applyOperationDetailed(db, list, {
     op: "add_item",
     itemId: input.itemId,
-    // ONLY the article name reaches the catalog — the rule this slice exists to
+    // ONLY the article name reaches the catalog — the rule Slice 15 exists to
     // preserve. An empty name still travels: getOrCreateCatalogItem owns that
     // error („Name darf nicht leer sein"), and duplicating it here would drift.
     name: parsed.name,
@@ -124,14 +131,20 @@ export async function addEntryFromRow(
     category,
   });
 
-  // applyOperation returns null only for remove_item. Asserting it loudly beats
+  // applyOperationDetailed returns null only for remove_item. Asserting it loudly beats
   // a non-null assertion, which would hide a future contract change.
-  if (!item) throw new Error("add_item must return the created entry");
+  if (!item) throw new Error("add_item must return the affected entry");
 
   return {
     item,
     // Both halves matter: a KNOWN article without a category is a choice the user
     // already made, and a new article that inherited a chip needs no prompt.
-    needsCategory: knownArticle === null && item.category === null,
+    //
+    // `merge === null` is defense in depth (Slice 17): a merge can only happen when a row for this
+    // article is already on the list, which means the catalog knows the article, which means
+    // `knownArticle` is non-null anyway. Saying it out loud keeps the rule LOCAL instead of
+    // emergent — if the lookup above ever changes, the sheet still cannot open on top of a merge.
+    needsCategory: merge === null && knownArticle === null && item.category === null,
+    merge,
   };
 }

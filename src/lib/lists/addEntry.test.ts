@@ -335,3 +335,80 @@ describe("addEntryFromRow — quantity parsing (Slice 15)", () => {
     expect(item.unit).toBe("l");
   });
 });
+
+describe("addEntryFromRow — merging (Slice 17)", () => {
+  it("adds the quantity to the row that is already on the list", async () => {
+    const { list } = await seed();
+    const first = await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "1 l Milch",
+      activeCategory: null,
+    });
+
+    const { item, merge } = await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "2 l Milch",
+      activeCategory: null,
+    });
+
+    expect(item.id).toBe(first.item.id);
+    expect(item.quantity).toBe(3);
+    expect(merge).toMatchObject({ name: "Milch", previousQuantity: 1, quantity: 3, unit: "l" });
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+  });
+
+  // The rule from the design: the row already existed and already has whatever category it has, so
+  // the entry sheet must not open on top of a merge.
+  it("never asks for a category after a merge", async () => {
+    const { list } = await seed();
+    // First add lands uncategorized — the case that normally triggers the sheet.
+    await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "1 l Milch",
+      activeCategory: null,
+    });
+
+    const { needsCategory, merge } = await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "2 l Milch",
+      activeCategory: null,
+    });
+
+    expect(merge).not.toBeNull();
+    expect(needsCategory).toBe(false);
+  });
+
+  it("reports no merge for an ordinary add", async () => {
+    const { list } = await seed();
+
+    const { merge, needsCategory } = await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "Milch",
+      activeCategory: null,
+    });
+
+    expect(merge).toBeNull();
+    // Unchanged Slice 12 behaviour: a brand-new article with no category still opens its sheet.
+    expect(needsCategory).toBe(true);
+  });
+
+  it("does not merge a bare name into a quantified row", async () => {
+    const { list } = await seed();
+    await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "1 l Milch",
+      activeCategory: null,
+    });
+
+    const { merge } = await addEntryFromRow(db, list, {
+      itemId: randomUUID(),
+      name: "Milch",
+      activeCategory: null,
+    });
+
+    // D1 needs a quantity on BOTH sides — this is exactly the case Slice 19's ordering rule
+    // (recipes first, pre-fill second) exists to avoid.
+    expect(merge).toBeNull();
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
+  });
+});

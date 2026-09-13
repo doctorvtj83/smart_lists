@@ -165,3 +165,19 @@ describe("EntryRow", () => {
     expect(props.onDelete).not.toHaveBeenCalled();
   });
 });
+
+describe("EntryRow — merge flash (Slice 17)", () => {
+  it("marks the row as flashing when a nonce is supplied", () => {
+    const { container } = renderRow({ flashNonce: 1 });
+
+    // A data attribute, not a CSS-Module class: the class name is a generated hash and meaningless
+    // to a test, while the attribute is the contract this component promises.
+    expect(container.querySelector("[data-flash]")).not.toBeNull();
+  });
+
+  it("does not mark a row that did not change", () => {
+    const { container } = renderRow();
+
+    expect(container.querySelector("[data-flash]")).toBeNull();
+  });
+});

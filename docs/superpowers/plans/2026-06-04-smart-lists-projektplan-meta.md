@@ -75,7 +75,7 @@ under the table). Each slice is working, tested software on its own.
 | 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | [2026-08-02-slice-14-restyle-built-screens.md](2026-08-02-slice-14-restyle-built-screens.md) | ✅ Done / verified |
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | [2026-09-02-slice-15-quantity-parsing.md](2026-09-02-slice-15-quantity-parsing.md) | ✅ Done / verified |
 | 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
-| 17 | **Entry merging** | Adding an entry for an article already on the list **sums the quantities** instead of creating a second row (same article + same unit, both quantified, unchecked target only). Carries the `AbsorbedEntry` idempotency ledger that keeps `add_item` replay-safe now that it no longer always creates a row | _to be created_ | ⬜ Open |
+| 17 | **Entry merging** | Adding an entry for an article already on the list **sums the quantities** instead of creating a second row (same article + same unit, both quantified, unchecked target only). Carries the `AbsorbedEntry` idempotency ledger that keeps `add_item` replay-safe now that it no longer always creates a row | [2026-09-13-slice-17-entry-merging.md](2026-09-13-slice-17-entry-merging.md) | ✅ Done / verified |
 | 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | _to be created_ | ⬜ Open |
 | 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | _to be created_ | ⬜ Open |
 
@@ -352,6 +352,36 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-09-13 — Slice 17: Entry merging — ✅ Done / verified
+- **Delivered:** Quantified `add_item` operations now merge into the lowest matching unchecked row
+  for the same catalog article and unit bucket. The new `AbsorbedEntry` ledger keeps merged adds
+  replay-safe; deleted targets fall through to normal recreation; merge outcomes drive an accessible
+  German banner and a repeatable 1.4 s target-row flash. Full review:
+  [`docs/implementation-reviews/slice-17-entry-merging.md`](../../implementation-reviews/slice-17-entry-merging.md).
+- **Tested:** `npm test` → exit 0, **89 files / 722 tests passed**. `npm run lint` → exit 0,
+  **0 errors / 14 warnings**, all unused typed mock parameters in `ListBody.test.tsx`.
+  `npx tsc --noEmit` → exit 2 with **5 inherited test-only diagnostics** in
+  `RevokeSheet.test.tsx`, `CatalogBrowser.test.tsx`, and `InviteForm.test.tsx`; no Slice 17 file
+  appears in the compiler output.
+- **Deviations from the plan:** Approved Task 3 correction: the merge writes
+  `quantity: { increment: contribution }` atomically instead of an absolute total computed from a
+  stale read, then derives `MergeOutcome` from the written row (`summed - contribution`). This avoids
+  silently losing one amount when concurrent adds merge into the same existing target. The remaining
+  known MVP race is unchanged and documented: two parallel first adds can both miss a target and
+  create two visible rows; there is no concurrency test.
+- **Follow-up decisions for later slices:** Ruling R1: `applyOperationDetailed` is the opt-in seam
+  that reports `{ item, merge }`, while `applyOperation` remains the row-only compatibility wrapper.
+  Ruling R4: replaying an `AbsorbedEntry` ledger id against a different list returns 409
+  “Eintrags-ID wird bereits verwendet”. Slice 19 must rely on both when recipe lines enter the same
+  operation funnel.
+- **Inherited open items:** The five inherited test-mock diagnostics in `RevokeSheet.test.tsx`,
+  `CatalogBrowser.test.tsx`, and `InviteForm.test.tsx` remain. Also carried forward: Preview-build
+  `DATABASE_URL` gap, `middleware` → `proxy` migration, no CI, and member-path browser smoke
+  requiring a second Google account.
+- **Next open slice:** **Slice 18 (Recipes: core, management, settings)**.
+- **Commit(s):** `f3b0613`, `ddcf243`, `e149ffa`, `426d492`, `9d12d2c`, `1b56355`, `7d1d217`,
+  `455371a`, `661051f`, `3b28a04`, plus this documentation commit.
 
 ### 2026-09-13 — Recipes designed → slices 17–19 added
 - **Delivered:** Design session (brainstorming) for the owner's first post-MVP feature request:
