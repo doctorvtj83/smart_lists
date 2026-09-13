@@ -155,20 +155,28 @@ export default async function RecipeDetailPage({ params }: Props) {
   }
 
   /**
-   * Rename takes a plain name and returns nothing — the shape InlineEdit expects, and the same
-   * contract renameListAction uses on the list screen. It is NOT a useActionState action: the
-   * inline editor has no form state to render, and a duplicate name surfaces through InlineEdit's
-   * own `error` prop on the next render.
+   * Renames the recipe and returns only an expected German domain error to the client wrapper.
+   *
+   * This is not a useActionState action because InlineEdit is not a form. RecipeTitle keeps this
+   * compact result in local state and passes it to InlineEdit's existing inline error boundary.
    */
-  async function renameAction(name: string) {
+  async function renameAction(name: string): Promise<string | null> {
     "use server";
     const actionLabels = await guard();
     const trimmed = name.trim();
-    if (!trimmed) return; // InlineEdit already refuses an empty value; belt and braces.
+    if (!trimmed) return null; // InlineEdit already refuses an empty value; belt and braces.
 
-    await renameRecipe(prisma, { projectId, recipeId, name: trimmed }, actionLabels);
-    // The index lists this name too, so the whole subtree revalidates.
-    revalidatePath(`/projects/${projectId}/rezepte`, "layout");
+    try {
+      await renameRecipe(prisma, { projectId, recipeId, name: trimmed }, actionLabels);
+      // The index lists this name too, so the whole subtree revalidates.
+      revalidatePath(`/projects/${projectId}/rezepte`, "layout");
+      return null;
+    } catch (error) {
+      // ApiError messages are intentionally German and user-safe; unexpected failures still crash
+      // so an infrastructure bug cannot masquerade as a validation result.
+      if (error instanceof ApiError) return error.message;
+      throw error;
+    }
   }
 
   async function deleteAction() {

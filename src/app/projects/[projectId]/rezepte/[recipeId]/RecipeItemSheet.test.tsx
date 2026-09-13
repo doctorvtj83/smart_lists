@@ -88,6 +88,22 @@ describe("RecipeItemSheet", () => {
     expect(formData.get("recipeItemId")).toBe(milch.id);
   });
 
+  it("surfaces a German error when removing the line fails", async () => {
+    const user = userEvent.setup();
+    const removeAction = vi.fn(async (): Promise<RecipeFormState> => ({
+      error: "Artikel konnte nicht entfernt werden",
+      ok: false,
+      recipeId: null,
+    }));
+    renderSheet({ removeAction });
+
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Artikel konnte nicht entfernt werden",
+    );
+  });
+
   it("renders a German validation error inline", () => {
     renderSheet({
       initialState: { error: "Menge muss eine positive Zahl sein", ok: false, recipeId: null },

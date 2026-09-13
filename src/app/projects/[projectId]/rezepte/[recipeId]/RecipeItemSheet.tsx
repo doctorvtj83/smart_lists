@@ -49,7 +49,12 @@ export function RecipeItemSheet({
   initialState = RECIPE_FORM_IDLE,
 }: RecipeItemSheetProps) {
   const [state, saveFormAction, saving] = useActionState(updateAction, initialState);
-  const [, removeFormAction, removing] = useActionState(removeAction, initialState);
+  // Removal needs its own result state: discarding it would turn a rejected delete into a silent
+  // no-op. It starts idle independently so the update test seam does not duplicate an error.
+  const [removeState, removeFormAction, removing] = useActionState(
+    removeAction,
+    RECIPE_FORM_IDLE,
+  );
 
   // Drafts are strings, because that is what a text input holds. Converting only on the server
   // keeps "1," mid-typing from being interpreted as a number.
@@ -61,35 +66,38 @@ export function RecipeItemSheet({
   // The article name is the title, exactly as on a list entry — it is what the user tapped.
   return (
     <Sheet open onClose={onClose} title={line.name}>
-      <form action={saveFormAction} className={styles.fields}>
+      <form action={saveFormAction} className={styles.form}>
         {/* Hidden rather than a prop on the action: a Server Action reached directly must still
             say WHICH line it edits, and the page's guard scopes it to this recipe. */}
         <input type="hidden" name="recipeItemId" value={line.id} />
         <input type="hidden" name="recipeId" value={recipeId} />
 
-        <div className={styles.quantityField}>
-          <TextField
-            label="Menge"
-            aria-label="Menge"
-            name="quantity"
-            placeholder="1,5"
-            // Brings up the numeric keypad on iPhone; the comma still arrives as text.
-            inputMode="decimal"
-            fieldSize="sm"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-          />
-        </div>
-        <div className={styles.unitField}>
-          <TextField
-            label="Einheit"
-            aria-label="Einheit"
-            name="unit"
-            placeholder="l"
-            fieldSize="sm"
-            value={unit}
-            onChange={(event) => setUnit(event.target.value)}
-          />
+        {/* Only the two compact inputs form a row. Errors and actions remain full-width siblings. */}
+        <div className={styles.fields}>
+          <div className={styles.quantityField}>
+            <TextField
+              label="Menge"
+              aria-label="Menge"
+              name="quantity"
+              placeholder="1,5"
+              // Brings up the numeric keypad on iPhone; the comma still arrives as text.
+              inputMode="decimal"
+              fieldSize="sm"
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+            />
+          </div>
+          <div className={styles.unitField}>
+            <TextField
+              label="Einheit"
+              aria-label="Einheit"
+              name="unit"
+              placeholder="l"
+              fieldSize="sm"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value)}
+            />
+          </div>
         </div>
 
         {state.error ? <FieldError>{state.error}</FieldError> : null}
@@ -109,6 +117,7 @@ export function RecipeItemSheet({
         <Button type="submit" variant="danger" disabled={removing}>
           Entfernen
         </Button>
+        {removeState.error ? <FieldError>{removeState.error}</FieldError> : null}
       </form>
     </Sheet>
   );

@@ -22,6 +22,9 @@ function renderShell() {
         activeListCount: 3,
         memberCount: 4,
         isAdmin: false,
+        recipesEnabled: false,
+        recipeLabelPlural: "Rezepte",
+        isOwner: true,
       }}
       signOutAction={noop}
     >

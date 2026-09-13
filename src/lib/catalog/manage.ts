@@ -288,13 +288,12 @@ export interface DeleteCatalogArticleInput {
 }
 
 /**
- * Deletes an article from the project's catalog — but ONLY when no list uses it.
+ * Deletes an article from the project's catalog — but ONLY when no list or recipe uses it.
  *
- * Why the guard is not optional: ListItem.catalogItemId cascades on delete, so
- * without it, removing an article would silently strip that article's entries
- * from every list it appears on, including completed ones. Those completed lists
- * are exactly what the N-of-M suggestion statistic reads (MVP design § 4.3), so
- * an unguarded delete would quietly rewrite history and change future suggestions.
+ * Why both guards are not optional: ListItem.catalogItemId and RecipeItem.catalogItemId cascade on
+ * delete, so an unchecked removal would silently strip the article from every list and recipe that
+ * uses it. Completed lists feed the N-of-M suggestion statistic (MVP design §4.3), while recipes
+ * must remain stable templates; deleting either reference would corrupt durable project content.
  *
  * The count is re-read HERE and not taken from the caller: the screen decided
  * whether to show the button from a render that may be seconds old, and in the

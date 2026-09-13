@@ -78,6 +78,32 @@ export function RecipeDetail({
 
   const openLine = lines.find((line) => line.id === openLineId) ?? null;
 
+  /**
+   * Closes the sheet only after the edit action confirms success, so a failed save leaves the
+   * offending fields and their inline error visible.
+   */
+  async function submitLineUpdate(
+    previousState: RecipeFormState,
+    formData: FormData,
+  ): Promise<RecipeFormState> {
+    const result = await updateLineAction(previousState, formData);
+    if (result.ok) setOpenLineId(null);
+    return result;
+  }
+
+  /**
+   * Mirrors the update lifecycle for removal: successful deletion closes the sheet, while a
+   * domain error stays in the mounted sheet where RecipeItemSheet can render it.
+   */
+  async function submitLineRemoval(
+    previousState: RecipeFormState,
+    formData: FormData,
+  ): Promise<RecipeFormState> {
+    const result = await removeLineAction(previousState, formData);
+    if (result.ok) setOpenLineId(null);
+    return result;
+  }
+
   /** Submits the trailing row's text and clears it, leaving focus where it was. */
   const submitDraft = (name: string) => {
     const text = name.trim();
@@ -146,8 +172,8 @@ export function RecipeDetail({
           line={openLine}
           recipeId={recipeId}
           onClose={() => setOpenLineId(null)}
-          updateAction={updateLineAction}
-          removeAction={removeLineAction}
+          updateAction={submitLineUpdate}
+          removeAction={submitLineRemoval}
         />
       ) : null}
     </div>

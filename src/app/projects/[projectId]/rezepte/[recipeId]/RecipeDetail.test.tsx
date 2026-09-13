@@ -80,6 +80,21 @@ describe("RecipeDetail", () => {
     expect(screen.getByLabelText("Menge")).toHaveValue("500");
   });
 
+  it("closes the line sheet after Fertig succeeds", async () => {
+    const user = userEvent.setup();
+    const updateLineAction = vi.fn(async (): Promise<RecipeFormState> => ({
+      error: null,
+      ok: true,
+      recipeId: "11111111-1111-4111-8111-111111111111",
+    }));
+    renderDetail({ updateLineAction });
+
+    await user.click(screen.getByRole("button", { name: /Hackfleisch/ }));
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
+
+    expect(screen.queryByRole("dialog", { name: "Hackfleisch" })).not.toBeInTheDocument();
+  });
+
   it("shows an empty state naming the project's own wording", () => {
     renderDetail({
       lines: [],
