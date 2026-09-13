@@ -22,6 +22,12 @@ type Context = { params: Promise<{ listId: string }> };
  * Applies one operation to the list. Member-level.
  * Request body: an Operation (see src/lib/lists/operations.ts for the exact shapes).
  * Response: 200 ListItem (the resulting entry) — or 200 `null` after remove_item.
+ *
+ * SINCE SLICE 17: the returned entry's `id` may DIFFER from the `itemId` that was posted. An
+ * add_item whose article, unit and quantity match an existing unchecked row is absorbed by that row
+ * (recipes design §3), and the absorbed row is what comes back. A client must therefore read the
+ * response instead of assuming the id it generated now exists — replaying the same operation later
+ * resolves to the same target row via the server-side AbsorbedEntry ledger, so retries stay safe.
  */
 export async function POST(request: Request, { params }: Context) {
   try {

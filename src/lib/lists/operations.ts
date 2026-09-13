@@ -2,6 +2,7 @@ import type { List, ListItem, PrismaClient } from "@prisma/client";
 import { flowBackCatalogDefaults, getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { ApiError } from "@/lib/http/errors";
 import { isUuid } from "@/lib/validate";
+import { findMergeTarget, round3, type MergeOutcome } from "./merge";
 
 // Upper bound for the short free-text fields (unit, category). Smaller than names on purpose:
 // these are labels like "l", "kg", "Kühlregal" — 100 chars is already generous.
@@ -188,16 +189,36 @@ export function assertValidUpdateItemValue(
   }
 }
 
-// Applies ONE operation to a list and returns the resulting entry (null after remove_item).
-// The caller (route handler / server action) has already authorized access to `list` via
-// requireListAccess and passes the loaded row — so this core never re-checks permissions, and the
-// list is known to exist. Takes the full List (not just the id) because add_item needs
-// list.projectId for the catalog get-or-create.
-export async function applyOperation(
+/**
+ * What one operation did. `item` is the affected entry (null only after remove_item); `merge` is
+ * non-null ONLY when an add was absorbed by an existing row.
+ *
+ * Why a result object instead of just the row: since Slice 17 an add can resolve to a row whose id
+ * is NOT the one the client sent, and the UI has to say so („Zu 1 l Milch addiert → 3 l"). The
+ * caller cannot reconstruct the target's previous quantity afterwards — subtracting the contribution
+ * back out would be a second, drifting copy of the merge arithmetic.
+ */
+export interface OperationResult {
+  item: ListItem | null;
+  merge: MergeOutcome | null;
+}
+
+/**
+ * Applies ONE operation to a list and reports both the resulting entry and whether it was a merge.
+ *
+ * The caller (route handler / server action) has already authorized access to `list` via
+ * requireListAccess and passes the loaded row — so this core never re-checks permissions, and the
+ * list is known to exist. Takes the full List (not just the id) because add_item needs
+ * list.projectId for the catalog get-or-create.
+ *
+ * Most callers want `applyOperation` below; this form exists for the one caller that renders the
+ * merge cue (addEntryFromRow).
+ */
+export async function applyOperationDetailed(
   db: PrismaClient,
   list: List,
   operation: Operation,
-): Promise<ListItem | null> {
+): Promise<OperationResult> {
   // Every operation targets an entry by id; a malformed id must be a clean 400 before any query
   // touches the uuid column (Prisma P2023 -> fake 500 otherwise).
   if (!isUuid(operation.itemId)) throw new ApiError(400, "Ungültige Eintrags-ID");
@@ -212,22 +233,94 @@ export async function applyOperation(
       // getOrCreateCatalogItem — the single source of truth for the article-name rule; it is
       // deliberately not duplicated here (DRY).
 
-      // IDEMPOTENCY: if this entry id already exists, this is a replay (retry / offline queue).
+      // STEP 2 — IDEMPOTENCY: if this entry id already exists, this is a replay (retry / offline
+      // queue). Checked BEFORE the ledger (step 3, Task 4): a row under this id is the stronger
+      // fact, and it is what a fall-through create leaves behind.
       const existing = await db.listItem.findUnique({ where: { id: operation.itemId } });
       if (existing) {
         // Replay into the SAME list -> return the existing entry unchanged (no-op, applying twice
         // equals applying once). Same id in a DIFFERENT list -> a real id collision, which is a
         // client bug (UUIDs must be unique); 409 Conflict makes it visible instead of hiding it.
-        if (existing.listId === list.id) return existing;
+        if (existing.listId === list.id) return { item: existing, merge: null };
         throw new ApiError(409, "Eintrags-ID wird bereits verwendet");
       }
 
-      // Article identity: resolve the typed name to the project's catalog row (create on first use).
+      // STEP 4 — Article identity: resolve the typed name to the project's catalog row (create on
+      // first use).
       const catalogItem = await getOrCreateCatalogItem(db, {
         projectId: list.projectId,
         name: operation.name,
       });
 
+      // STEP 5 — The unit this entry will ACTUALLY carry, resolved before anything is matched or
+      // written. `undefined` = "not supplied" -> inherit the catalog default; `null` = explicit
+      // empty. Computing it here rather than inline in the create is what makes two adds that both
+      // inherit „Becher" land in the same merge bucket.
+      const effectiveUnit =
+        operation.unit !== undefined ? operation.unit : catalogItem.defaultUnit;
+      // Normalize the "no quantity" case once: parseOperation admits both undefined and null.
+      const quantity = operation.quantity ?? null;
+
+      // STEP 6 — Find the row that should absorb this add. The query narrows to candidates only
+      // (this list, this article); findMergeTarget owns every RULE, including re-checking the
+      // article — one source of truth, so the `where` clause and the predicate cannot drift apart
+      // (recipes design §3 / ruling R3). Skipped entirely when there is no quantity, because
+      // findMergeTarget would refuse every candidate anyway and this saves a round-trip on the
+      // most common add of all („Milch" with no number).
+      const target =
+        quantity === null
+          ? null
+          : findMergeTarget(
+              await db.listItem.findMany({
+                where: { listId: list.id, catalogItemId: catalogItem.id },
+                orderBy: { sortIndex: "asc" },
+              }),
+              { catalogItemId: catalogItem.id, quantity, unit: effectiveUnit },
+            );
+
+      // STEP 7 — MERGE: the only field that changes is the number. Category, unit spelling,
+      // sortIndex and checked state belong to the row that was already there; overwriting them
+      // would silently re-file an entry the user deliberately placed.
+      if (target) {
+        const summed = round3(target.quantity + quantity!);
+        // ONE transaction, because these two writes are one fact: "this add became part of that
+        // row". If the update landed without the ledger row, a retry would add the amount twice;
+        // if the ledger row landed without the update, the quantity would be lost and the retry
+        // would report success. The ARRAY form of $transaction is used deliberately — the callback
+        // form hands back `Omit<PrismaClient, ITXClientDenyList>`, which none of this module's
+        // `PrismaClient` parameters accept (the same constraint documented in suggestions.ts).
+        const [mergedItem] = await db.$transaction([
+          db.listItem.update({ where: { id: target.id }, data: { quantity: summed } }),
+          db.absorbedEntry.create({
+            data: {
+              id: operation.itemId, // the client's id IS the ledger key
+              listId: list.id,
+              targetItemId: target.id,
+              quantity: quantity!,
+            },
+          }),
+        ]);
+
+        // Flow-back still fires: an explicitly supplied category/unit is CATALOG memory and is
+        // independent of where the entry landed (design §3, step 7).
+        await flowBackCatalogDefaults(db, catalogItem.id, {
+          category: operation.category,
+          unit: operation.unit,
+        });
+
+        return {
+          item: mergedItem,
+          merge: {
+            targetItemId: mergedItem.id,
+            name: catalogItem.name,
+            previousQuantity: target.quantity,
+            quantity: summed,
+            unit: mergedItem.unit,
+          },
+        };
+      }
+
+      // No target: create the row exactly as before this slice.
       // Append at the end: next sortIndex = current max + 1. _max is null on an empty list -> 0.
       // (Not race-free under concurrent adds, but a duplicate sortIndex only makes ordering
       // ambiguous, never corrupts data — acceptable for the MVP, revisit with Slice 7 if needed.)
@@ -242,11 +335,11 @@ export async function applyOperation(
           id: operation.itemId, // the client-generated id IS the identity — never remap it
           listId: list.id,
           catalogItemId: catalogItem.id,
-          quantity: operation.quantity ?? null,
+          quantity,
           // `undefined` = "not supplied" → inherit the catalog default. `null` = explicit empty
           // (e.g. adding under the „Ohne Kategorie" chip) → store null on the entry. Using `??`
           // here would wrongly collapse both and make an explicit clear impossible.
-          unit: operation.unit !== undefined ? operation.unit : catalogItem.defaultUnit,
+          unit: effectiveUnit,
           category:
             operation.category !== undefined ? operation.category : catalogItem.defaultCategory,
           sortIndex,
@@ -262,7 +355,7 @@ export async function applyOperation(
         category: operation.category,
         unit: operation.unit,
       });
-      return created;
+      return { item: created, merge: null };
     }
 
     case "update_item": {
@@ -294,7 +387,7 @@ export async function applyOperation(
           [operation.field]: operation.value as string | null,
         });
       }
-      return updated;
+      return { item: updated, merge: null };
     }
 
     case "check_item": {
@@ -304,14 +397,39 @@ export async function applyOperation(
       });
       if (!item) throw new ApiError(404, "Eintrag nicht gefunden");
       // Writes the target state (not a toggle) — idempotent under replay by construction.
-      return db.listItem.update({ where: { id: item.id }, data: { checked: operation.checked } });
+      const checkedItem = await db.listItem.update({
+        where: { id: item.id },
+        data: { checked: operation.checked },
+      });
+      return { item: checkedItem, merge: null };
     }
 
     case "remove_item": {
       // deleteMany (not delete) because it tolerates 0 matches: removing an already-removed entry
       // is a SUCCESSFUL no-op (idempotency), and scoping by listId keeps foreign ids untouchable.
       await db.listItem.deleteMany({ where: { id: operation.itemId, listId: list.id } });
-      return null;
+      return { item: null, merge: null };
     }
   }
+}
+
+/**
+ * The operations funnel as every existing caller knows it: apply one operation, get the affected
+ * entry back (null after remove_item).
+ *
+ * Kept as a thin wrapper rather than changing every call site, because only ONE caller
+ * (addEntryFromRow) needs to know that an add was merged. The rest — the REST endpoint, the list
+ * screen's check/remove/update actions, the pre-fill loop — care about the row and nothing else.
+ *
+ * NOTE THE CONTRACT CHANGE THIS INHERITS: since Slice 17 the returned row's id may differ from
+ * `operation.itemId`. Callers must use the RETURNED row and never assume the id they sent now
+ * exists as a row.
+ */
+export async function applyOperation(
+  db: PrismaClient,
+  list: List,
+  operation: Operation,
+): Promise<ListItem | null> {
+  const { item } = await applyOperationDetailed(db, list, operation);
+  return item;
 }
