@@ -281,25 +281,42 @@ export async function applyOperationDetailed(
       // STEP 7 — MERGE: the only field that changes is the number. Category, unit spelling,
       // sortIndex and checked state belong to the row that was already there; overwriting them
       // would silently re-file an entry the user deliberately placed.
+      // KNOWN MVP LIMIT: two parallel adds can both observe no target and create two rows. That
+      // race stays deliberately open because it is self-revealing (the user sees both rows), unlike
+      // silent quantity loss. Closing it needs a partial unique index plus retry, which is out of
+      // MVP scope.
       if (target) {
-        const summed = round3(target.quantity + quantity!);
         // ONE transaction, because these two writes are one fact: "this add became part of that
         // row". If the update landed without the ledger row, a retry would add the amount twice;
         // if the ledger row landed without the update, the quantity would be lost and the retry
         // would report success. The ARRAY form of $transaction is used deliberately — the callback
         // form hands back `Omit<PrismaClient, ITXClientDenyList>`, which none of this module's
         // `PrismaClient` parameters accept (the same constraint documented in suggestions.ts).
+        const contribution = quantity!;
         const [mergedItem] = await db.$transaction([
-          db.listItem.update({ where: { id: target.id }, data: { quantity: summed } }),
+          db.listItem.update({
+            where: { id: target.id },
+            // An atomic increment, NOT an absolute value computed from the row we read a moment
+            // ago: a read-modify-write loses one of the two amounts when two adds merge into the
+            // same row concurrently — silently, because there is no duplicate row to reveal it.
+            // Postgres performs the addition under the row lock, so both contributions survive.
+            data: { quantity: { increment: contribution } },
+          }),
           db.absorbedEntry.create({
             data: {
               id: operation.itemId, // the client's id IS the ledger key
               listId: list.id,
               targetItemId: target.id,
-              quantity: quantity!,
+              quantity: contribution,
             },
           }),
         ]);
+
+        // Derived from what was actually written, never from the stale read — the same derivation
+        // the replay path (funnel step 3, Task 4) uses. "Total minus my own contribution" stays a
+        // true statement even when someone else's add landed in between.
+        const summed = round3(mergedItem.quantity!);
+        const previousQuantity = round3(summed - contribution);
 
         // Flow-back still fires: an explicitly supplied category/unit is CATALOG memory and is
         // independent of where the entry landed (design §3, step 7).
@@ -313,7 +330,7 @@ export async function applyOperationDetailed(
           merge: {
             targetItemId: mergedItem.id,
             name: catalogItem.name,
-            previousQuantity: target.quantity,
+            previousQuantity,
             quantity: summed,
             unit: mergedItem.unit,
           },
