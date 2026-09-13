@@ -52,10 +52,23 @@ model Project {
   ownerId String @db.Uuid @map("owner_id") // the creator; also gets an owner Membership row (see createProject)
   owner   User   @relation(fields: [ownerId], references: [id])
 
-  // Parameters of the suggestion statistic (MVP design §4.3). Stored now so Slice 5 needs no migration;
-  // editing them is out of scope for this slice. Defaults: appears in >= N of the last M completed lists.
-  suggestionRuleN Int @default(2) @map("suggestion_rule_n")
+  // Raised 2 -> 3 in Slice 18 (recipes design, D8): an article is suggested when it appeared in
+  // >= 3 of the last 4 completed lists. The old threshold of 2 crowded the pre-fill, and the
+  // migration that introduces this default also updates existing projects still sitting on 2 —
+  // otherwise the change is invisible exactly where it matters. Per-project tuning stays out of
+  // scope: the columns exist, there is no UI.
+  suggestionRuleN Int @default(3) @map("suggestion_rule_n")
   suggestionRuleM Int @default(4) @map("suggestion_rule_m")
+
+  // --- Recipes (Slice 18) ---------------------------------------------------
+  // Opt-in per project. Kept SEPARATE from the two label columns on purpose: turning the feature
+  // off must not destroy the wording the project chose, so off -> on restores everything.
+  recipesEnabled Boolean @default(false) @map("recipes_enabled")
+  // The project NAMES the feature: "Rezept/Rezepte" is only the default. A packing project calls
+  // them "Sets". Every user-facing string is composed from this pair by recipeLabels() — which is
+  // why renaming the feature needs no migration and touches no stored string.
+  recipeLabelSingular String @default("Rezept") @map("recipe_label_singular")
+  recipeLabelPlural   String @default("Rezepte") @map("recipe_label_plural")
 
   createdAt   DateTime     @default(now()) @map("created_at")
   memberships Membership[]
@@ -66,6 +79,9 @@ model Project {
 
   // Back-relation added in Slice 5 (Favorites + Suggestions). Favorites are project-shared.
   favorites Favorite[]
+
+  // Back-relation added in Slice 18 (Recipes). Cascade lives on Recipe.project.
+  recipes Recipe[]
 
   @@map("projects")
 }
@@ -122,6 +138,11 @@ model CatalogItem {
 
   // Back-relation added in Slice 5: which favorites point at this article (0 or 1 per project).
   favorites Favorite[]
+
+  // Back-relation added in Slice 18: which recipe lines reference this article. A recipe line has
+  // NO name column — the name lives here — so renaming an article updates every recipe for free.
+  // This relation is also what the extended catalog-delete guard counts (Task 6).
+  recipeItems RecipeItem[]
 
   // One catalog row per article identity per project. Prisma exposes this as the compound
   // selector `projectId_normalizedName` in findUnique/upsert — the race-safe get-or-create key.
@@ -208,4 +229,63 @@ model Favorite {
   // Prisma exposes this as the compound selector `projectId_catalogItemId` in upsert/findUnique.
   @@unique([projectId, catalogItemId])
   @@map("favorites")
+}
+
+// A named set of catalog articles describing what ONE unit (one portion, one dish, one trip)
+// needs — the feature the project may call "Rezept", "Set" or "Paket" (Slice 18).
+//
+// Modelled on List/ListItem rather than on a document: the articles ARE the recipe. There is no
+// instruction text, no image and no servings metadata (spec §1 "Out of scope") — a recipe is a set
+// of articles, and everything else would be a second content model to maintain.
+model Recipe {
+  id        String  @id @default(uuid()) @db.Uuid // stable, client-generatable UUID (offline-prep convention)
+  projectId String  @db.Uuid @map("project_id")
+  // onDelete: Cascade -> deleting a project removes its recipes (project-scoped configuration,
+  // exactly like the catalog and the favorites).
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Display name exactly as typed (trimmed, inner whitespace collapsed).
+  name String
+  // Identity key, produced by the SAME normalizeName the catalog uses (lowercase + trim + collapse
+  // spaces). Reusing that rule is what makes "Lasagne" and " lasagne " one recipe rather than two.
+  normalizedName String @map("normalized_name")
+
+  createdAt DateTime     @default(now()) @map("created_at")
+  items     RecipeItem[]
+
+  // One recipe per name identity per project — the collision the UI reports as a 409.
+  // Prisma exposes this as the compound selector `projectId_normalizedName`.
+  @@unique([projectId, normalizedName])
+  @@map("recipes")
+}
+
+// One line of a recipe: an article, how much of it ONE unit of the recipe needs, and in which unit.
+model RecipeItem {
+  id       String @id @default(uuid()) @db.Uuid
+  recipeId String @db.Uuid @map("recipe_id")
+  // onDelete: Cascade -> deleting a recipe removes its lines.
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  // The article. NO name column, exactly like ListItem — article identity lives on the catalog row
+  // (MVP design §3.1). onDelete: Cascade is referential hygiene only: the catalog-delete guard
+  // (Task 6) refuses to delete an article any recipe uses, so this cascade only ever fires via a
+  // project delete, which is taking the recipes with it anyway.
+  catalogItemId String      @db.Uuid @map("catalog_item_id")
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  // Per ONE unit of the recipe. null = "just add it" (Salz), which stays one entry at any count
+  // (spec D4) — that is why it is nullable rather than defaulting to 1.
+  quantity Float?
+  // null inherits the article's catalog default at apply time (Slice 19), so a recipe written
+  // before the project settled on a unit still produces the right entry later.
+  unit String?
+
+  // Manual ordering within the recipe, server-assigned max+1 on add — the same contract as
+  // ListItem.sortIndex, so a recipe built from a well-ordered list reads in that order.
+  sortIndex Int @map("sort_index")
+
+  // One line per article per recipe. Two lines for the same article would be ambiguous under the
+  // apply multiplier and would merge on apply anyway — so addRecipeItem UPDATES instead of failing.
+  @@unique([recipeId, catalogItemId])
+  @@map("recipe_items")
 }

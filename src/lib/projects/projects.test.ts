@@ -28,8 +28,13 @@ describe("createProject", () => {
     expect(project.id).toBeTruthy();
     expect(project.name).toBe("Einkauf");
     expect(project.ownerId).toBe(userId);
-    expect(project.suggestionRuleN).toBe(2); // default from the schema
+    expect(project.suggestionRuleN).toBe(3); // raised 2 -> 3 in Slice 18 (spec D8)
     expect(project.suggestionRuleM).toBe(4); // default from the schema
+    // A project starts with recipes OFF and the default German wording, so the
+    // settings form has something to pre-fill before anyone enables anything.
+    expect(project.recipesEnabled).toBe(false);
+    expect(project.recipeLabelSingular).toBe("Rezept");
+    expect(project.recipeLabelPlural).toBe("Rezepte");
 
     // The owner membership must exist (this is what later permission checks read).
     const membership = await db.membership.findUnique({
