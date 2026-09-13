@@ -1,0 +1,50 @@
+/* The section is one vertical form so its controls retain the handoff's compact rhythm. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Keep the feature explanation and its switch on one readable row. */
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.switchText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.switchLabel {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.switchHint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+/* The two related labels share a row until a narrow phone would make them cramped. */
+.labelFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.saved {
+  color: var(--color-success-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 419px) {
+  .labelFields {
+    grid-template-columns: 1fr;
+  }
+}
