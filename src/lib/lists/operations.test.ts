@@ -565,3 +565,99 @@ describe("add_item — merging", () => {
     expect(returned!.quantity).toBe(3);
   });
 });
+
+describe("add_item — merge idempotency", () => {
+  // THE test of this slice. Without the ledger, replaying a merged add adds the amount again —
+  // silently, with no duplicate row to reveal it.
+  it("replaying a merged add does not add the quantity twice", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+    const replayId = randomUUID();
+    const merged = { itemId: replayId, name: "Milch", quantity: 2, unit: "l" };
+
+    await add(merged);
+    const { item, merge } = await add(merged); // the retry
+
+    expect(item!.id).toBe(first.item!.id);
+    expect(item!.quantity).toBe(3); // NOT 5
+    // The replay reports the same outcome the first application did, so a retried request paints
+    // the same banner rather than nothing.
+    expect(merge).toMatchObject({ previousQuantity: 1, quantity: 3 });
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(1);
+  });
+
+  // The subtlest behaviour in the feature, and the consistency rule with remove_item: once the
+  // target row is gone, the client's id is free again — exactly as it is after a remove.
+  it("re-creates the entry when the target row was deleted since", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+    const replayId = randomUUID();
+    const merged = { itemId: replayId, name: "Milch", quantity: 2, unit: "l" };
+    await add(merged);
+
+    await applyOperation(db, list, { op: "remove_item", itemId: first.item!.id });
+    const { item, merge } = await add(merged); // the retry, target gone
+
+    expect(item!.id).toBe(replayId); // a real row under the client's own id
+    expect(item!.quantity).toBe(2);
+    expect(merge).toBeNull();
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+  });
+
+  it("keeps the stale ledger row harmless on a second replay after that", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+    const replayId = randomUUID();
+    const merged = { itemId: replayId, name: "Milch", quantity: 2, unit: "l" };
+    await add(merged);
+    await applyOperation(db, list, { op: "remove_item", itemId: first.item!.id });
+    await add(merged); // re-created under replayId
+
+    const { item } = await add(merged); // and again
+
+    // Step 2 (a row with this id exists) is reached before step 3, so the stale ledger row pointing
+    // at the deleted target is never consulted again.
+    expect(item!.id).toBe(replayId);
+    expect(item!.quantity).toBe(2);
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+  });
+
+  it("composes two different adds into the correct sum", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+
+    await add({ name: "Milch", quantity: 2, unit: "l" });
+    const { item } = await add({ name: "Milch", quantity: 0.5, unit: "l" });
+
+    expect(item!.id).toBe(first.item!.id);
+    expect(item!.quantity).toBe(3.5);
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(2);
+  });
+
+  it("rejects a ledger id replayed against a DIFFERENT list with 409", async () => {
+    await add({ name: "Milch", quantity: 1, unit: "l" });
+    const replayId = randomUUID();
+    await add({ itemId: replayId, name: "Milch", quantity: 2, unit: "l" });
+
+    const otherList = await db.list.create({ data: { projectId, name: "Zweite Liste" } });
+
+    // Same rule as a ListItem id reused across lists: a reused UUID is a client bug, and it must
+    // surface as a clean 409 rather than a Prisma unique-constraint 500.
+    await expect(
+      applyOperationDetailed(db, otherList, {
+        op: "add_item",
+        itemId: replayId,
+        name: "Milch",
+        quantity: 2,
+        unit: "l",
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("discards the ledger with the list it belongs to", async () => {
+    await add({ name: "Milch", quantity: 1, unit: "l" });
+    await add({ name: "Milch", quantity: 2, unit: "l" });
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(1);
+
+    await db.list.delete({ where: { id: list.id } });
+
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(0);
+  });
+});

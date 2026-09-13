@@ -245,6 +245,46 @@ export async function applyOperationDetailed(
         throw new ApiError(409, "Eintrags-ID wird bereits verwendet");
       }
 
+      // STEP 3 — REPLAY OF A MERGE. No row carries this id, but the ledger may say it was absorbed
+      // by one. Without this lookup a retried merged add would add its quantity a SECOND time, and
+      // nothing on screen would reveal it (there is no duplicate row to notice).
+      const absorbed = await db.absorbedEntry.findUnique({ where: { id: operation.itemId } });
+      if (absorbed) {
+        // Same id, different list: a reused UUID — the exact mirror of step 2's cross-list rule.
+        // Falling through would try to insert a second ledger row under this primary key and turn a
+        // client bug into a 500 (ruling R4).
+        if (absorbed.listId !== list.id) {
+          throw new ApiError(409, "Eintrags-ID wird bereits verwendet");
+        }
+        // `include`: the banner names the ARTICLE, whose name lives on the catalog row (article
+        // identity, MVP design §3.1) — one query instead of a second round-trip.
+        const target = await db.listItem.findFirst({
+          where: { id: absorbed.targetItemId, listId: list.id },
+          include: { catalogItem: true },
+        });
+        // The target must STILL EXIST. If it was deleted since (swipe-to-delete), the ledger is
+        // ignored and this add falls through to a normal create — deliberately the same behaviour
+        // add_item already has after a remove_item: the id is free again, so a replay re-creates
+        // the entry. One rule, not two (recipes design §3).
+        if (target) {
+          // Reconstruct the outcome of the ORIGINAL application from the contribution the ledger
+          // recorded, so a retry renders the identical banner instead of a silent nothing. A null
+          // quantity means someone cleared the row afterwards — there is no sum left to describe,
+          // so report the row without a merge cue rather than invent numbers.
+          const merge =
+            target.quantity === null
+              ? null
+              : {
+                  targetItemId: target.id,
+                  name: target.catalogItem.name,
+                  previousQuantity: round3(target.quantity - absorbed.quantity),
+                  quantity: target.quantity,
+                  unit: target.unit,
+                };
+          return { item: target, merge };
+        }
+      }
+
       // STEP 4 — Article identity: resolve the typed name to the project's catalog row (create on
       // first use).
       const catalogItem = await getOrCreateCatalogItem(db, {
