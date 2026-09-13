@@ -248,6 +248,7 @@ describe("ListBody — entry interaction", () => {
       ok: false,
       openEntryId: null,
       itemId: milch.id,
+      merge: null,
     }));
     renderBody({ updateAction });
 
@@ -267,6 +268,7 @@ describe("ListBody — entry interaction", () => {
       ok: false,
       openEntryId: null,
       itemId: milch.id,
+      merge: null,
     }));
     renderBody({ updateAction });
 

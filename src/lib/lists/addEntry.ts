@@ -22,7 +22,7 @@ import { buildUnitLookup, parseEntryInput } from "./parseEntryInput";
  *     unit vocabulary and a raw-name catalog escape hatch, so the server remains
  *     the single source of truth for the entry and the catalog article name.
  *
- * Deliberately a thin wrapper around `applyOperation` rather than its own write:
+ * Deliberately a thin wrapper around `applyOperationDetailed` rather than its own write:
  * the operations funnel stays the only way entries are created, so idempotent
  * replay, catalog get-or-create and flow-back all still apply (MVP design §4.5).
  */

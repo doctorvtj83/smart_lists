@@ -14,11 +14,10 @@ client's `itemId`; the inline banner and 1.4-second row flash make the otherwise
 
 Fresh verification on 2026-09-13 produced **89 test files / 722 tests passed**. `npm run lint` exited
 0 with **0 errors / 14 warnings**, all unused typed mock parameters in `ListBody.test.tsx`.
-`npx tsc --noEmit` exited 2 with **7 test-only diagnostics**: five inherited diagnostics in
-`RevokeSheet.test.tsx`, `CatalogBrowser.test.tsx`, and `InviteForm.test.tsx`, plus **two Slice 17
-diagnostics** in `ListBody.test.tsx` where older failure stubs do not include the newly required
-`merge: null`. The runtime suite is green, but the slice therefore does not claim a clean standalone
-TypeScript check.
+`npx tsc --noEmit` exited 2 with **5 inherited test-only diagnostics** in `RevokeSheet.test.tsx`,
+`CatalogBrowser.test.tsx`, and `InviteForm.test.tsx`. The two Slice 17 `ListBody.test.tsx` stubs
+missing `merge: null` were closed in a follow-up fix. The runtime suite is green; a fully clean
+standalone TypeScript check still depends on clearing those inherited test diagnostics.
 
 ---
 
