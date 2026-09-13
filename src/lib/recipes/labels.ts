@@ -58,7 +58,7 @@ export interface RecipeLabels {
  * import or a future bug — but "Neues " on a button is the kind of breakage nobody reports, so the
  * cheapest possible guard is worth having here rather than in each of eight phrases.
  */
-function useLabel(raw: string, fallback: string): string {
+function resolveLabel(raw: string, fallback: string): string {
   const trimmed = raw.trim();
   return trimmed === "" ? fallback : trimmed;
 }
@@ -71,8 +71,8 @@ function useLabel(raw: string, fallback: string): string {
  * consequence the design cares about: renaming the feature is a settings edit, never a migration.
  */
 export function recipeLabels(source: RecipeLabelSource): RecipeLabels {
-  const singular = useLabel(source.recipeLabelSingular, DEFAULT_RECIPE_LABEL_SINGULAR);
-  const plural = useLabel(source.recipeLabelPlural, DEFAULT_RECIPE_LABEL_PLURAL);
+  const singular = resolveLabel(source.recipeLabelSingular, DEFAULT_RECIPE_LABEL_SINGULAR);
+  const plural = resolveLabel(source.recipeLabelPlural, DEFAULT_RECIPE_LABEL_PLURAL);
 
   return {
     singular,
