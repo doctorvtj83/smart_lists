@@ -58,6 +58,29 @@ describe("getProjectNav", () => {
     expect(await getProjectNav(db, "11111111-1111-4111-8111-111111111111", ownerId)).toBeNull();
   });
 
+  it("carries the project's recipe settings for the nav entry", async () => {
+    const project = await createProject(db, { name: "Haushalt", ownerId });
+    await db.project.update({
+      where: { id: project.id },
+      data: { recipesEnabled: true, recipeLabelPlural: "Sets" },
+    });
+
+    const nav = await getProjectNav(db, project.id, ownerId);
+
+    // The panel needs BOTH: the flag decides whether the entry is rendered, the plural is its label.
+    expect(nav!.recipesEnabled).toBe(true);
+    expect(nav!.recipeLabelPlural).toBe("Sets");
+  });
+
+  it("reports recipes as off by default", async () => {
+    const project = await createProject(db, { name: "Haushalt", ownerId });
+
+    const nav = await getProjectNav(db, project.id, ownerId);
+
+    expect(nav!.recipesEnabled).toBe(false);
+    expect(nav!.recipeLabelPlural).toBe("Rezepte");
+  });
+
   // A malformed id arrives straight from the URL segment and must not reach a
   // uuid column (Prisma P2023 → a fake 500).
   it("returns null for a malformed project id", async () => {

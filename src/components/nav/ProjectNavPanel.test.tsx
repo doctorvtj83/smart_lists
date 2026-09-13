@@ -22,6 +22,9 @@ function renderPanel(overrides: Partial<Parameters<typeof ProjectNavPanel>[0]> =
     activeListCount: 3,
     memberCount: 4,
     isAdmin: false,
+    recipesEnabled: false,
+    recipeLabelPlural: "Rezepte",
+    isOwner: false,
     signOutAction: noop,
     ...overrides,
   };
@@ -110,6 +113,32 @@ describe("ProjectNavPanel", () => {
 
     renderPanel({ isAdmin: true });
     expect(screen.getByRole("link", { name: "Verwaltung" })).toHaveAttribute("href", "/admin");
+  });
+
+  it("hides the recipes entry when the feature is off", () => {
+    renderPanel({ recipesEnabled: false });
+
+    expect(screen.queryByRole("link", { name: "Rezepte" })).not.toBeInTheDocument();
+  });
+
+  it("shows the recipes entry under the project's own name when enabled", () => {
+    renderPanel({ recipesEnabled: true, recipeLabelPlural: "Sets" });
+
+    expect(screen.getByRole("link", { name: "Sets" })).toHaveAttribute(
+      "href",
+      "/projects/p1/rezepte",
+    );
+  });
+
+  it("shows the settings entry only to the owner", () => {
+    renderPanel({ isOwner: false });
+    expect(screen.queryByRole("link", { name: "Einstellungen" })).not.toBeInTheDocument();
+
+    renderPanel({ isOwner: true });
+    expect(screen.getByRole("link", { name: "Einstellungen" })).toHaveAttribute(
+      "href",
+      "/projects/p1/einstellungen",
+    );
   });
 
   it("always offers Abmelden", () => {

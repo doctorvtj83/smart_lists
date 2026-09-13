@@ -51,6 +51,11 @@ export default async function ProjectLayout({ children, params }: Props) {
         projects: nav.projects,
         activeListCount: nav.activeListCount,
         memberCount: nav.memberCount,
+        recipesEnabled: nav.recipesEnabled,
+        recipeLabelPlural: nav.recipeLabelPlural,
+        // The role comes from the same membership read that guarded this render, so it is live —
+        // unlike the session's isAdmin flag below, which is only a visibility hint.
+        isOwner: nav.role === "owner",
         // The session flag decides VISIBILITY only; /admin re-reads isAdmin live
         // from the database, so a stale token gets redirected there (Slice 9).
         isAdmin: Boolean(session!.user.isAdmin),

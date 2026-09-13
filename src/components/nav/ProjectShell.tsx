@@ -13,6 +13,12 @@ export interface ProjectNavPanelData {
   activeListCount: number;
   memberCount: number;
   isAdmin: boolean;
+  /** Whether this project's opt-in recipes feature should appear in navigation. */
+  recipesEnabled: boolean;
+  /** The project-defined plural used for the recipes navigation entry. */
+  recipeLabelPlural: string;
+  /** Whether the live project membership grants owner-only navigation entries. */
+  isOwner: boolean;
 }
 
 type ProjectShellProps = {

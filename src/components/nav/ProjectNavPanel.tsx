@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Archive,
+  BookOpen,
   Check,
   ChevronDown,
   Home,
@@ -12,6 +13,7 @@ import {
   ListChecks,
   LogOut,
   Plus,
+  Settings,
   Shield,
   Star,
   Users,
@@ -37,6 +39,12 @@ type ProjectNavPanelProps = {
   memberCount: number;
   /** Drives the „Verwaltung" entry. Visibility only — /admin re-checks for real. */
   isAdmin: boolean;
+  /** Drives whether the recipes entry exists at all. The ROUTE re-checks — this is convenience. */
+  recipesEnabled: boolean;
+  /** The project's own plural, e.g. "Sets". Never hardcode "Rezepte" here (spec §4). */
+  recipeLabelPlural: string;
+  /** Owner-only entries (Einstellungen). Visibility only — the route re-checks with requireOwner. */
+  isOwner: boolean;
   /** Server Action; passed down so the panel never touches auth itself. */
   signOutAction: () => Promise<void>;
   /** The mobile drawer passes its close(); the desktop sidebar passes nothing. */
@@ -72,6 +80,9 @@ export function ProjectNavPanel({
   activeListCount,
   memberCount,
   isAdmin,
+  recipesEnabled,
+  recipeLabelPlural,
+  isOwner,
   signOutAction,
   onNavigate,
 }: ProjectNavPanelProps) {
@@ -89,8 +100,19 @@ export function ProjectNavPanel({
 
   const projectEntries: NavEntry[] = [
     { label: "Favoriten", href: `/projects/${projectId}/favoriten`, glyph: Star },
+    // Slice 18: recipes are opt-in per project, so the entry only exists when the feature is on —
+    // and it is labelled with the project's OWN plural, because the project names the feature.
+    // The route re-checks the flag and 404s: the nav is a convenience, the route is the gate.
+    ...(recipesEnabled
+      ? [{ label: recipeLabelPlural, href: `/projects/${projectId}/rezepte`, glyph: BookOpen }]
+      : []),
     { label: "Katalog", href: `/projects/${projectId}/katalog`, glyph: Library },
     { label: "Mitglieder", href: `/projects/${projectId}/mitglieder`, glyph: Users, count: memberCount },
+    // Ruling R2: the settings screen is otherwise unreachable. Owner-only visibility mirrors its
+    // requireOwner guard — a member sees no entry, and the route redirects them if they guess it.
+    ...(isOwner
+      ? [{ label: "Einstellungen", href: `/projects/${projectId}/einstellungen`, glyph: Settings }]
+      : []),
   ];
 
   // Every nav row is built here so the active styling, the icon size and the
