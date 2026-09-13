@@ -75,10 +75,16 @@ under the table). Each slice is working, tested software on its own.
 | 14 | **Restyle the built screens** | Login, Zugang verweigert, Home (incl. the new "Weitermachen" card), Projekte, Verwaltung (incl. the two-way revoke sheet) in the new visual language | [2026-08-02-slice-14-restyle-built-screens.md](2026-08-02-slice-14-restyle-built-screens.md) | ✅ Done / verified |
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | [2026-09-02-slice-15-quantity-parsing.md](2026-09-02-slice-15-quantity-parsing.md) | ✅ Done / verified |
 | 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
+| 17 | **Entry merging** | Adding an entry for an article already on the list **sums the quantities** instead of creating a second row (same article + same unit, both quantified, unchecked target only). Carries the `AbsorbedEntry` idempotency ledger that keeps `add_item` replay-safe now that it no longer always creates a row | _to be created_ | ⬜ Open |
+| 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | _to be created_ | ⬜ Open |
+| 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
-**Build order for what is left: Slice 16 (optional)**, only if real use asks for it.
+**Build order for what is left: 17 → 18 → 19**, then Slice 16 (optional), only if real use asks
+for it. Slices 17–19 come from the
+[Recipes design](../specs/2026-09-13-smart-lists-recipes-design.md) (2026-09-13); see the note
+below the build-order notes.
 
 > **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
 > Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
@@ -209,6 +215,42 @@ under the table). Each slice is working, tested software on its own.
 > shipped on every `EntryRow`. Slice 16 should implement the flash via a `FlashProvider` + thin row
 > wrappers while rows stay server-rendered.
 
+> **Slices 17–19 note (2026-09-13):** These come from the
+> [Recipes design](../specs/2026-09-13-smart-lists-recipes-design.md) — the first feature work since
+> the MVP went live, requested by the owner after real use. They are **not** from MVP design §9.
+>
+> A project can define **recipes**: named sets of catalog articles with a quantity each, describing
+> what **one** unit needs. Applying a recipe with a count multiplies every quantity. Recipes can also
+> be **derived from a completed list**, turning what a household already bought into something
+> reusable. The feature is **opt-in per project** and **named by the project** — "Rezept/Rezepte" is
+> only the default wording, stored as a singular/plural pair, so a packing project can call them
+> "Sets". Every user-facing string is composed by one `recipeLabels` helper; no German string outside
+> it may hardcode "Rezept".
+>
+> **Why merging is its own slice (17) and goes first.** Applying two recipes that both need milk must
+> not produce two milk rows, so entries for the same article merge: same article **and** same unit
+> (where "no unit" is its own bucket), **both** sides carrying a quantity, **on add only**, and never
+> into a **checked** row (what is already in the basket stays settled). No unit conversion — 1 l and
+> 500 ml stay apart. This fixes duplicate rows on today's lists, so it ships alone.
+>
+> The consequence that makes it delicate: `add_item` **stops guaranteeing that a row with the client's
+> id exists afterwards**. Replaying a merged add would otherwise double-count silently, so the slice
+> carries an `AbsorbedEntry` ledger keyed by the client's `itemId`, and the two existing callers
+> (`addEntryFromRow`'s `needsCategory`, the list screen's `openEntryId`) must read the **returned**
+> row. A replay whose target row was since deleted falls through to a normal create — deliberately the
+> same behaviour `add_item` already has after a `remove_item`.
+>
+> **One interaction to watch in Slice 19:** recipes are applied **before** the suggestion pre-fill, and
+> the pre-fill then skips articles already on the list. Otherwise a recipe's "3 l Milch" and the
+> pre-fill's quantity-less "Milch" sit side by side and never merge. The new-list sheet's button must
+> show the **de-duplicated** count, or it promises a number the list will not have.
+>
+> **Absorbed into these slices rather than scheduled separately:** the `suggestionRuleN` default goes
+> **2 → 3** (Slice 18), with a migration that also updates existing projects. Verified during design:
+> the rule was never "on all of the last four lists" — it is "in ≥ N of the last M", N=2/M=4, counted
+> per **article** with quantity ignored, plus every favourite unconditionally. Per-project tuning of
+> N/M stays **out of scope**; the columns exist, no UI.
+
 ### Dependencies between slices
 
 ```
@@ -228,7 +270,12 @@ UI rework + design (2026-08-01):
 
 8 PWA polish: final polish at the end, AFTER 10–15.
 
-Build order for what is left: Slice 16 (optional), only if real use asks for it
+Recipes (2026-09-13):
+3 Lists/Entries ──> 17 Entry merging ──┐
+4 Catalog ──> 18 Recipes core/mgmt ────┴──> 19 Recipes: applying + deriving
+                                             (needs 5 pre-fill, 6 completed lists, 11 new-list sheet)
+
+Build order for what is left: 17 → 18 → 19, then Slice 16 (optional)
 ```
 
 - Slice 2 needs 1 (auth identity for membership checks).
@@ -255,6 +302,14 @@ Build order for what is left: Slice 16 (optional), only if real use asks for it
   2, 3 and 6 (open lists in the user's projects, with checked/total counts).
 - Slice 15 needs 12 (it wires the parser into the trailing row that slice builds). It is the last
   functional slice and can slip past 8 without blocking anything.
+- Slice 17 needs 3 (it changes `applyOperation`'s `add_item`). It is independent of recipes and
+  independently valuable — it fixes duplicate rows on today's lists — which is exactly why it is cut
+  as its own slice: it carries all the subtle replay/idempotency behaviour of the whole feature.
+- Slice 18 needs 4 (recipe lines reference catalog articles) and 10 (its delete guard is the one being
+  extended). It does not need 17 — recipes can be created and edited before anything can be applied.
+- Slice 19 needs 17 **and** 18, plus 5 (the pre-fill it must de-duplicate against), 6 (only a completed
+  list can produce a recipe) and 11 (the "Neue Liste" sheet it turns into two steps). This is where the
+  feature pays off, which is why it goes last.
 - Slice 16 needs 12 **settled**, not merely done: its cost depends entirely on how much of the list body
   Slice 12 moved to the client. It blocks nothing and nothing waits on it — the app is fully
   collaborative without it. Deliberately scheduled after Slice 8 so the decision is "do we still want
@@ -297,6 +352,62 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-09-13 — Recipes designed → slices 17–19 added
+- **Delivered:** Design session (brainstorming) for the owner's first post-MVP feature request:
+  per-project **recipes**, plus the **entry merging** it depends on. Spec written and committed to
+  [`docs/superpowers/specs/2026-09-13-smart-lists-recipes-design.md`](../specs/2026-09-13-smart-lists-recipes-design.md)
+  (commit `5ef8256`), with eight locked product decisions (D1–D8), the data model, the funnel change,
+  both apply surfaces, the derive-from-list flow, error handling and the test seams. Cut into three
+  slices — **17 Entry merging**, **18 Recipes core/management/settings**, **19 Applying + deriving** —
+  and added to the table, the dependency graph and the notes above.
+- **Tested:** Nothing built; no code touched. Two claims were **verified against the source** during
+  the session and corrected the owner's assumption: `computeSuggestions` qualifies an article at
+  **≥ N of the last M** completed lists (N=2, M=4 — not "all four"), and it counts **distinct lists per
+  article with quantity ignored**, so an article bought in different amounts already counts. The
+  crowded pre-fill is the low threshold plus the unconditional favourites, not a quantity effect.
+- **Deviations from the plan:** None — this was design work, not a scheduled slice.
+- **Follow-up decisions for later slices:** (1) `suggestionRuleN` default 2 → 3 rides along in Slice 18
+  with a migration for existing projects; per-project N/M tuning stays out of scope. (2) Slice 16's
+  1.4 s row flash gains a second, cheaper customer in Slice 17 (highlighting a row that just absorbed a
+  quantity) — the server names the changed row, so none of Slice 16's poller problems apply.
+- **Inherited open items:** Unchanged — Preview-build `DATABASE_URL` gap, `middleware` → `proxy`
+  migration, no CI, member-path browser smoke needing a second Google account.
+- **Commit(s):** `5ef8256` (spec); this documentation commit.
+
+### 2026-09-08 — Post-deploy UAT session 1: two nav/rename gaps fixed; Preview-build env gap found
+- **Delivered:** First live UAT pass on production (`docs/uat/2026-09-08-uat-session-1.md`), continuing
+  from Phase G of the [deploy runbook](../../deployment/2026-09-06-production-deploy-runbook.md).
+  Three findings: **F1** (project rename "broken") was a false report — the feature already works,
+  dismissed after a code check. **F2** — the project drawer/switcher had no way back to Home (`/`),
+  only an indirect two-hop path via `/projects`; fixed by adding a "Startseite" entry to
+  `ProjectNavPanel`'s switcher dropdown. **F3** — list rename was fully built server-side
+  (`renameList`, `PATCH /api/lists/[listId]`, both already tested) but never wired into the UI; fixed
+  with a new `ListTitle` component mirroring `ProjectTitle`'s `InlineEdit` pattern, member-level per
+  the MVP design's permission matrix (unlike the project's own owner-only rename).
+- **Tested:** F2/F3 built test-first in an isolated worktree (`worktree-uat-nav-rename-fixes`,
+  commit `584d738`) — 2 new tests, both watched RED before GREEN. Full suite: **88 files / 668 tests**
+  passed. `npm run lint` — no new errors. `npm run build` — succeeds. Merged as
+  [PR #7](https://github.com/doctorvtj83/smart_lists/pull/7); production redeploy confirmed **Ready**
+  (`vercel ls` / `vercel inspect`, alias `smart-lists-jade.vercel.app` serving the merge commit).
+- **Deviations from the plan:** None — this was UAT + reactive fixes, not a scheduled slice.
+- **Follow-up decisions for later slices:** None beyond the open item below.
+- **New open action found during this session's deployment check:** while verifying the production
+  deploy, the automatic **Preview** build for the PR branch (triggered on push, before merge) failed
+  outright — not the known "Preview can't log in" OAuth limitation the deploy runbook already
+  documents, but a hard build failure: `PrismaConfigEnvError: Missing required environment variable:
+  DATABASE_URL`. No `DATABASE_URL` is configured for the Vercel **Preview** environment, so
+  `prisma generate` (which now runs through `prisma.config.ts`) fails during `next build` before the
+  app code is even reached. This means Preview deployments currently cannot verify a PR's build health
+  at all, contradicting the runbook's "Previews are still useful for build checks" note. **Fix:** add a
+  `DATABASE_URL` for the Preview environment in Vercel (likely pointed at the Neon `dev` branch, same
+  as local `.env` — never the `production` branch), then confirm a Preview build succeeds. Not yet
+  scheduled to a slice; do before the next PR if avoidable.
+- **Inherited open items:** Unchanged from Slice 8: Next.js `middleware` → `proxy` migration; no CI;
+  member-path browser smoke requiring a second Google account. **Plus the new Preview-build
+  `DATABASE_URL` gap above.** Slice 16 (optional) is still the only unbuilt slice.
+- **Commit(s):** `584d738` (F2/F3 fix, worktree branch), merged via `7c6f4a6`; this documentation
+  commit.
 
 ### 2026-09-05 — Slice 8: PWA polish — ✅ Done / verified
 - **Delivered:** Installable PWA metadata and generated standard/maskable/Apple icons; a production-only root service worker with versioned shell precaching and a static German navigation fallback; repository-wide ≥44px touch targets with wrapped-row spacing; lean category/unit vocabulary reads; and shared, abortable fetch-on-keystroke autocomplete on list and Favoriten screens. The full architectural review is in `docs/implementation-reviews/slice-8-pwa-polish.md`.
