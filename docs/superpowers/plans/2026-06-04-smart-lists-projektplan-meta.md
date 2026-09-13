@@ -76,7 +76,7 @@ under the table). Each slice is working, tested software on its own.
 | 15 | **Quantity parsing in the entry row** | Pure parser for "1,5 l Milch" / "3 Joghurt" (leading number + known unit → Menge/Einheit), wired into the trailing row; the catalog only ever receives the article name | [2026-09-02-slice-15-quantity-parsing.md](2026-09-02-slice-15-quantity-parsing.md) | ✅ Done / verified |
 | 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
 | 17 | **Entry merging** | Adding an entry for an article already on the list **sums the quantities** instead of creating a second row (same article + same unit, both quantified, unchecked target only). Carries the `AbsorbedEntry` idempotency ledger that keeps `add_item` replay-safe now that it no longer always creates a row | _to be created_ | ⬜ Open |
-| 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | _to be created_ | ⬜ Open |
+| 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | [2026-09-13-slice-18-recipes-core.md](2026-09-13-slice-18-recipes-core.md) | ✅ Done / verified |
 | 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | _to be created_ | ⬜ Open |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
@@ -352,6 +352,43 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-09-13 — Slice 18: Recipes core, management, settings — ✅ Done / verified
+- **Delivered:** Per-project opt-in recipes with project-owned singular/plural wording; owner-only
+  `/einstellungen`; member-level recipe index/detail CRUD with parsed trailing-row input and a
+  quantity/unit-only line sheet; `Recipe`/`RecipeItem` persistence; recipe-aware catalog-delete
+  protection; and `suggestionRuleN` raised from 2 to 3 for new and existing projects. Applying or
+  deriving recipes remains Slice 19. Implementation review:
+  [`docs/implementation-reviews/slice-18-recipes-core.md`](../../implementation-reviews/slice-18-recipes-core.md).
+- **Tested:** `npm test` → **95 files / 751 tests passed**; `npm run lint` → exit 0,
+  **0 errors / 14 inherited `ListBody.test.tsx` warnings**; `npm run build` → exit 0, including the
+  new `/einstellungen`, `/rezepte`, and `/rezepte/[recipeId]` routes. The eleven-item authenticated
+  browser checklist remains unobserved: the Cursor browser stayed on `about:blank`, and Playwright
+  could not start because Chrome is absent. Domain/component coverage proves the permission and flag
+  guards, custom wording, duplicate errors, parse/upsert behavior, sheet fields, and delete guard, but
+  this is not claimed as manual UAT.
+- **Deviations from the plan:** The branch was cut before Slice 17 landed. Prisma initially generated
+  Slice 17's `absorbed_entries` migration into this worktree; it was removed in `39dc127` because the
+  slices are independent and Slice 18 must not own Slice 17's schema. The label helper's internal
+  `useLabel` name was changed to `resolveLabel` in `044294e` because ESLint interpreted the original
+  spelling as a React Hook. No browser-observed product deviations are recorded because authenticated
+  UAT could not run.
+- **Follow-up decisions for later slices:** `suggestionRuleN` is now 3 for both new and existing
+  projects, so Slice 19's new-list sheet inherits the deliberately sparser pre-fill. Ruling R5 (recipe
+  lines never flow quantity/unit back into catalog defaults) and ruling R1 (`RecipeItemSheet` remains
+  its own component) are settled constraints, not Slice 19 design questions. The wording audit is a
+  **standing Slice 19 review gate**: search `src/` for `Rezept` and require all production wording to
+  originate in `src/lib/recipes/labels.ts` (literal matches in tests are expected).
+- **Build-order fact:** Slice 17 had **not landed when this slice was built**; the branch therefore
+  contains no `AbsorbedEntry` work. Slice 17 has since landed independently on `main`, consistent with
+  the dependency graph: only Slice 19 requires both.
+- **Inherited open items:** Human UAT for all eleven Slice 18 browser checks; Preview
+  `DATABASE_URL`; Next.js `middleware` → `proxy`; no CI; and member-path smoke requiring a second
+  Google account.
+- **Next open slice:** **Slice 19 (Recipes: applying + deriving)**. It has no plan yet; create it with
+  `superpowers:writing-plans` from the recipes spec §6, §7, and §6's “Into a new list” ordering rule.
+- **Commit(s):** `9fa3e79`…`8920a08` (implementation, including `39dc127` and `044294e`) plus this
+  documentation commit.
 
 ### 2026-09-13 — Recipes designed → slices 17–19 added
 - **Delivered:** Design session (brainstorming) for the owner's first post-MVP feature request:
