@@ -376,7 +376,7 @@ When you have finished a slice, **before** the final commit do the following:
 - **Commit(s):** `5ef8256` (spec); this documentation commit.
 
 ### 2026-09-08 — Post-deploy UAT session 1: two nav/rename gaps fixed; Preview-build env gap found
-- **Delivered:** First live UAT pass on production (`docs/uat/2026-09-08-uat-session-1.md`), continuing
+- **Delivered:** First live UAT pass on production, continuing
   from Phase G of the [deploy runbook](../../deployment/2026-09-06-production-deploy-runbook.md).
   Three findings: **F1** (project rename "broken") was a false report — the feature already works,
   dismissed after a code check. **F2** — the project drawer/switcher had no way back to Home (`/`),
