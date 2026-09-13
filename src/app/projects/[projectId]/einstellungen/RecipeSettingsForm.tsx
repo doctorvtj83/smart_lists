@@ -47,7 +47,7 @@ export function RecipeSettingsForm({
   const [singular, setSingular] = useState(recipeLabelSingular);
   const [plural, setPlural] = useState(recipeLabelPlural);
 
-  // The live wording, so every string on this screen already obeys the no-hardcoded-"Rezept" rule
+  // The live wording, so every string on this screen already obeys the no-hardcoded-default rule
   // while the user is still typing the new name.
   const labels = recipeLabels({ recipeLabelSingular: singular, recipeLabelPlural: plural });
 

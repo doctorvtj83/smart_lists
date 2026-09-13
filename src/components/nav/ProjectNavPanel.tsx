@@ -41,7 +41,7 @@ type ProjectNavPanelProps = {
   isAdmin: boolean;
   /** Drives whether the recipes entry exists at all. The ROUTE re-checks — this is convenience. */
   recipesEnabled: boolean;
-  /** The project's own plural, e.g. "Sets". Never hardcode "Rezepte" here (spec §4). */
+  /** The project's own plural, e.g. "Sets". Never hardcode the default plural here (spec §4). */
   recipeLabelPlural: string;
   /** Owner-only entries (Einstellungen). Visibility only — the route re-checks with requireOwner. */
   isOwner: boolean;

@@ -2,8 +2,8 @@
  * The result shape EVERY recipe Server Action returns — the index screen's create, and (Task 11)
  * the detail screen's rename, line-add, line-edit and line-remove.
  *
- * Why the actions return state instead of throwing: the collision error („Ein Rezept mit diesem
- * Namen existiert bereits") has to land inline on the field that caused it, and a thrown error on a
+ * Why the actions return state instead of throwing: the duplicate-name error has to land inline
+ * on the field that caused it, and a thrown error on a
  * Server Action produces Next.js's error overlay. Returning state is what React 19's useActionState
  * consumes — the convention the Katalog screen established (see katalog/formState.ts).
  *

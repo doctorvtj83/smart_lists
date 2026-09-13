@@ -1,0 +1,38 @@
+/* Handoff §10: MENGE 100px · EINHEIT 90px · KATEGORIE fills the rest. */
+.fields {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quantityField {
+  width: 100px;
+}
+
+.unitField {
+  width: 90px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* Category chips are tappable and carry a 44px hit-area expander; a plain
+     .chip is 27px tall, so the rows need a 17px pitch supplement (27 + 17 = 44). */
+  row-gap: 17px;
+  margin-top: 10px;
+}
+
+.hint {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin-top: 9px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}

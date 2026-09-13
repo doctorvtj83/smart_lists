@@ -354,7 +354,7 @@ export async function deleteCatalogArticle(
         });
         if (recipeUses > 0) {
           // The message names the feature the way THIS project names it, so a project that calls
-          // them "Sets" never sees the word "Rezept". Reading the project here rather than taking
+          // them "Sets" never sees the default noun. Reading the project here rather than taking
           // labels as a parameter keeps deleteCatalogArticle's signature — and its four call
           // sites — unchanged (ruling R3); it is one extra row inside a transaction that is
           // already open.

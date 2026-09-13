@@ -10,7 +10,7 @@ import styles from "./RecipeMenu.module.css";
 type RecipeMenuProps = {
   /** Named in the confirmation so the user sees WHICH recipe is at stake. */
   recipeName: string;
-  /** The project's own wording — „Set löschen", never a hardcoded „Rezept" (spec §4). */
+  /** The project's own wording — for example „Set löschen", never the default noun (spec §4). */
   labels: RecipeLabels;
   /** Server Action, bound by the page. Member-level. */
   deleteAction: () => void | Promise<void>;

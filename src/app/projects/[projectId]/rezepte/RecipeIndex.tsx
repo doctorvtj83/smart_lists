@@ -110,7 +110,7 @@ export function RecipeIndex({
       ) : (
         <Button type="button" onClick={() => setCreating(true)}>
           {/* Button takes no icon slot — it spreads native button props and renders children, so
-              the glyph simply goes inside. labels.newOne is „Neues Rezept" / „Neues Set":
+              the glyph simply goes inside. labels.newOne supports defaults and e.g. „Neues Set":
               composed, never hardcoded (spec §4). */}
           <Icon icon={Plus} size={16} />
           {labels.newOne}

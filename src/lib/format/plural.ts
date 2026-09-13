@@ -108,14 +108,14 @@ export function formatRecipeArticleCount(count: number): string {
 }
 
 /**
- * "wird in 2 Rezepten verwendet" — the second reason a catalog article cannot be deleted (Slice 18).
+ * The recipe-usage message — the second reason a catalog article cannot be deleted (Slice 18).
  *
  * Twin of formatUsedInLists, and shared for the same reason: the sentence is printed twice, once as
  * a note in the Katalog edit panel and once inside the ApiError the delete guard throws when a
  * recipe was created in the meantime. They must read identically.
  *
  * The dative "-n" is why this cannot just concatenate labels.plural: "in" governs the dative, and
- * German weak plurals take an extra -n there ("in 2 Rezepten", "in 2 Paketen"). A plural that
+ * German weak plurals take an extra -n there (for example "in 2 Paketen"). A plural that
  * already ends in -n or -s takes nothing ("in 3 Sets"), which is what the suffix check below does.
  * It is a heuristic over a user-chosen noun, which is the best that is possible here — and it is
  * right for the default wording, which is what almost every project will use.
