@@ -461,4 +461,15 @@ describe("ListBody — merge banner (Slice 17)", () => {
 
     await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
   });
+
+  it("highlights the row that absorbed the quantity, and only that row", async () => {
+    const { container } = renderBody({ addAction: mergedAdd });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "2 l Milch{Enter}");
+
+    await waitFor(() =>
+      expect(container.querySelector(`[data-item-id="${milch.id}"] [data-flash]`)).not.toBeNull(),
+    );
+    expect(container.querySelector(`[data-item-id="${butter.id}"] [data-flash]`)).toBeNull();
+  });
 });

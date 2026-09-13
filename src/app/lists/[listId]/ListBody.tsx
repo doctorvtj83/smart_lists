@@ -81,6 +81,9 @@ export function ListBody({
   const [activeChip, setActiveChip] = useState(ALL_CATEGORIES_LABEL);
   const [draft, setDraft] = useState("");
   const [openEntryId, setOpenEntryId] = useState<string | null>(null);
+  // Which row most recently absorbed an add, and how many times we have flashed since mount. The
+  // counter is what makes a second merge into the SAME row replay the animation (see EntryRow).
+  const [flash, setFlash] = useState<{ id: string; nonce: number } | null>(null);
   // Keeps the cursor in the trailing row after a submit — "Enter legt an und
   // fokussiert die nächste leere Zeile" (handoff §10). There is only ever one
   // trailing row, so "the next empty row" IS this input, cleared.
@@ -92,6 +95,11 @@ export function ListBody({
   const [addState, dispatchAdd] = useActionState(async (prev: EntryFormState, formData: FormData) => {
     const next = await addAction(prev, formData);
     if (next.openEntryId) setOpenEntryId(next.openEntryId);
+    // The server tells us exactly which row changed, so the highlight costs one setState.
+    if (next.merge) {
+      const targetId = next.merge.targetItemId;
+      setFlash((current) => ({ id: targetId, nonce: (current?.nonce ?? 0) + 1 }));
+    }
     return next;
   }, ENTRY_FORM_IDLE);
 
@@ -278,6 +286,7 @@ export function ListBody({
                       key={item.id}
                       entry={item}
                       frozen={frozen}
+                      flashNonce={flash?.id === item.id ? flash.nonce : null}
                       onToggle={(checked) => toggleEntry(item, checked)}
                       onOpen={() => setOpenEntryId(item.id)}
                       onDelete={() => removeEntry(item.id)}
@@ -294,6 +303,7 @@ export function ListBody({
                     key={item.id}
                     entry={item}
                     frozen={frozen}
+                    flashNonce={flash?.id === item.id ? flash.nonce : null}
                     onToggle={(checked) => toggleEntry(item, checked)}
                     onOpen={() => setOpenEntryId(item.id)}
                     onDelete={() => removeEntry(item.id)}

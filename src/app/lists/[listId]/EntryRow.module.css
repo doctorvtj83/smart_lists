@@ -121,3 +121,12 @@
   font-size: 13px;
   color: var(--color-text-muted);
 }
+
+/*
+ * The 1.4 s absorb highlight (recipes design §3). `sl-flash` already lives in globals.css — it came
+ * with the design handoff's keyframes for exactly this kind of cue — so this rule only binds it.
+ * The global prefers-reduced-motion block neutralises it for users who asked for less motion.
+ */
+.flash {
+  animation: sl-flash 1.4s ease-out;
+}
