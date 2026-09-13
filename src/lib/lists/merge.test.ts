@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { findMergeTarget, round3, unitsMatch, type MergeCandidate } from "./merge";
+import {
+  findMergeTarget,
+  formatMergeMessage,
+  round3,
+  unitsMatch,
+  type MergeCandidate,
+} from "./merge";
 
 // One article, one list: every candidate below differs only in the field under test.
 const ARTICLE = "11111111-1111-4111-8111-111111111111";
@@ -132,5 +138,43 @@ describe("findMergeTarget", () => {
   it("returns a target whose quantity is a number", () => {
     const target = findMergeTarget([row({ quantity: 1.5 })], incoming());
     expect(target?.quantity).toBe(1.5);
+  });
+});
+
+describe("formatMergeMessage", () => {
+  it("names the row that absorbed the add and its new total", () => {
+    expect(
+      formatMergeMessage({
+        targetItemId: "row-1",
+        name: "Milch",
+        previousQuantity: 1,
+        quantity: 3,
+        unit: "l",
+      }),
+    ).toBe("Zu 1 l Milch addiert → 3 l");
+  });
+
+  it("uses the German decimal comma", () => {
+    expect(
+      formatMergeMessage({
+        targetItemId: "row-1",
+        name: "Milch",
+        previousQuantity: 0.5,
+        quantity: 2,
+        unit: "l",
+      }),
+    ).toBe("Zu 0,5 l Milch addiert → 2 l");
+  });
+
+  it("works for an article without a unit", () => {
+    expect(
+      formatMergeMessage({
+        targetItemId: "row-1",
+        name: "Zwiebeln",
+        previousQuantity: 2,
+        quantity: 5,
+        unit: null,
+      }),
+    ).toBe("Zu 2 Zwiebeln addiert → 5");
   });
 });

@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useRef, useState } from "react";
 import { Autocomplete } from "@/components/ui/Autocomplete";
+import { Banner } from "@/components/ui/Banner";
 import { ChipTabs } from "@/components/ui/ChipTabs";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useCatalogSearch } from "@/components/ui/useCatalogSearch";
@@ -13,6 +14,7 @@ import {
   categoryLabel,
   groupItemsByCategory,
 } from "@/lib/lists/categories";
+import { formatMergeMessage } from "@/lib/lists/merge";
 import { buildUnitLookup, parseEntryInput } from "@/lib/lists/parseEntryInput";
 import { EntryRow, type ListEntry } from "./EntryRow";
 import { EntrySheet, type EntryChanges } from "./EntrySheet";
@@ -331,6 +333,16 @@ export function ListBody({
         {/* An add that failed validation (an empty name reaching the server, a
             name over the length cap) reports here — the row itself has no room. */}
         {addState.error ? <p className={styles.addError}>{addState.error}</p> : null}
+
+        {/* Slice 17: the add went INTO an existing row. Without this line a row
+            quietly changing from 1 l to 3 l reads as a bug. It sits under the
+            trailing row (where the user's attention already is) and survives until
+            the next add — the same lifecycle as the error above it. */}
+        {addState.merge ? (
+          <div className={styles.mergeBanner}>
+            <Banner tone="info">{formatMergeMessage(addState.merge)}</Banner>
+          </div>
+        ) : null}
       </div>
 
       {openEntry && (

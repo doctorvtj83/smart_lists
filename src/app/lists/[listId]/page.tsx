@@ -51,7 +51,8 @@ type Props = { params: Promise<{ listId: string }> };
  */
 function toEntryFormState(error: unknown, itemId: string | null): EntryFormState {
   if (error instanceof ApiError) {
-    return { error: error.message, ok: false, openEntryId: null, itemId };
+    // merge: null — a failed operation merged nothing.
+    return { error: error.message, ok: false, openEntryId: null, itemId, merge: null };
   }
   throw error;
 }
@@ -156,18 +157,21 @@ export default async function ListDetailPage({ params }: Props) {
     const activeCategory = rawCategory === null ? null : String(rawCategory);
 
     try {
-      const { item, needsCategory } = await addEntryFromRow(prisma, l, {
+      const { item, needsCategory, merge } = await addEntryFromRow(prisma, l, {
         itemId,
         name,
         activeCategory,
       });
       revalidatePath(`/lists/${listId}`);
-      // The design's rule: a brand-new article with no category opens its sheet.
+      // The design's rule: a brand-new article with no category opens its sheet. A merge never
+      // does — the row already existed and already carries whatever category it has.
       return {
         error: null,
         ok: true,
         openEntryId: needsCategory ? item.id : null,
         itemId: item.id,
+        // Slice 17: non-null when this add flowed into an existing row, so the body can say so.
+        merge,
       };
     } catch (error) {
       return toEntryFormState(error, itemId);
@@ -235,7 +239,7 @@ export default async function ListDetailPage({ params }: Props) {
         await applyOperation(prisma, l, op);
       }
       revalidatePath(`/lists/${listId}`);
-      return { error: null, ok: true, openEntryId: null, itemId };
+      return { error: null, ok: true, openEntryId: null, itemId, merge: null };
     } catch (error) {
       return toEntryFormState(error, itemId);
     }

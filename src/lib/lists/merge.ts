@@ -8,6 +8,8 @@
  * writing. Nothing here touches Prisma, so Slice 19's recipe apply can reuse the same rule.
  */
 
+import { formatQuantityLabel } from "@/lib/format/quantity";
+
 /**
  * Rounds a quantity to three decimals.
  *
@@ -116,4 +118,18 @@ export interface MergeOutcome {
   quantity: number;
   /** The target's unit — unchanged by the merge; the existing row wins every field but the number. */
   unit: string | null;
+}
+
+/**
+ * The German sentence that makes a merge visible: „Zu 1 l Milch addiert → 3 l".
+ *
+ * Why the copy lives next to the rule rather than in the component: a row silently changing from
+ * 2 l to 3 l reads as a bug, so this sentence is part of the feature, not decoration — and putting
+ * it here makes it testable without a DOM. It reuses formatQuantityLabel, so the German decimal
+ * comma and the "quantity without a unit" case are handled exactly as the row label handles them.
+ */
+export function formatMergeMessage(merge: MergeOutcome): string {
+  const before = formatQuantityLabel(merge.previousQuantity, merge.unit);
+  const after = formatQuantityLabel(merge.quantity, merge.unit);
+  return `Zu ${before} ${merge.name} addiert → ${after}`;
 }

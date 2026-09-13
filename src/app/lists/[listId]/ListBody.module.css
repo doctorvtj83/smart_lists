@@ -82,3 +82,8 @@
   color: var(--color-danger);
   padding: 4px 0 0 33px;
 }
+
+/* Spacing only — the Banner primitive owns the tint, the radius and the type. */
+.mergeBanner {
+  margin-top: 8px;
+}

@@ -427,3 +427,38 @@ describe("ListBody — quantity prefix (Slice 15)", () => {
     expect(formData.get("name")).toBe("7 Zwerge Bier");
   });
 });
+
+describe("ListBody — merge banner (Slice 17)", () => {
+  /** An add action that reports the add was absorbed by the Milch row. */
+  const mergedAdd = vi.fn(async () => ({
+    error: null,
+    ok: true,
+    openEntryId: null,
+    itemId: milch.id,
+    merge: {
+      targetItemId: milch.id,
+      name: "Milch",
+      previousQuantity: 1,
+      quantity: 3,
+      unit: "l",
+    },
+  }));
+
+  it("explains that the quantity was added to an existing row", async () => {
+    renderBody({ addAction: mergedAdd });
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "2 l Milch{Enter}");
+
+    // role="status": the banner is a polite live region, which is how a screen-reader user learns
+    // that the row above changed rather than a new one appearing.
+    expect(await screen.findByRole("status")).toHaveTextContent("Zu 1 l Milch addiert → 3 l");
+  });
+
+  it("shows no banner for an ordinary add", async () => {
+    renderBody();
+
+    await userEvent.type(screen.getByLabelText("Eintrag hinzufügen"), "Brot{Enter}");
+
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+  });
+});
