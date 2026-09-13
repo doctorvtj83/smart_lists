@@ -93,3 +93,15 @@ export function formatNewListLabel(count: number): string {
   if (count === 0) return "Leere Liste anlegen";
   return `Liste mit ${count} ${count === 1 ? "Eintrag" : "Einträgen"} anlegen`;
 }
+
+/**
+ * "6 Artikel" — the meta line of a recipe row on the index screen (spec §5).
+ *
+ * Why not formatArticleCount, which produces the same string: a recipe with no lines yet must not
+ * read "0 Artikel". An empty recipe is a normal intermediate state (you create it, then fill it),
+ * so the zero case says so in words instead of printing a count that looks like a failure.
+ */
+export function formatRecipeArticleCount(count: number): string {
+  if (count === 0) return "Noch keine Artikel";
+  return `${count} Artikel`;
+}

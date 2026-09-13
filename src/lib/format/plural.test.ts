@@ -8,6 +8,7 @@ import {
   formatOpenCount,
   formatOpenOfTotal,
   formatProjectMeta,
+  formatRecipeArticleCount,
   formatUsedInLists,
 } from "./plural";
 
@@ -105,5 +106,14 @@ describe("formatNewListLabel", () => {
   // the exact trap this helper exists to keep out of the call site.
   it("uses the dative plural for many", () => {
     expect(formatNewListLabel(7)).toBe("Liste mit 7 Einträgen anlegen");
+  });
+});
+
+describe("formatRecipeArticleCount", () => {
+  it("uses the same noun for singular and plural", () => {
+    // "Artikel" is one of the German nouns whose plural equals its singular.
+    expect(formatRecipeArticleCount(1)).toBe("1 Artikel");
+    expect(formatRecipeArticleCount(6)).toBe("6 Artikel");
+    expect(formatRecipeArticleCount(0)).toBe("Noch keine Artikel");
   });
 });
