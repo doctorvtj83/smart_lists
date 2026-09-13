@@ -269,3 +269,167 @@ export async function deleteRecipe(
   await requireRecipe(db, input.projectId, input.recipeId, labels);
   await db.recipe.delete({ where: { id: input.recipeId } });
 }
+
+// ---------------------------------------------------------------------------
+// Recipe lines
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates a recipe line's quantity: a finite number > 0, or null to clear it.
+ *
+ * Deliberately the SAME rule and the SAME German sentence as lists/operations.ts's
+ * assertValidQuantity. It is duplicated rather than imported because that one is private to the
+ * operations funnel and recipes are explicitly not part of that funnel (spec §5) — importing it
+ * would create the coupling this slice is built to avoid. If the wording ever changes, both change.
+ */
+function assertValidRecipeQuantity(value: number | null | undefined): void {
+  if (value === null || value === undefined) return;
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new ApiError(400, "Menge muss eine positive Zahl sein");
+  }
+}
+
+/** A blank unit is stored as null — "" would be a unit the row would then try to render. */
+function toStoredUnit(unit: string | null | undefined): string | null {
+  const trimmed = unit?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
+ * Loads a line, scoped to BOTH its project and its recipe, or throws the shared 404.
+ *
+ * Scoping by recipe as well as project is the enforcement point a Server Action needs: the line id
+ * arrives in a form field, and a crafted request must not be able to edit a neighbouring recipe's
+ * line just because it belongs to the same project.
+ */
+async function requireRecipeItem(
+  db: PrismaClient,
+  projectId: string,
+  recipeId: string,
+  recipeItemId: string,
+  labels: RecipeLabels,
+): Promise<RecipeItem> {
+  await requireRecipe(db, projectId, recipeId, labels);
+  if (!isUuid(recipeItemId)) throw new ApiError(404, "Artikel nicht gefunden");
+  const item = await db.recipeItem.findFirst({ where: { id: recipeItemId, recipeId } });
+  if (!item) throw new ApiError(404, "Artikel nicht gefunden");
+  return item;
+}
+
+export interface AddRecipeItemInput {
+  projectId: string;
+  recipeId: string;
+  catalogItemId: string;
+  /** Per ONE unit of the recipe. Omitted or null = "just add it" (spec D4). */
+  quantity?: number | null;
+  /** Omitted or null inherits the article's catalog default at apply time. */
+  unit?: string | null;
+}
+
+/**
+ * Adds an article to a recipe — or UPDATES the line that article already has.
+ *
+ * The upsert behaviour is required by the spec (§5), not a convenience: @@unique([recipeId,
+ * catalogItemId]) would otherwise surface as a P2002 the user cannot act on ("you already have
+ * Milch in this recipe, now what?"). Two lines for the same article are meaningless anyway — they
+ * would be ambiguous under the apply multiplier and would merge on apply.
+ */
+export async function addRecipeItem(
+  db: PrismaClient,
+  input: AddRecipeItemInput,
+  labels: RecipeLabels,
+): Promise<RecipeItem> {
+  const { projectId, recipeId, catalogItemId } = input;
+  assertValidRecipeQuantity(input.quantity);
+  await requireRecipe(db, projectId, recipeId, labels);
+
+  // The article must belong to THIS project. Without this check a foreign article id would end up
+  // in the recipe, and Slice 19's apply loop would put an article on a list that this project's own
+  // catalog has never heard of.
+  if (!isUuid(catalogItemId)) throw new ApiError(404, "Artikel nicht gefunden");
+  const article = await db.catalogItem.findFirst({ where: { id: catalogItemId, projectId } });
+  if (!article) throw new ApiError(404, "Artikel nicht gefunden");
+
+  const quantity = input.quantity ?? null;
+  const unit = toStoredUnit(input.unit);
+
+  // Server-assigned max+1, the same contract as ListItem.sortIndex. `_max` returns null for an
+  // empty recipe, which is why the nullish coalescing produces the first index of 0.
+  const highest = await db.recipeItem.aggregate({
+    where: { recipeId },
+    _max: { sortIndex: true },
+  });
+  const sortIndex = (highest._max.sortIndex ?? -1) + 1;
+
+  // upsert on the compound unique: one round-trip, and it is race-safe in a way a
+  // findFirst-then-create never is — two members adding Milch at the same moment cannot produce
+  // two rows. sortIndex is only in `create`: an existing line keeps its position, because the user
+  // re-typing an article is correcting its quantity, not re-ordering the recipe.
+  return db.recipeItem.upsert({
+    where: { recipeId_catalogItemId: { recipeId, catalogItemId } },
+    create: { recipeId, catalogItemId, quantity, unit, sortIndex },
+    update: { quantity, unit },
+  });
+}
+
+export interface UpdateRecipeItemInput {
+  projectId: string;
+  recipeId: string;
+  recipeItemId: string;
+  /** null CLEARS the quantity — that is how an unquantified line is produced (spec §7). */
+  quantity: number | null;
+  /** null clears the unit, so the article's catalog default applies at apply time. */
+  unit: string | null;
+}
+
+/**
+ * Writes a line's Menge and Einheit — the two fields RecipeItemSheet edits (Task 12).
+ *
+ * Both fields are written every time, unlike the list's update_item: the sheet shows both, the
+ * recipe is not collaboratively edited, and last-writer-wins on a whole line is the agreed conflict
+ * behaviour for configuration (spec §5). There is nothing to merge field-granularly here.
+ */
+export async function updateRecipeItem(
+  db: PrismaClient,
+  input: UpdateRecipeItemInput,
+  labels: RecipeLabels,
+): Promise<RecipeItem> {
+  assertValidRecipeQuantity(input.quantity);
+  const item = await requireRecipeItem(
+    db,
+    input.projectId,
+    input.recipeId,
+    input.recipeItemId,
+    labels,
+  );
+
+  return db.recipeItem.update({
+    where: { id: item.id },
+    data: { quantity: input.quantity, unit: toStoredUnit(input.unit) },
+  });
+}
+
+export interface RemoveRecipeItemInput {
+  projectId: string;
+  recipeId: string;
+  recipeItemId: string;
+}
+
+/**
+ * Removes one line from a recipe. The catalog article it referenced is untouched — the recipe
+ * points at project memory, it does not own it.
+ */
+export async function removeRecipeItem(
+  db: PrismaClient,
+  input: RemoveRecipeItemInput,
+  labels: RecipeLabels,
+): Promise<void> {
+  const item = await requireRecipeItem(
+    db,
+    input.projectId,
+    input.recipeId,
+    input.recipeItemId,
+    labels,
+  );
+  await db.recipeItem.delete({ where: { id: item.id } });
+}
