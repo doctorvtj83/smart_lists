@@ -9,6 +9,7 @@
  * Only "exactly 1" takes the singular in German — 0 takes the plural
  * ("0 Listen"), which is the trap this module exists to get right.
  */
+import type { RecipeLabels } from "@/lib/recipes/labels";
 
 /** "1 Liste" / "3 Listen" — counts a project's ACTIVE lists. */
 export function formatListCount(count: number): string {
@@ -104,4 +105,27 @@ export function formatNewListLabel(count: number): string {
 export function formatRecipeArticleCount(count: number): string {
   if (count === 0) return "Noch keine Artikel";
   return `${count} Artikel`;
+}
+
+/**
+ * "wird in 2 Rezepten verwendet" — the second reason a catalog article cannot be deleted (Slice 18).
+ *
+ * Twin of formatUsedInLists, and shared for the same reason: the sentence is printed twice, once as
+ * a note in the Katalog edit panel and once inside the ApiError the delete guard throws when a
+ * recipe was created in the meantime. They must read identically.
+ *
+ * The dative "-n" is why this cannot just concatenate labels.plural: "in" governs the dative, and
+ * German weak plurals take an extra -n there ("in 2 Rezepten", "in 2 Paketen"). A plural that
+ * already ends in -n or -s takes nothing ("in 3 Sets"), which is what the suffix check below does.
+ * It is a heuristic over a user-chosen noun, which is the best that is possible here — and it is
+ * right for the default wording, which is what almost every project will use.
+ */
+export function formatUsedInRecipes(count: number, labels: RecipeLabels): string {
+  const noun =
+    count === 1
+      ? labels.singular
+      : /[ns]$/i.test(labels.plural)
+        ? labels.plural
+        : `${labels.plural}n`;
+  return `wird in ${count} ${noun} verwendet`;
 }

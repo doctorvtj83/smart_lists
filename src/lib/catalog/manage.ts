@@ -1,7 +1,12 @@
 import type { CatalogItem, PrismaClient } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import { formatUsedInLists } from "@/lib/format/plural";
+import { formatUsedInLists, formatUsedInRecipes } from "@/lib/format/plural";
 import { ApiError } from "@/lib/http/errors";
+import {
+  DEFAULT_RECIPE_LABEL_PLURAL,
+  DEFAULT_RECIPE_LABEL_SINGULAR,
+  recipeLabels,
+} from "@/lib/recipes/labels";
 import { isUuid } from "@/lib/validate";
 import { MAX_ITEM_NAME_LENGTH } from "./catalog";
 import { normalizeName } from "./normalize";
@@ -40,6 +45,11 @@ export interface CatalogArticle {
   defaultUnit: string | null;
   /** Distinct lists (active AND completed) that contain this article. */
   usedInListCount: number;
+  /**
+   * Recipes of the project holding this article (Slice 18). The SECOND delete blocker: the panel
+   * must not offer "Löschen" for an article a recipe needs, or the button 409s on tap.
+   */
+  usedInRecipeCount: number;
   /** True when the project has favourited this article. */
   isFavorite: boolean;
 }
@@ -64,6 +74,8 @@ export async function listCatalog(db: PrismaClient, projectId: string): Promise<
       // cannot express COUNT(DISTINCT list_id) per row, and pulling the ids is
       // cheaper than one extra query per article.
       listItems: { select: { listId: true } },
+      // One line per recipe by @@unique([recipeId, catalogItemId]), so length is the recipe count.
+      recipeItems: { select: { id: true } },
       // 0 or 1 row per project by the @@unique — presence is the whole answer.
       favorites: { select: { id: true } },
     },
@@ -77,6 +89,7 @@ export async function listCatalog(db: PrismaClient, projectId: string): Promise<
       defaultUnit: item.defaultUnit,
       // A Set is the distinct: the same article twice on one list is one list.
       usedInListCount: new Set(item.listItems.map((listItem) => listItem.listId)).size,
+      usedInRecipeCount: item.recipeItems.length,
       isFavorite: item.favorites.length > 0,
     }))
     // Sort AFTER the projection so the comparator works on plain names — the
@@ -252,6 +265,23 @@ export async function countListsUsingArticle(
   return rows.length;
 }
 
+/**
+ * How many recipes of the project hold this article (Slice 18).
+ *
+ * No `distinct` needed, unlike countListsUsingArticle: @@unique([recipeId, catalogItemId]) already
+ * guarantees at most one line per recipe, so the row count IS the recipe count.
+ *
+ * The nested `recipe: { projectId }` filter keeps the count project-scoped even if an id from
+ * elsewhere ever reached this function — the same defence countListsUsingArticle applies.
+ */
+export async function countRecipesUsingArticle(
+  db: PrismaClient,
+  projectId: string,
+  catalogItemId: string,
+): Promise<number> {
+  return db.recipeItem.count({ where: { catalogItemId, recipe: { projectId } } });
+}
+
 export interface DeleteCatalogArticleInput {
   projectId: string;
   catalogItemId: string;
@@ -314,6 +344,38 @@ export async function deleteCatalogArticle(
         if (rows.length > 0) {
           // Same sentence the panel prints from the read model — see formatUsedInLists.
           throw new ApiError(409, `Löschen nicht möglich — ${formatUsedInLists(rows.length)}.`);
+        }
+
+        // SECOND blocker (Slice 18): recipe lines. Read against the SAME snapshot as the delete, so
+        // a recipe created concurrently either lands before this read (and blocks) or aborts the
+        // transaction at commit — the same mechanism the list guard above relies on.
+        const recipeUses = await tx.recipeItem.count({
+          where: { catalogItemId, recipe: { projectId } },
+        });
+        if (recipeUses > 0) {
+          // The message names the feature the way THIS project names it, so a project that calls
+          // them "Sets" never sees the word "Rezept". Reading the project here rather than taking
+          // labels as a parameter keeps deleteCatalogArticle's signature — and its four call
+          // sites — unchanged (ruling R3); it is one extra row inside a transaction that is
+          // already open.
+          const project = await tx.project.findUnique({
+            where: { id: projectId },
+            select: { recipeLabelSingular: true, recipeLabelPlural: true },
+          });
+          throw new ApiError(
+            409,
+            `Löschen nicht möglich — ${formatUsedInRecipes(
+              recipeUses,
+              recipeLabels(
+                project ?? {
+                  // The project cannot actually be missing here (the article was just read through
+                  // it), but a `null` must not become a crash inside an error path.
+                  recipeLabelSingular: DEFAULT_RECIPE_LABEL_SINGULAR,
+                  recipeLabelPlural: DEFAULT_RECIPE_LABEL_PLURAL,
+                },
+              ),
+            )}.`,
+          );
         }
 
         // The article's Favorite row (0 or 1) goes with it via the FK cascade — intended: an article

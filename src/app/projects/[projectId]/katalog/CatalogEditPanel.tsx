@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { TextField } from "@/components/ui/TextField";
 import type { CatalogArticle } from "@/lib/catalog/manage";
-import { formatUsedInLists } from "@/lib/format/plural";
+import { formatUsedInLists, formatUsedInRecipes } from "@/lib/format/plural";
+import type { RecipeLabels } from "@/lib/recipes/labels";
 import styles from "./CatalogEditPanel.module.css";
 
 type CatalogEditPanelProps = {
   article: CatalogArticle;
+  /** Project-owned wording used when recipe usage is the delete blocker. */
+  labels: RecipeLabels;
   /** German inline error from the last save attempt; sits on the NAME field. */
   error: string | null;
   /** The edit action's dispatch, owned by CatalogBrowser (useActionState). */
@@ -33,6 +36,7 @@ type CatalogEditPanelProps = {
  */
 export function CatalogEditPanel({
   article,
+  labels,
   error,
   formAction,
   onConfirmDelete,
@@ -40,9 +44,9 @@ export function CatalogEditPanel({
 }: CatalogEditPanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // The one product rule of this screen: an article on any list — active or
-  // archived — cannot be deleted, because the suggestion statistic reads them.
-  const deletable = article.usedInListCount === 0;
+  // BOTH usages block deletion: a list, because the N-of-M suggestion statistic reads past lists
+  // (Slice 10), and a recipe, because the cascade would quietly leave the recipe an article short.
+  const deletable = article.usedInListCount === 0 && article.usedInRecipeCount === 0;
 
   return (
     // NOT the Card primitive: the design gives this panel an accent-tinted border
@@ -99,7 +103,11 @@ export function CatalogEditPanel({
           note takes the button's place so the absence is explained. */}
       {!deletable && (
         <p className={styles.note}>
-          Löschen nicht möglich — {formatUsedInLists(article.usedInListCount)}.
+          Löschen nicht möglich —{" "}
+          {article.usedInListCount > 0
+            ? formatUsedInLists(article.usedInListCount)
+            : formatUsedInRecipes(article.usedInRecipeCount, labels)}
+          .
         </p>
       )}
 

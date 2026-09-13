@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { CatalogArticle } from "@/lib/catalog/manage";
+import { recipeLabels } from "@/lib/recipes/labels";
 import { CatalogBrowser } from "./CatalogBrowser";
 import { CATALOG_FORM_IDLE, type CatalogFormState } from "./formState";
 
@@ -12,6 +13,7 @@ const milch: CatalogArticle = {
   defaultCategory: "Molkerei",
   defaultUnit: "l",
   usedInListCount: 0,
+  usedInRecipeCount: 0,
   isFavorite: false,
 };
 
@@ -21,6 +23,7 @@ const nudeln: CatalogArticle = {
   defaultCategory: "Trockenwaren",
   defaultUnit: null,
   usedInListCount: 2,
+  usedInRecipeCount: 0,
   isFavorite: false,
 };
 
@@ -29,6 +32,7 @@ const idle = async (): Promise<CatalogFormState> => CATALOG_FORM_IDLE;
 function renderBrowser(overrides: Partial<Parameters<typeof CatalogBrowser>[0]> = {}) {
   const props = {
     articles: [milch, nudeln],
+    labels: recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" }),
     createAction: idle,
     editAction: idle,
     ...overrides,
@@ -82,6 +86,18 @@ describe("CatalogBrowser", () => {
 
     expect(screen.getByLabelText("Name")).toHaveValue("Milch");
     expect(screen.getByRole("button", { name: "Speichern" })).toBeInTheDocument();
+  });
+
+  it("forwards the project's recipe wording into the edit panel", async () => {
+    const setLabels = recipeLabels({ recipeLabelSingular: "Set", recipeLabelPlural: "Sets" });
+    renderBrowser({
+      articles: [{ ...milch, usedInRecipeCount: 2 }],
+      labels: setLabels,
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Milch/ }));
+
+    expect(screen.getByText("Löschen nicht möglich — wird in 2 Sets verwendet.")).toBeInTheDocument();
   });
 
   it("closes the panel again on Abbrechen", async () => {

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import {
+  countRecipesUsingArticle,
   createCatalogArticle,
   deleteCatalogArticle,
   DUPLICATE_ARTICLE_MESSAGE,
@@ -408,5 +409,86 @@ describe("deleteCatalogArticle", () => {
     await expect(
       deleteCatalogArticle(db, { projectId, catalogItemId: article.id }),
     ).rejects.toMatchObject({ status: 409, message: "Löschen nicht möglich — wird in 1 Liste verwendet." });
+  });
+});
+
+describe("recipe usage guard", () => {
+  async function makeRecipe(name: string, catalogItemId: string) {
+    const recipe = await db.recipe.create({
+      data: { projectId, name, normalizedName: name.toLowerCase() },
+    });
+    await db.recipeItem.create({ data: { recipeId: recipe.id, catalogItemId, sortIndex: 0 } });
+    return recipe;
+  }
+
+  it("counts the recipes using an article", async () => {
+    const milch = await makeArticle("Milch");
+    await makeRecipe("Lasagne", milch.id);
+    await makeRecipe("Milchreis", milch.id);
+
+    expect(await countRecipesUsingArticle(db, projectId, milch.id)).toBe(2);
+  });
+
+  it("reports the recipe count on the read model", async () => {
+    const milch = await makeArticle("Milch");
+    await makeRecipe("Lasagne", milch.id);
+
+    const [article] = await listCatalog(db, projectId);
+    expect(article.usedInRecipeCount).toBe(1);
+    expect(article.usedInListCount).toBe(0);
+  });
+
+  it("refuses to delete an article a recipe uses, even with no list using it", async () => {
+    const milch = await makeArticle("Milch");
+    await makeRecipe("Lasagne", milch.id);
+
+    // Without this guard the RecipeItem.catalogItemId cascade would silently strip Milch out of
+    // every recipe that needs it — the recipe would still exist, quietly one article short.
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: milch.id }),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: "Löschen nicht möglich — wird in 1 Rezept verwendet.",
+    });
+    expect(await db.catalogItem.count()).toBe(1);
+  });
+
+  it("phrases the refusal with the project's own wording", async () => {
+    await db.project.update({
+      where: { id: projectId },
+      data: { recipeLabelSingular: "Set", recipeLabelPlural: "Sets" },
+    });
+    const milch = await makeArticle("Milch");
+    await makeRecipe("Lasagne", milch.id);
+    await makeRecipe("Milchreis", milch.id);
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: milch.id }),
+    ).rejects.toMatchObject({
+      message: "Löschen nicht möglich — wird in 2 Sets verwendet.",
+    });
+  });
+
+  it("still refuses when recipes are switched off", async () => {
+    // recipesEnabled is false by default. The recipes still EXIST and still reference the article,
+    // and turning the feature back on must restore them intact (spec §9) — so the guard is not
+    // conditional on the flag.
+    const milch = await makeArticle("Milch");
+    await makeRecipe("Lasagne", milch.id);
+
+    await expect(
+      deleteCatalogArticle(db, { projectId, catalogItemId: milch.id }),
+    ).rejects.toMatchObject({
+      status: 409,
+    });
+  });
+
+  it("still deletes an article no list and no recipe uses", async () => {
+    const milch = await makeArticle("Milch");
+    await makeRecipe("Lasagne", milch.id);
+    await db.recipeItem.deleteMany({});
+
+    await deleteCatalogArticle(db, { projectId, catalogItemId: milch.id });
+    expect(await db.catalogItem.count()).toBe(0);
   });
 });

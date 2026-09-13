@@ -9,6 +9,7 @@ import { TextField } from "@/components/ui/TextField";
 import type { CatalogArticle } from "@/lib/catalog/manage";
 import { normalizeName } from "@/lib/catalog/normalize";
 import { formatArticleDefaults } from "@/lib/format/plural";
+import type { RecipeLabels } from "@/lib/recipes/labels";
 import { CatalogEditPanel } from "./CatalogEditPanel";
 import { CATALOG_FORM_IDLE, type CatalogFormState } from "./formState";
 import styles from "./CatalogBrowser.module.css";
@@ -19,6 +20,8 @@ type CatalogAction = (prev: CatalogFormState, formData: FormData) => Promise<Cat
 type CatalogBrowserProps = {
   /** The WHOLE catalog, already sorted, straight from the server on every render. */
   articles: CatalogArticle[];
+  /** Project-owned recipe wording, needed even when recipes are currently disabled. */
+  labels: RecipeLabels;
   createAction: CatalogAction;
   editAction: CatalogAction;
 };
@@ -43,7 +46,7 @@ type CatalogBrowserProps = {
  * the new form state — still after the await, so it is not a cascading render
  * during the effect phase, and the create/edit error paths stay independent.
  */
-export function CatalogBrowser({ articles, createAction, editAction }: CatalogBrowserProps) {
+export function CatalogBrowser({ articles, labels, createAction, editAction }: CatalogBrowserProps) {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -150,6 +153,7 @@ export function CatalogBrowser({ articles, createAction, editAction }: CatalogBr
               {article.id === openId ? (
                 <CatalogEditPanel
                   article={article}
+                  labels={labels}
                   // Only the error that belongs to THIS article — otherwise a
                   // failed save would follow the user to the next panel.
                   error={editState.articleId === article.id ? editState.error : null}

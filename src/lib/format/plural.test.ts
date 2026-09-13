@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { recipeLabels } from "@/lib/recipes/labels";
 import {
   formatArticleCount,
   formatArticleDefaults,
@@ -10,6 +11,7 @@ import {
   formatProjectMeta,
   formatRecipeArticleCount,
   formatUsedInLists,
+  formatUsedInRecipes,
 } from "./plural";
 
 describe("formatListCount", () => {
@@ -115,5 +117,19 @@ describe("formatRecipeArticleCount", () => {
     expect(formatRecipeArticleCount(1)).toBe("1 Artikel");
     expect(formatRecipeArticleCount(6)).toBe("6 Artikel");
     expect(formatRecipeArticleCount(0)).toBe("Noch keine Artikel");
+  });
+});
+
+describe("formatUsedInRecipes", () => {
+  const labels = recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" });
+
+  it("uses the singular only for exactly one", () => {
+    expect(formatUsedInRecipes(1, labels)).toBe("wird in 1 Rezept verwendet");
+    expect(formatUsedInRecipes(2, labels)).toBe("wird in 2 Rezepten verwendet");
+  });
+
+  it("uses the project's own wording", () => {
+    const sets = recipeLabels({ recipeLabelSingular: "Set", recipeLabelPlural: "Sets" });
+    expect(formatUsedInRecipes(3, sets)).toBe("wird in 3 Sets verwendet");
   });
 });

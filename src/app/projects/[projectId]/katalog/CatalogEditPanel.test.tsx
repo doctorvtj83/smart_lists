@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { CatalogArticle } from "@/lib/catalog/manage";
+import { recipeLabels } from "@/lib/recipes/labels";
 import { CatalogEditPanel } from "./CatalogEditPanel";
 
 const article: CatalogArticle = {
@@ -11,6 +12,7 @@ const article: CatalogArticle = {
   defaultCategory: "Molkerei",
   defaultUnit: "l",
   usedInListCount: 0,
+  usedInRecipeCount: 0,
   isFavorite: false,
 };
 
@@ -21,6 +23,7 @@ function renderPanel(overrides: Partial<Parameters<typeof CatalogEditPanel>[0]> 
     formAction: vi.fn(),
     onConfirmDelete: vi.fn(),
     onCancel: vi.fn(),
+    labels: recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" }),
     ...overrides,
   };
   return { ...render(<CatalogEditPanel {...props} />), props };
@@ -67,6 +70,17 @@ describe("CatalogEditPanel", () => {
     expect(screen.queryByRole("button", { name: "Löschen" })).not.toBeInTheDocument();
     expect(
       screen.getByText("Löschen nicht möglich — wird in 3 Listen verwendet."),
+    ).toBeInTheDocument();
+  });
+
+  it("blocks deletion and names the reason when a recipe uses the article", () => {
+    renderPanel({
+      article: { ...article, usedInListCount: 0, usedInRecipeCount: 2 },
+    });
+
+    expect(screen.queryByRole("button", { name: "Löschen" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Löschen nicht möglich — wird in 2 Rezepten verwendet."),
     ).toBeInTheDocument();
   });
 

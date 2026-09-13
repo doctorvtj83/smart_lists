@@ -13,6 +13,7 @@ import {
 import { formatArticleCount } from "@/lib/format/plural";
 import { DrawerTrigger } from "@/components/nav/DrawerTrigger";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { recipeLabels } from "@/lib/recipes/labels";
 import { CatalogBrowser } from "./CatalogBrowser";
 import { CATALOG_FORM_IDLE, type CatalogFormState } from "./formState";
 import styles from "./page.module.css";
@@ -58,6 +59,12 @@ export default async function CatalogPage({ params }: Props) {
   }
 
   const articles = await listCatalog(prisma, projectId);
+  // The delete guard's reason line names the feature the way this project names it, so the screen
+  // needs the labels even when recipes are switched off — a disabled feature's recipes still block.
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { recipeLabelSingular: true, recipeLabelPlural: true },
+  });
 
   // --- Server Actions ---------------------------------------------------------
   // Both re-derive identity and re-check membership: a Server Action is an
@@ -135,6 +142,7 @@ export default async function CatalogPage({ params }: Props) {
       <main className={styles.content}>
         <CatalogBrowser
           articles={articles}
+          labels={recipeLabels(project!)}
           createAction={createArticleAction}
           editAction={editArticleAction}
         />
