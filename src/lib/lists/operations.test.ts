@@ -505,8 +505,17 @@ describe("add_item — merging", () => {
     await add({ name: "Milch", quantity: 0.1, unit: "l" });
 
     const { item } = await add({ name: "Milch", quantity: 0.2, unit: "l" });
+    // Prisma deserializes both 0.3 and PostgreSQL's binary-float tail as the JavaScript number
+    // 0.3. Reading the database value as text proves the STORED quantity is normalized too, which
+    // keeps persistence and formatGermanNumber's displayed value one and the same.
+    const [stored] = await db.$queryRaw<Array<{ quantityText: string }>>`
+      SELECT quantity::text AS "quantityText"
+      FROM list_items
+      WHERE id = ${item!.id}::uuid
+    `;
 
-    expect(item!.quantity).toBe(0.3); // not 0.30000000000000004
+    expect(item!.quantity).toBe(0.3);
+    expect(stored.quantityText).toBe("0.3");
   });
 
   it("merges into the lowest sortIndex when two rows qualify", async () => {
@@ -583,6 +592,28 @@ describe("add_item — merge idempotency", () => {
     // the same banner rather than nothing.
     expect(merge).toMatchObject({ previousQuantity: 1, quantity: 3 });
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(1);
+  });
+
+  it("returns no merge outcome when the target quantity was cleared before replay", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+    const replayId = randomUUID();
+    const merged = { itemId: replayId, name: "Milch", quantity: 2, unit: "l" };
+    await add(merged);
+    // A later absolute edit may intentionally remove the number. The ledger still proves the add
+    // was applied, but there is no meaningful sum left from which to reconstruct a banner.
+    await applyOperation(db, list, {
+      op: "update_item",
+      itemId: first.item!.id,
+      field: "quantity",
+      value: null,
+    });
+
+    const { item, merge } = await add(merged);
+
+    expect(item!.id).toBe(first.item!.id);
+    expect(item!.quantity).toBeNull();
+    expect(merge).toBeNull();
     expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(1);
   });
 

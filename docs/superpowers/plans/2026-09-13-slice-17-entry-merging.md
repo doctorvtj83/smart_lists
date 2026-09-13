@@ -904,36 +904,48 @@ Replace the body of the `case "add_item":` branch from the idempotency check dow
       // silent quantity loss. Closing it needs a partial unique index plus retry, which is out of
       // MVP scope.
       if (target) {
-        // ONE transaction, because these two writes are one fact: "this add became part of that
-        // row". If the update landed without the ledger row, a retry would add the amount twice;
-        // if the ledger row landed without the update, the quantity would be lost and the retry
-        // would report success. The ARRAY form of $transaction is used deliberately — the callback
-        // form hands back `Omit<PrismaClient, ITXClientDenyList>`, which none of this module's
-        // `PrismaClient` parameters accept (the same constraint documented in suggestions.ts).
+        // ONE interactive transaction, because incrementing, normalizing and recording the ledger
+        // are one fact: "this add became part of that row". The callback is intentionally local:
+        // no helper that requires a full PrismaClient receives Prisma's narrower transaction
+        // client. Keeping all three writes here also keeps the row lock acquired by the increment
+        // until the rounded value and replay marker are safely committed together.
         const contribution = quantity!;
-        const [mergedItem] = await db.$transaction([
-          db.listItem.update({
+        const mergedItem = await db.$transaction(async (tx) => {
+          const incrementedItem = await tx.listItem.update({
             where: { id: target.id },
             // An atomic increment, NOT an absolute value computed from the row we read a moment
             // ago: a read-modify-write loses one of the two amounts when two adds merge into the
             // same row concurrently — silently, because there is no duplicate row to reveal it.
             // Postgres performs the addition under the row lock, so both contributions survive.
             data: { quantity: { increment: contribution } },
-          }),
-          db.absorbedEntry.create({
+          });
+          const roundedQuantity = round3(incrementedItem.quantity!);
+          // PostgreSQL double precision preserves binary-float tails such as
+          // 0.30000000000000004, while Prisma deserializes that returned value to 0.3 and therefore
+          // makes a JavaScript equality check unable to detect the tail. Always write round3's
+          // result while this transaction still owns the row lock so the persisted number and the
+          // number shown by formatGermanNumber never diverge.
+          const finalItem = await tx.listItem.update({
+            where: { id: target.id },
+            data: { quantity: roundedQuantity },
+          });
+
+          await tx.absorbedEntry.create({
             data: {
               id: operation.itemId, // the client's id IS the ledger key
               listId: list.id,
               targetItemId: target.id,
               quantity: contribution,
             },
-          }),
-        ]);
+          });
+
+          return finalItem;
+        });
 
         // Derived from what was actually written, never from the stale read — the same derivation
         // the replay path (funnel step 3, Task 4) uses. "Total minus my own contribution" stays a
         // true statement even when someone else's add landed in between.
-        const summed = round3(mergedItem.quantity!);
+        const summed = mergedItem.quantity!;
         const previousQuantity = round3(summed - contribution);
 
         // Flow-back still fires: an explicitly supplied category/unit is CATALOG memory and is

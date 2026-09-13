@@ -28,6 +28,8 @@ type Context = { params: Promise<{ listId: string }> };
  * (recipes design §3), and the absorbed row is what comes back. A client must therefore read the
  * response instead of assuming the id it generated now exists — replaying the same operation later
  * resolves to the same target row via the server-side AbsorbedEntry ledger, so retries stay safe.
+ * A Phase-2 offline queue must likewise replace references to an absorbed client id with the target
+ * id returned by this response before it sends later operations for that logical entry.
  */
 export async function POST(request: Request, { params }: Context) {
   try {
