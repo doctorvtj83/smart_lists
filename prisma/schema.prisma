@@ -165,6 +165,12 @@ model List {
   createdAt DateTime   @default(now()) @map("created_at")
   items     ListItem[]
 
+  // Back-relation added in Slice 17 (Entry merging): the idempotency ledger of adds that were
+  // absorbed by an existing row of this list. Deleting a list discards its ledger with it — the
+  // ledger only ever answers "was THIS add already applied to THIS list?", which is meaningless
+  // once the list is gone.
+  absorbedEntries AbsorbedEntry[]
+
   @@map("lists")
 }
 
@@ -288,4 +294,41 @@ model RecipeItem {
   // apply multiplier and would merge on apply anyway — so addRecipeItem UPDATES instead of failing.
   @@unique([recipeId, catalogItemId])
   @@map("recipe_items")
+}
+
+// The idempotency ledger for MERGED adds (Slice 17, recipes design §2/§3).
+//
+// WHY THIS TABLE EXISTS: before this slice, `add_item` guaranteed that a row with the client's
+// `itemId` existed afterwards, which is what made a replay a cheap no-op ("row already there ->
+// return it"). A merged add creates NO such row — the quantity flows into an existing entry — so a
+// retry or a Phase 2 offline-queue replay would silently add the amount a second time. This table
+// records "the add with id X was absorbed into row Y, contributing Z", so the replay resolves to the
+// same target instead of double-counting. It is a SERVER-SIDE ledger: never synced, never rendered,
+// never part of a delta (the absorbed entry never existed as a row, so it cannot appear in one).
+model AbsorbedEntry {
+  // NO @default(uuid()): the id IS the client-generated ListItem id the add carried. That identity is
+  // the whole point — it is the key a replay arrives with.
+  id String @id @db.Uuid
+
+  listId String @db.Uuid @map("list_id")
+  // onDelete: Cascade -> the ledger dies with the list it describes (see the back-relation comment).
+  // The column is ALSO read: a ledger id replayed against a DIFFERENT list is a reused UUID, i.e. the
+  // same client bug ListItem answers with 409 (operations.ts, add_item step 3).
+  list List @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  // The row this add was absorbed into. DELIBERATELY NOT A FOREIGN KEY, and deliberately not
+  // cascading: if the target row is later deleted (swipe-to-delete), this ledger row MUST survive as
+  // a tombstone. It is only ever read by primary key and its target existence is re-checked on every
+  // read, so a stale pointer is harmless — whereas a cascade would silently delete the ledger row and
+  // re-enable the double-count it exists to prevent.
+  targetItemId String @db.Uuid @map("target_item_id")
+
+  // What THIS operation contributed to the target — not the target's total. Required (an add without
+  // a quantity can never merge, see findMergeTarget), and it is what lets a replay reconstruct the
+  // exact message the first application produced.
+  quantity Float
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("absorbed_entries")
 }

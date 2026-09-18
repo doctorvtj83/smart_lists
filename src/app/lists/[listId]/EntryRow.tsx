@@ -25,6 +25,20 @@ type EntryRowProps = {
   entry: ListEntry;
   /** A completed list is read-only: desaturated, no checking, no swipe, no sheet. */
   frozen: boolean;
+  /**
+   * Non-null while this row should show the 1.4 s highlight (Slice 17) — the cue that the row's
+   * quantity just absorbed an add instead of a new row appearing.
+   *
+   * WHY A COUNTER RATHER THAN A BOOLEAN: a CSS animation replays only when the element is
+   * remounted or the matching rule changes. Adding to the same row twice inside 1.4 s would
+   * otherwise be a silent second change. The value is used as the row's `key`, so each new nonce
+   * remounts exactly this one element and restarts the animation.
+   *
+   * This is deliberately NOT Slice 16 (highlighting what a REMOTE member changed, which needs a
+   * FlashProvider and a poller seam). Here the server names the changed row in its own response to
+   * the add, so nothing extra is needed. Slice 16 should absorb this when it lands.
+   */
+  flashNonce?: number | null;
   /** Receives the TARGET state, matching check_item's idempotent semantics. */
   onToggle: (checked: boolean) => void;
   onOpen: () => void;
@@ -46,7 +60,7 @@ type EntryRowProps = {
  * entry sheet's „Eintrag löschen" is the keyboard- and screen-reader-accessible
  * path, because a swipe cannot be one.
  */
-export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRowProps) {
+export function EntryRow({ entry, frozen, flashNonce = null, onToggle, onOpen, onDelete }: EntryRowProps) {
   // How far the row currently follows the finger. null = not swiping, so the CSS
   // transition (snap-back) is only active when the finger is off the glass.
   const [offset, setOffset] = useState<number | null>(null);
@@ -141,7 +155,17 @@ export function EntryRow({ entry, frozen, onToggle, onOpen, onDelete }: EntryRow
       </span>
 
       <div
-        className={[styles.row, offset === null ? styles.settling : ""].filter(Boolean).join(" ")}
+        key={flashNonce ?? "idle"}
+        className={[
+          styles.row,
+          offset === null ? styles.settling : "",
+          flashNonce !== null ? styles.flash : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        // The contract the flash test reads. Kept as a data attribute because the class name is a
+        // generated CSS-Module hash and tests must never assert on it.
+        data-flash={flashNonce ?? undefined}
         // The only inline style in this component: a per-pixel transform no CSS
         // Module can express (the ProgressBar precedent).
         style={{ transform: `translateX(${offset ?? 0}px)` }}

@@ -1,3 +1,5 @@
+import type { MergeOutcome } from "@/lib/lists/merge";
+
 /**
  * The result shape both entry Server Actions return.
  *
@@ -25,6 +27,15 @@ export type EntryFormState = {
    * onto the next entry the user opens (or a needsCategory sheet after add).
    */
   itemId: string | null;
+  /**
+   * Set when the add was ABSORBED by a row that was already on the list (Slice 17). The row's
+   * quantity changed without a new row appearing, which reads as a bug unless it is announced —
+   * so this drives both the banner and the target row's highlight. null for every other outcome.
+   *
+   * A type-only import: MergeOutcome lives in the pure merge module precisely so this
+   * client-imported file never pulls Prisma types into the browser bundle.
+   */
+  merge: MergeOutcome | null;
 };
 
 /** The initial value both useActionState hooks start from. */
@@ -33,4 +44,5 @@ export const ENTRY_FORM_IDLE: EntryFormState = {
   ok: false,
   openEntryId: null,
   itemId: null,
+  merge: null,
 };
