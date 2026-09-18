@@ -1,12 +1,17 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "node:crypto";
 import { ArrowLeft, Check } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/http/errors";
 import { getCatalogVocabulary } from "@/lib/catalog/vocabulary";
+import { formatApplyResult } from "@/lib/format/plural";
 import { requireListAccess } from "@/lib/lists/access";
+import { applyRecipesToList, type RecipeSelection } from "@/lib/recipes/apply";
+import { recipeLabels } from "@/lib/recipes/labels";
+import { listRecipes } from "@/lib/recipes/recipes";
 import {
   allItemsChecked,
   completeList,
@@ -33,7 +38,7 @@ import { ListBody } from "./ListBody";
 import { ListMenu } from "./ListMenu";
 import { ListTitle } from "./ListTitle";
 import type { ListEntry } from "./EntryRow";
-import { ENTRY_FORM_IDLE, type EntryFormState } from "./formState";
+import { APPLY_FORM_IDLE, ENTRY_FORM_IDLE, type ApplyFormState, type EntryFormState } from "./formState";
 import styles from "./page.module.css";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
@@ -101,6 +106,18 @@ export default async function ListDetailPage({ params }: Props) {
   ]);
   // Deleted between guard and read (rare race) — same redirect as an unknown list.
   if (!list) redirect("/projects");
+
+  // The recipes feature is opt-in per project (spec §4), and this route sits OUTSIDE the project
+  // layout, so it reads the two settings columns itself rather than through getProjectNav.
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { recipesEnabled: true, recipeLabelSingular: true, recipeLabelPlural: true },
+  });
+  const recipesEnabled = project?.recipesEnabled ?? false;
+  const labels = project ? recipeLabels(project) : null;
+  // Only read the recipes when there is a menu entry that could use them — an off project pays
+  // nothing for a feature it never enabled.
+  const recipes = recipesEnabled ? await listRecipes(prisma, projectId) : [];
 
   // Flatten to the client shape. The display NAME lives on the catalog item
   // (article identity, MVP design §3.1), so it is resolved here — the same
@@ -321,6 +338,68 @@ export default async function ListDetailPage({ params }: Props) {
     revalidatePath(`/projects/${l.projectId}`, "layout");
   }
 
+  /**
+   * The guard the recipe actions share: identity, list access (which resolves membership) and the
+   * feature flag. A Server Action is an individually addressable POST endpoint that this page's
+   * render never gated, so disabling recipes while a sheet is open must turn its next submit into
+   * a 404 (spec §9).
+   */
+  async function requireRecipeAccess() {
+    "use server";
+    const s = await auth();
+    const { list: l } = await requireListAccess(prisma, listId, s!.user.id);
+    const settings = await prisma.project.findUnique({
+      where: { id: l.projectId },
+      select: { recipesEnabled: true, recipeLabelSingular: true, recipeLabelPlural: true },
+    });
+    if (!settings?.recipesEnabled) notFound();
+    return { list: l, labels: recipeLabels(settings) };
+  }
+
+  /** „Rezept hinzufügen“: applies the picker's selection. Member-level. */
+  async function applyRecipesAction(
+    _prev: ApplyFormState,
+    formData: FormData,
+  ): Promise<ApplyFormState> {
+    "use server";
+    const { list: l, labels: actionLabels } = await requireRecipeAccess();
+
+    // Ruling R2: a missing token still applies, it is just not retry-safe. Never a 400 the user
+    // cannot act on.
+    const token = String(formData.get("applyToken") ?? "") || randomUUID();
+
+    // „<recipeId>:<count>“ — a UUID contains no colon, so the first one is the separator.
+    const selections: RecipeSelection[] = formData.getAll("selection").map((raw) => {
+      const value = String(raw);
+      const separator = value.indexOf(":");
+      return {
+        recipeId: value.slice(0, separator),
+        // NaN survives deliberately: assertValidRecipeCount answers with the German
+        // „Anzahl muss zwischen 1 und 99 liegen“ rather than a second, drifting rule here.
+        count: Number(value.slice(separator + 1)),
+      };
+    });
+    // Empty submission: silent no-op, the convention every form in this app uses.
+    if (selections.length === 0) return APPLY_FORM_IDLE;
+
+    try {
+      const result = await applyRecipesToList(prisma, l, selections, token, actionLabels);
+      revalidatePath(`/lists/${listId}`);
+      // The project screen prints „N offen“ per list — it lives above this route.
+      revalidatePath(`/projects/${l.projectId}`, "layout");
+      return {
+        error: null,
+        ok: true,
+        message: formatApplyResult(result.applied, result.added, result.merged),
+      };
+    } catch (error) {
+      // Only ApiError carries user-facing German copy; anything else is a real bug and must not be
+      // disguised as a validation message (the same rule as toEntryFormState above).
+      if (error instanceof ApiError) return { error: error.message, ok: false, message: null };
+      throw error;
+    }
+  }
+
   /** Delete the whole list (member-level per the permission matrix). */
   async function deleteListAction() {
     "use server";
@@ -369,6 +448,12 @@ export default async function ListDetailPage({ params }: Props) {
             isCompleted={isCompleted}
             completeAction={completeListAction}
             deleteAction={deleteListAction}
+            // Ruling R8: no entry at all unless the feature is on AND there is something to pick.
+            recipeApply={
+              recipesEnabled && labels && recipes.length > 0
+                ? { labels, recipes, applyAction: applyRecipesAction }
+                : undefined
+            }
           />
         }
       />

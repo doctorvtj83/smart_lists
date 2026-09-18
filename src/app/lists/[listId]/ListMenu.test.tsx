@@ -2,7 +2,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { recipeLabels } from "@/lib/recipes/labels";
 import { ListMenu } from "./ListMenu";
+import { APPLY_FORM_IDLE } from "./formState";
 
 function renderMenu(overrides: Partial<Parameters<typeof ListMenu>[0]> = {}) {
   const props = {
@@ -83,6 +85,54 @@ describe("ListMenu", () => {
     await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
     await userEvent.click(screen.getByTestId("menu-backdrop"));
 
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+  });
+});
+
+const applyProps = {
+  labels: recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" }),
+  recipes: [{ id: "r1", name: "Lasagne", itemCount: 6 }],
+  applyAction: vi.fn(async () => APPLY_FORM_IDLE),
+};
+
+describe("ListMenu — Rezept hinzufügen", () => {
+  it("does not offer the entry when the feature is off", async () => {
+    renderMenu();
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Rezept hinzufügen" })).not.toBeInTheDocument();
+  });
+
+  it("does not offer the entry when the project has no recipes yet", async () => {
+    renderMenu({ recipeApply: { ...applyProps, recipes: [] } });
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Rezept hinzufügen" })).not.toBeInTheDocument();
+  });
+
+  it("does not offer the entry on a completed list", async () => {
+    renderMenu({ isCompleted: true, recipeApply: applyProps });
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Rezept hinzufügen" })).not.toBeInTheDocument();
+  });
+
+  it("opens the picker from the menu, using the project's wording", async () => {
+    renderMenu({
+      recipeApply: {
+        ...applyProps,
+        labels: recipeLabels({ recipeLabelSingular: "Set", recipeLabelPlural: "Sets" }),
+      },
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Set hinzufügen" }));
+
+    expect(screen.getByRole("dialog", { name: "Set hinzufügen" })).toBeInTheDocument();
+    // The menu closed behind it — two overlays must not fight (the ConfirmSheet precedent).
     expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
   });
 });

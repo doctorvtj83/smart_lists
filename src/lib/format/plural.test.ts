@@ -9,6 +9,7 @@ import {
   formatOpenCount,
   formatOpenOfTotal,
   formatProjectMeta,
+  formatApplyResult,
   formatRecipeArticleCount,
   formatUsedInLists,
   formatUsedInRecipes,
@@ -131,5 +132,44 @@ describe("formatUsedInRecipes", () => {
   it("uses the project's own wording", () => {
     const sets = recipeLabels({ recipeLabelSingular: "Set", recipeLabelPlural: "Sets" });
     expect(formatUsedInRecipes(3, sets)).toBe("wird in 3 Sets verwendet");
+  });
+});
+
+describe("formatApplyResult", () => {
+  it("names the recipes with their counts and both totals", () => {
+    expect(formatApplyResult([{ name: "Lasagne", count: 2 }], 4, 2)).toBe(
+      "Lasagne ×2 hinzugefügt · 4 neue Einträge, 2 zusammengeführt",
+    );
+  });
+
+  it("lists several recipes in the order they were applied", () => {
+    expect(
+      formatApplyResult(
+        [
+          { name: "Lasagne", count: 2 },
+          { name: "Chili", count: 1 },
+        ],
+        5,
+        0,
+      ),
+    ).toBe("Lasagne ×2, Chili ×1 hinzugefügt · 5 neue Einträge");
+  });
+
+  it("uses the singular for exactly one new entry", () => {
+    expect(formatApplyResult([{ name: "Chili", count: 1 }], 1, 0)).toBe(
+      "Chili ×1 hinzugefügt · 1 neuer Eintrag",
+    );
+  });
+
+  it("drops the „neue Einträge“ half when everything merged", () => {
+    expect(formatApplyResult([{ name: "Chili", count: 1 }], 0, 3)).toBe(
+      "Chili ×1 hinzugefügt · 3 zusammengeführt",
+    );
+  });
+
+  it("says so when an empty recipe produced nothing at all", () => {
+    expect(formatApplyResult([{ name: "Leer", count: 1 }], 0, 0)).toBe(
+      "Leer ×1 hinzugefügt · keine neuen Einträge",
+    );
   });
 });

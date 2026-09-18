@@ -1,0 +1,35 @@
+.form,
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Name on the left, stepper hard right — the shape the spec sketches. */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+
+.meta {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}

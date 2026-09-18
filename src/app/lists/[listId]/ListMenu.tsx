@@ -4,6 +4,10 @@ import { useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { Icon } from "@/components/ui/Icon";
+import type { RecipeLabels } from "@/lib/recipes/labels";
+import type { RecipeSummary } from "@/lib/recipes/recipes";
+import { ApplyRecipeSheet } from "./ApplyRecipeSheet";
+import type { ApplyFormState } from "./formState";
 import styles from "./ListMenu.module.css";
 
 type ListMenuProps = {
@@ -14,6 +18,15 @@ type ListMenuProps = {
   /** Server Actions, bound by the page. Both are member-level. */
   completeAction: () => void | Promise<void>;
   deleteAction: () => void | Promise<void>;
+  /**
+   * Present only when the project has recipes ON and at least one recipe exists (ruling R8) —
+   * a picker with nothing to pick is a dead end. `undefined` means „no entry at all“.
+   */
+  recipeApply?: {
+    labels: RecipeLabels;
+    recipes: RecipeSummary[];
+    applyAction: (prev: ApplyFormState, formData: FormData) => Promise<ApplyFormState>;
+  };
 };
 
 /**
@@ -27,9 +40,16 @@ type ListMenuProps = {
  * Escape, so putting a nameless stop in the tab order would only cost keyboard
  * users a step (the same reasoning as `Sheet`'s overlay).
  */
-export function ListMenu({ listName, isCompleted, completeAction, deleteAction }: ListMenuProps) {
+export function ListMenu({
+  listName,
+  isCompleted,
+  completeAction,
+  deleteAction,
+  recipeApply,
+}: ListMenuProps) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(false);
 
   return (
     <>
@@ -52,6 +72,25 @@ export function ListMenu({ listName, isCompleted, completeAction, deleteAction }
             onClick={() => setOpen(false)}
           />
           <div className={styles.menu} role="menu">
+            {/* Applying is a change to the list's contents, so it is hidden on a completed list
+                exactly as „Liste abschließen“ is (ruling R8). An empty recipe list is also a
+                dead end — the page already omits `recipeApply`, but the menu itself refuses a
+                picker with nothing to pick. */}
+            {recipeApply && recipeApply.recipes.length > 0 && !isCompleted && (
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.item}
+                onClick={() => {
+                  // Close the menu first: the sheet is the surface the user should now be
+                  // looking at, and two overlays would fight (the ConfirmSheet precedent).
+                  setOpen(false);
+                  setApplyOpen(true);
+                }}
+              >
+                {recipeApply.labels.addToList}
+              </button>
+            )}
             {!isCompleted && (
               <button
                 type="button"
@@ -100,6 +139,15 @@ export function ListMenu({ listName, isCompleted, completeAction, deleteAction }
           },
         ]}
       />
+
+      {recipeApply && applyOpen && (
+        <ApplyRecipeSheet
+          recipes={recipeApply.recipes}
+          labels={recipeApply.labels}
+          applyAction={recipeApply.applyAction}
+          onClose={() => setApplyOpen(false)}
+        />
+      )}
     </>
   );
 }

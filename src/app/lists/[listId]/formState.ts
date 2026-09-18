@@ -46,3 +46,22 @@ export const ENTRY_FORM_IDLE: EntryFormState = {
   itemId: null,
   merge: null,
 };
+
+/**
+ * The result shape the „Rezept hinzufügen“ Server Action returns.
+ *
+ * A third shape next to `EntryFormState` rather than more optional fields on it: applying has no
+ * entry id, no sheet to open and no merge cue — it has one German sentence describing what
+ * happened to n rows at once (ruling R6, the sheet shows it in place).
+ */
+export type ApplyFormState = {
+  /** German inline error from the last attempt, or null. Drives the „Erneut versuchen“ state. */
+  error: string | null;
+  /** True after an apply SUCCEEDED — the sheet switches to its confirmation. */
+  ok: boolean;
+  /** The composed result sentence, or null when nothing has been applied yet. */
+  message: string | null;
+};
+
+/** The initial value the apply sheet's useActionState starts from. */
+export const APPLY_FORM_IDLE: ApplyFormState = { error: null, ok: false, message: null };

@@ -129,3 +129,32 @@ export function formatUsedInRecipes(count: number, labels: RecipeLabels): string
         : `${labels.plural}n`;
   return `wird in ${count} ${noun} verwendet`;
 }
+
+/**
+ * The sentence the apply sheet reports: „Lasagne ×2 hinzugefügt · 4 neue Einträge, 2 zusammengeführt“.
+ *
+ * Why the copy lives here rather than in the sheet: it carries two independent German plural rules
+ * („Eintrag“/„Einträge“) and three shapes (both halves, one half, neither), which is exactly the
+ * kind of thing that is cheap to test without a DOM and expensive to eyeball inside JSX. It is the
+ * same reasoning that put `formatMergeMessage` next to the merge rule in Slice 17.
+ *
+ * Note what `merged` counts: a line that REPLAYED on a retry is reported as merged, because the
+ * sentence describes the state of the list, not the number of rows this request wrote.
+ */
+export function formatApplyResult(
+  applied: { name: string; count: number }[],
+  added: number,
+  merged: number,
+): string {
+  // „Lasagne ×2, Chili ×1“ — the multiplication sign U+00D7, not the letter x.
+  const recipes = applied.map((entry) => `${entry.name} ×${entry.count}`).join(", ");
+
+  const parts: string[] = [];
+  if (added > 0) parts.push(`${added} ${added === 1 ? "neuer Eintrag" : "neue Einträge"}`);
+  if (merged > 0) parts.push(`${merged} zusammengeführt`);
+  // Both zero is reachable: an empty recipe, or a retry of an apply whose every line had already
+  // landed as a new row. Saying nothing at all would read as a failure.
+  if (parts.length === 0) parts.push("keine neuen Einträge");
+
+  return `${recipes} hinzugefügt · ${parts.join(", ")}`;
+}
