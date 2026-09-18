@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { recipeLabels } from "@/lib/recipes/labels";
 import { ListMenu } from "./ListMenu";
-import { APPLY_FORM_IDLE } from "./formState";
+import { APPLY_FORM_IDLE, DERIVE_FORM_IDLE } from "./formState";
 
 function renderMenu(overrides: Partial<Parameters<typeof ListMenu>[0]> = {}) {
   const props = {
@@ -134,5 +134,43 @@ describe("ListMenu — Rezept hinzufügen", () => {
     expect(screen.getByRole("dialog", { name: "Set hinzufügen" })).toBeInTheDocument();
     // The menu closed behind it — two overlays must not fight (the ConfirmSheet precedent).
     expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+  });
+});
+
+const deriveProps = {
+  labels: recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" }),
+  entries: [{ id: "e1", catalogItemId: "c1", name: "Milch", quantity: 1, unit: "l" }],
+  units: ["l"],
+  createAction: vi.fn(async () => DERIVE_FORM_IDLE),
+};
+
+describe("ListMenu — Rezept aus Liste anlegen", () => {
+  it("does not offer the entry on an OPEN list — its quantities are not settled yet", async () => {
+    renderMenu({ recipeDerive: deriveProps });
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Rezept aus Liste anlegen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not offer the entry when the feature is off", async () => {
+    renderMenu({ isCompleted: true });
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Rezept aus Liste anlegen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers it on a completed list even when the project has no recipes yet", async () => {
+    renderMenu({ isCompleted: true, recipeDerive: deriveProps });
+
+    await userEvent.click(screen.getByRole("button", { name: "Listenmenü" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rezept aus Liste anlegen" }));
+
+    expect(screen.getByRole("dialog", { name: "Rezept aus Liste anlegen" })).toBeInTheDocument();
   });
 });

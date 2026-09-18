@@ -10,6 +10,8 @@ import { getCatalogVocabulary } from "@/lib/catalog/vocabulary";
 import { formatApplyResult } from "@/lib/format/plural";
 import { requireListAccess } from "@/lib/lists/access";
 import { applyRecipesToList, type RecipeSelection } from "@/lib/recipes/apply";
+import { buildRecipeFromEntries, type DerivableEntry } from "@/lib/recipes/build";
+import { createRecipeFromList } from "@/lib/recipes/derive";
 import { recipeLabels } from "@/lib/recipes/labels";
 import { listRecipes } from "@/lib/recipes/recipes";
 import {
@@ -38,7 +40,7 @@ import { ListBody } from "./ListBody";
 import { ListMenu } from "./ListMenu";
 import { ListTitle } from "./ListTitle";
 import type { ListEntry } from "./EntryRow";
-import { APPLY_FORM_IDLE, ENTRY_FORM_IDLE, type ApplyFormState, type EntryFormState } from "./formState";
+import { APPLY_FORM_IDLE, DERIVE_FORM_IDLE, ENTRY_FORM_IDLE, type ApplyFormState, type DeriveFormState, type EntryFormState } from "./formState";
 import styles from "./page.module.css";
 
 // Next.js 16: dynamic route params are a Promise in server components — must be awaited.
@@ -129,6 +131,16 @@ export default async function ListDetailPage({ params }: Props) {
     unit: item.unit,
     category: item.category,
     checked: item.checked,
+  }));
+
+  // What the derive sheet needs: the article IDENTITY as well as the display name, because a
+  // recipe line references the article, not the text (spec §2).
+  const derivableEntries: DerivableEntry[] = list.items.map((item) => ({
+    id: item.id,
+    catalogItemId: item.catalogItemId,
+    name: item.catalogItem.name,
+    quantity: item.quantity,
+    unit: item.unit,
   }));
 
   // The entry sheet's chips: what the catalog remembers ∪ what this list uses.
@@ -400,6 +412,67 @@ export default async function ListDetailPage({ params }: Props) {
     }
   }
 
+  /** „Rezept aus Liste anlegen“: turns the ticked rows into a new recipe. Member-level. */
+  async function createRecipeFromListAction(
+    _prev: DeriveFormState,
+    formData: FormData,
+  ): Promise<DeriveFormState> {
+    "use server";
+    const { list: l, labels: actionLabels } = await requireRecipeAccess();
+
+    // The render-time check is not authorization for a Server Action: a list reopened in another
+    // tab must not produce a recipe from quantities that are being shopped again (ruling R9).
+    if (l.status !== "completed") {
+      return { error: "Die Liste ist nicht abgeschlossen", ok: false, createdName: null, lineCount: 0 };
+    }
+
+    const name = String(formData.get("name") ?? "").trim();
+    // Empty submission: silent no-op, the convention every form in this app uses.
+    if (!name) return DERIVE_FORM_IDLE;
+
+    const entryIds = formData.getAll("entryId").map((value) => String(value));
+
+    try {
+      // Read the entries FRESH: the ones rendered into the sheet may be minutes old, and the
+      // builder's duplicate check has to run against what the list actually holds.
+      const fresh = await getListWithItems(prisma, l.id);
+      if (!fresh) return DERIVE_FORM_IDLE;
+
+      const lines = buildRecipeFromEntries(
+        fresh.items.map((item) => ({
+          id: item.id,
+          catalogItemId: item.catalogItemId,
+          name: item.catalogItem.name,
+          quantity: item.quantity,
+          unit: item.unit,
+        })),
+        entryIds.map((entryId) => ({
+          entryId,
+          // NaN travels on purpose: the builder answers with the German „Menge muss eine positive
+          // Zahl sein" rather than a second validation rule here (see quantity.ts).
+          quantity: parseGermanDecimal(String(formData.get(`quantity:${entryId}`) ?? "")),
+          unit: String(formData.get(`unit:${entryId}`) ?? "") || null,
+        })),
+      );
+
+      const recipe = await createRecipeFromList(
+        prisma,
+        { projectId: l.projectId, name, lines },
+        actionLabels,
+      );
+      // The recipe index lives under the project layout and now has one row more.
+      revalidatePath(`/projects/${l.projectId}/rezepte`);
+      return { error: null, ok: true, createdName: recipe.name, lineCount: lines.length };
+    } catch (error) {
+      // Only ApiError carries user-facing German copy; anything else is a real bug and must not be
+      // disguised as a validation message (the same rule as toEntryFormState above).
+      if (error instanceof ApiError) {
+        return { error: error.message, ok: false, createdName: null, lineCount: 0 };
+      }
+      throw error;
+    }
+  }
+
   /** Delete the whole list (member-level per the permission matrix). */
   async function deleteListAction() {
     "use server";
@@ -452,6 +525,16 @@ export default async function ListDetailPage({ params }: Props) {
             recipeApply={
               recipesEnabled && labels && recipes.length > 0
                 ? { labels, recipes, applyAction: applyRecipesAction }
+                : undefined
+            }
+            recipeDerive={
+              recipesEnabled && labels
+                ? {
+                    labels,
+                    entries: derivableEntries,
+                    units: vocabulary.units,
+                    createAction: createRecipeFromListAction,
+                  }
                 : undefined
             }
           />

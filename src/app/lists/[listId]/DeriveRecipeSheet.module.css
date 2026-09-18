@@ -1,0 +1,59 @@
+.form,
+.result,
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rows,
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 44px so the whole row is a tap target — the label wraps the checkbox, so tapping text works. */
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* A consumed row is a hint, not a rule: dimmed, never disabled (spec §7). */
+.rowLabel[data-consumed="true"] {
+  color: var(--color-text-muted);
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.lineName {
+  font-weight: 600;
+}
+
+.lineFields {
+  display: flex;
+  gap: 8px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.again {
+  margin: 0;
+  color: var(--color-text-muted);
+}

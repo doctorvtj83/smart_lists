@@ -65,3 +65,29 @@ export type ApplyFormState = {
 
 /** The initial value the apply sheet's useActionState starts from. */
 export const APPLY_FORM_IDLE: ApplyFormState = { error: null, ok: false, message: null };
+
+/**
+ * The result shape the „Rezept aus Liste anlegen“ Server Action returns.
+ *
+ * It carries the created recipe's NAME and line count rather than its id, because step ③ renders
+ * „„Lasagne“ angelegt · 4 Artikel" and never links anywhere: the flow loops back into the same
+ * list (spec §7), it does not navigate to the new recipe.
+ */
+export type DeriveFormState = {
+  /** German inline error from the last attempt — a duplicate name, a duplicate article, or null. */
+  error: string | null;
+  /** True after a create SUCCEEDED — the sheet advances to its „noch eins?“ step. */
+  ok: boolean;
+  /** The name as stored (trimmed), for the confirmation sentence. */
+  createdName: string | null;
+  /** How many lines the new recipe got. */
+  lineCount: number;
+};
+
+/** The initial value the derive sheet's useActionState starts from. */
+export const DERIVE_FORM_IDLE: DeriveFormState = {
+  error: null,
+  ok: false,
+  createdName: null,
+  lineCount: 0,
+};

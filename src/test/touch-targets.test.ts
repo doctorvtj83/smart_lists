@@ -80,6 +80,7 @@ const CONTROLS: Array<{ file: string; selector: string }> = [
   { file: "src/app/lists/[listId]/page.module.css", selector: ".bannerAction" },
   { file: "src/app/page.module.css", selector: ".adminLink" },
   { file: "src/components/ui/Stepper.module.css", selector: ".button" },
+  { file: "src/app/lists/[listId]/DeriveRecipeSheet.module.css", selector: ".rowLabel" },
 ];
 
 describe("touch targets", () => {

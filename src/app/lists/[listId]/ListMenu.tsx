@@ -4,10 +4,12 @@ import { useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { Icon } from "@/components/ui/Icon";
+import type { DerivableEntry } from "@/lib/recipes/build";
 import type { RecipeLabels } from "@/lib/recipes/labels";
 import type { RecipeSummary } from "@/lib/recipes/recipes";
 import { ApplyRecipeSheet } from "./ApplyRecipeSheet";
-import type { ApplyFormState } from "./formState";
+import { DeriveRecipeSheet } from "./DeriveRecipeSheet";
+import type { ApplyFormState, DeriveFormState } from "./formState";
 import styles from "./ListMenu.module.css";
 
 type ListMenuProps = {
@@ -26,6 +28,16 @@ type ListMenuProps = {
     labels: RecipeLabels;
     recipes: RecipeSummary[];
     applyAction: (prev: ApplyFormState, formData: FormData) => Promise<ApplyFormState>;
+  };
+  /**
+   * Present only when the project has recipes ON (ruling R8). Unlike `recipeApply` there is no
+   * „at least one recipe“ condition — deriving is how the FIRST recipe gets created.
+   */
+  recipeDerive?: {
+    labels: RecipeLabels;
+    entries: DerivableEntry[];
+    units: string[];
+    createAction: (prev: DeriveFormState, formData: FormData) => Promise<DeriveFormState>;
   };
 };
 
@@ -46,10 +58,12 @@ export function ListMenu({
   completeAction,
   deleteAction,
   recipeApply,
+  recipeDerive,
 }: ListMenuProps) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
+  const [deriveOpen, setDeriveOpen] = useState(false);
 
   return (
     <>
@@ -104,6 +118,21 @@ export function ListMenu({
                 Liste abschließen
               </button>
             )}
+            {/* Only on a COMPLETED list: an open list is still being shopped, so its quantities
+                are not settled (spec §7). */}
+            {recipeDerive && isCompleted && (
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.item}
+                onClick={() => {
+                  setOpen(false);
+                  setDeriveOpen(true);
+                }}
+              >
+                {recipeDerive.labels.fromList}
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
@@ -146,6 +175,16 @@ export function ListMenu({
           labels={recipeApply.labels}
           applyAction={recipeApply.applyAction}
           onClose={() => setApplyOpen(false)}
+        />
+      )}
+
+      {recipeDerive && deriveOpen && (
+        <DeriveRecipeSheet
+          entries={recipeDerive.entries}
+          labels={recipeDerive.labels}
+          units={recipeDerive.units}
+          createAction={recipeDerive.createAction}
+          onClose={() => setDeriveOpen(false)}
         />
       )}
     </>
