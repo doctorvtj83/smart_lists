@@ -14,28 +14,28 @@
 
 ---
 
-## Prerequisite: the branch this slice is built on
+## Starting point: the branch this slice is built on
 
-**Slice 19 is the first slice that needs Slice 17 *and* Slice 18 at the same time.** Slice 18 was built on a branch cut before Slice 17 landed, so its worktree contains no `AbsorbedEntry`, no `merge.ts` and no merge-aware `add_item`. Nothing in this plan can be implemented on the Slice 18 branch as it stands.
+**Slice 19 is the first slice that needs Slice 17 *and* Slice 18 at the same time — and that prerequisite is already satisfied.** Work in the worktree `/workspaces/smart_lists/.worktrees/slice-18-recipes-core` (branch `slice-18-recipes-core`), which merged `main` in commit `358bec2` (2026-09-18). It therefore carries Slice 17's `AbsorbedEntry`, `src/lib/lists/merge.ts` and the merge-aware `add_item` **next to** Slice 18's recipe core. Do **not** cut a fresh branch from either side alone.
 
-Before Task 1, make sure the working branch contains both. Expect these four merge conflicts, all mechanical:
+The four mechanical conflicts that merge produced are already resolved. Confirm you are on the right branch by checking the merged state rather than re-doing the merge:
 
-| File | Conflict | Resolution |
-|---|---|---|
-| `prisma/schema.prisma` | Slice 17 adds `model AbsorbedEntry` + `List.absorbedEntries`; Slice 18 adds `Recipe`, `RecipeItem` and four `Project` columns. | Keep **both** sides. They touch different models; only the `List` and `Project` blocks sit next to each other. |
-| `src/test/reset-db.ts` | Both extend the TRUNCATE list — Slice 17 with `"absorbed_entries"`, Slice 18 with `"recipes"`, `"recipe_items"`. | Keep **all three** table names. |
-| `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md` | Both set their own status row and append their own progress-log entry. | Keep both rows and both log entries, newest first. |
-| `prisma/migrations/` | Two independent migration folders. | Keep both; their timestamps already order them (`…_add_absorbed_entries` before `20260913163142_add_recipes`). Run `npx prisma migrate dev` once afterwards and confirm no new drift migration is generated. |
+| File | Expected merged state |
+|---|---|
+| `prisma/schema.prisma` | `model AbsorbedEntry` (Slice 17) **and** `model Recipe` + `model RecipeItem` (Slice 18) all present, plus the `Project` columns `recipesEnabled`, `recipeLabelSingular`, `recipeLabelPlural` and `suggestionRuleN @default(3)`. |
+| `src/test/reset-db.ts` | The TRUNCATE list ends `…, "favorites", "absorbed_entries", "recipes", "recipe_items"` — all three of the new tables. |
+| `prisma/migrations/` | Six folders, ending `20260913160600_add_absorbed_entries` then `20260913163142_add_recipes`. `npx prisma migrate dev` must report **no pending migrations** and generate no drift migration. |
+| `docs/superpowers/plans/2026-06-04-smart-lists-projektplan-meta.md` | Both slices' status rows and both progress-log entries present, newest first. |
 
-Verify the merge before writing a line of Slice 19 code:
+Verify the baseline before writing a line of Slice 19 code:
 
 ```bash
-npm run lint && npm test && npm run build
+npm run lint && npm test
 ```
 
-Expected: the full suite green (Slice 18 reported **95 test files / 751 tests**; Slice 17's files add to that), lint with 0 errors, build successful. If `npm test` fails here, the merge is wrong — fix that first; do **not** start Task 1 on a red suite.
+**Verified baseline on `358bec2` (2026-09-18):** `npm test` → **97 test files / 809 tests, all passing** (216 s); `npm run lint` → **0 errors, 14 warnings** (all pre-existing `_prev` / `_formData` unused-parameter warnings in Server Action signatures — do not "fix" them, the `useActionState` signature requires the parameters). If the suite is red here, the branch is wrong — fix that first; do **not** start Task 1 on a red suite.
 
-`src/app/lists/[listId]/formState.ts` is *not* a conflict but is worth knowing about: on `main` `EntryFormState` carries a `merge` field that the Slice 18 branch has never seen. Tasks 4 and 9 add sibling state types to that same file.
+One file is worth opening before Task 4: `src/app/lists/[listId]/formState.ts` now carries Slice 17's `merge: MergeOutcome | null` on `EntryFormState`, and `ENTRY_FORM_IDLE` sets it to `null`. Tasks 4 and 9 add **sibling** state types (`ApplyFormState`, `DeriveFormState`) to that same file — they do not extend `EntryFormState`, and they must not disturb its `merge` field or any test that mocks it.
 
 ---
 
