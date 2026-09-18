@@ -3,14 +3,17 @@ import { recipeLabels } from "@/lib/recipes/labels";
 import {
   formatArticleCount,
   formatArticleDefaults,
+  formatArticleEnumeration,
   formatListCount,
   formatMemberCount,
   formatNewListLabel,
+  formatNewListWithRecipesLabel,
   formatOpenCount,
   formatOpenOfTotal,
   formatProjectMeta,
   formatApplyResult,
   formatRecipeArticleCount,
+  formatRecipeOverlapNote,
   formatUsedInLists,
   formatUsedInRecipes,
 } from "./plural";
@@ -171,5 +174,62 @@ describe("formatApplyResult", () => {
     expect(formatApplyResult([{ name: "Leer", count: 1 }], 0, 0)).toBe(
       "Leer ×1 hinzugefügt · keine neuen Einträge",
     );
+  });
+});
+
+describe("formatArticleEnumeration", () => {
+  it("joins three names the way German writes a list", () => {
+    expect(formatArticleEnumeration(["Milch", "Eier", "Butter"])).toBe("Milch, Eier und Butter");
+  });
+
+  it("joins two names with „und“", () => {
+    expect(formatArticleEnumeration(["Milch", "Eier"])).toBe("Milch und Eier");
+  });
+
+  it("returns a single name unchanged", () => {
+    expect(formatArticleEnumeration(["Milch"])).toBe("Milch");
+  });
+
+  it("returns an empty string for an empty list", () => {
+    expect(formatArticleEnumeration([])).toBe("");
+  });
+});
+
+describe("formatRecipeOverlapNote", () => {
+  const labels = recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" });
+
+  it("explains an overlap of several articles", () => {
+    expect(formatRecipeOverlapNote(["Milch", "Eier", "Butter"], labels)).toBe(
+      "Milch, Eier und Butter kommen schon aus den Rezepten und werden nicht doppelt hinzugefügt.",
+    );
+  });
+
+  it("uses the singular verb for one article", () => {
+    expect(formatRecipeOverlapNote(["Milch"], labels)).toBe(
+      "Milch kommt schon aus den Rezepten und wird nicht doppelt hinzugefügt.",
+    );
+  });
+
+  it("uses the project's own plural label", () => {
+    const sets = recipeLabels({ recipeLabelSingular: "Set", recipeLabelPlural: "Sets" });
+    expect(formatRecipeOverlapNote(["Milch"], sets)).toContain("aus den Sets");
+  });
+
+  it("returns an empty string when nothing overlaps, so the caller can render it unconditionally", () => {
+    expect(formatRecipeOverlapNote([], labels)).toBe("");
+  });
+});
+
+describe("formatNewListWithRecipesLabel", () => {
+  it("shows the de-duplicated article total", () => {
+    expect(formatNewListWithRecipesLabel(15)).toBe("Liste anlegen · 15 Artikel");
+  });
+
+  it("keeps the singular", () => {
+    expect(formatNewListWithRecipesLabel(1)).toBe("Liste anlegen · 1 Artikel");
+  });
+
+  it("falls back to the empty-list wording at zero, exactly like formatNewListLabel", () => {
+    expect(formatNewListWithRecipesLabel(0)).toBe("Leere Liste anlegen");
   });
 });

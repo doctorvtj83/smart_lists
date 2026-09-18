@@ -159,6 +159,61 @@ export async function getRecipeWithItems(
   });
 }
 
+/** One recipe as the „Neue Liste“ picker needs it: a name to show and the articles it would add. */
+export interface RecipeForPicker {
+  id: string;
+  name: string;
+  articles: { catalogItemId: string; name: string }[];
+}
+
+/**
+ * Every recipe of a project WITH its article identities — the read behind the new-list sheet's
+ * second pane.
+ *
+ * Why the article names travel to the client at all: step 2 has to name the overlap with the
+ * pre-fill („Milch, Eier und Butter kommen schon aus den Rezepten…“) and show a DE-DUPLICATED
+ * count on the button. Both sets are already client-side at that moment, so this is a local
+ * computation — and the alternative, asking the server after every stepper tap, would put a
+ * round-trip inside a control the user presses repeatedly.
+ *
+ * Why quantities are deliberately absent: the button counts ARTICLES (ruling R5), and nothing in
+ * the sheet renders an amount. Shipping quantities would invite a second, client-side copy of the
+ * multiplier.
+ *
+ * Deliberately separate from `listRecipes`, which the index screen and the list's apply sheet use:
+ * those need a line COUNT, not a list of names.
+ */
+export async function listRecipesForApply(
+  db: PrismaClient,
+  projectId: string,
+): Promise<RecipeForPicker[]> {
+  const rows = await db.recipe.findMany({
+    where: { projectId },
+    select: {
+      id: true,
+      name: true,
+      items: {
+        // sortIndex is the recipe's own order — the same ordering getRecipeWithItems uses.
+        orderBy: { sortIndex: "asc" },
+        select: { catalogItemId: true, catalogItem: { select: { name: true } } },
+      },
+    },
+  });
+
+  return rows
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      articles: row.items.map((item) => ({
+        catalogItemId: item.catalogItemId,
+        name: item.catalogItem.name,
+      })),
+    }))
+    // Sort AFTER the projection, on plain names, under the shared German comparator — the same
+    // order of operations (and the same reason) as listRecipes and listCatalog.
+    .sort((a, b) => compareArticleNames(a.name, b.name));
+}
+
 // ---------------------------------------------------------------------------
 // Writes
 // ---------------------------------------------------------------------------

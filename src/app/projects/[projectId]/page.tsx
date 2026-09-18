@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { randomUUID } from "node:crypto";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ListChecks } from "lucide-react";
 import { auth } from "@/auth";
@@ -10,6 +11,9 @@ import { listActiveListSummaries } from "@/lib/lists/summaries";
 import { listFavorites } from "@/lib/favorites/favorites";
 import { computeSuggestions, createListWithArticles } from "@/lib/suggestions/suggestions";
 import { formatOpenCount } from "@/lib/format/plural";
+import { createListWithRecipes, type RecipeSelection } from "@/lib/recipes/apply";
+import { recipeLabels } from "@/lib/recipes/labels";
+import { listRecipesForApply } from "@/lib/recipes/recipes";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
@@ -67,6 +71,17 @@ export default async function ProjectDetailPage({ params }: Props) {
   // all that has to cross the boundary.
   const favoriteIds = favorites.map((favorite) => favorite.catalogItemId);
 
+  // The nav already carries `recipesEnabled` (Slice 18), but the sheet also needs the SINGULAR —
+  // and the recipes themselves — so the two label columns are read here.
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { recipesEnabled: true, recipeLabelSingular: true, recipeLabelPlural: true },
+  });
+  const recipesEnabled = project?.recipesEnabled ?? false;
+  const recipeSheetLabels = recipesEnabled && project ? recipeLabels(project) : null;
+  // Off projects pay nothing for a feature they never enabled.
+  const recipes = recipesEnabled ? await listRecipesForApply(prisma, projectId) : [];
+
   // --- Server Actions ---------------------------------------------------------
   // Each re-derives identity and re-checks permission (defense in depth).
 
@@ -86,9 +101,36 @@ export default async function ProjectDetailPage({ params }: Props) {
     // empty result is the legitimate "Leere Liste anlegen" case.
     const articleNames = formData.getAll("articleName").map((value) => String(value));
 
-    const list = await createListWithArticles(prisma, { projectId, name, articleNames });
-    // redirect() throws a special Next.js error internally — it must not be
-    // wrapped in try/catch, and nothing may run after it.
+    // „<recipeId>:<count>“ — see the list screen's applyRecipesAction for the same parse.
+    const selections: RecipeSelection[] = formData.getAll("selection").map((raw) => {
+      const value = String(raw);
+      const separator = value.indexOf(":");
+      return { recipeId: value.slice(0, separator), count: Number(value.slice(separator + 1)) };
+    });
+
+    // No recipes chosen -> the untouched Slice 11 path. This is what keeps a project that never
+    // enables the feature on exactly the code it runs today (ruling R3).
+    if (selections.length === 0) {
+      const list = await createListWithArticles(prisma, { projectId, name, articleNames });
+      redirect(`/lists/${list.id}`);
+    }
+
+    // The feature is re-checked on submit: a Server Action is an individually addressable POST
+    // endpoint, so disabling recipes while the sheet was open must not apply anything (spec §9).
+    const settings = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { recipesEnabled: true, recipeLabelSingular: true, recipeLabelPlural: true },
+    });
+    if (!settings?.recipesEnabled) notFound();
+
+    const token = String(formData.get("applyToken") ?? "") || randomUUID();
+    const list = await createListWithRecipes(
+      prisma,
+      { projectId, name, articleNames, selections, token },
+      recipeLabels(settings),
+    );
+    // redirect() throws a special Next.js error internally — it must not be wrapped in try/catch,
+    // and nothing may run after it.
     redirect(`/lists/${list.id}`);
   }
 
@@ -139,6 +181,8 @@ export default async function ProjectDetailPage({ params }: Props) {
     <NewListSheet
       suggestions={suggestions}
       favoriteIds={favoriteIds}
+      recipes={recipes}
+      labels={recipeSheetLabels}
       heroTitle={hasLists ? "Vorbefüllte Liste anlegen" : "Erste Liste anlegen"}
       heroSubtitle={
         hasLists

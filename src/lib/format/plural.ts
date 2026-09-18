@@ -158,3 +158,64 @@ export function formatApplyResult(
 
   return `${recipes} hinzugefügt · ${parts.join(", ")}`;
 }
+
+/**
+ * „Milch, Eier und Butter“ — a German enumeration.
+ *
+ * Why not names.join(", "): German (like English) replaces the last separator with „und“, and a
+ * note that reads „Milch, Eier, Butter kommen schon…“ is the kind of small wrongness that makes an
+ * app feel machine-written. Deliberately no Oxford comma — German does not use one.
+ */
+export function formatArticleEnumeration(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0];
+  const head = names.slice(0, -1);
+  const last = names[names.length - 1];
+  return `${head.join(", ")} und ${last}`;
+}
+
+/**
+ * The new-list sheet's step-2 note: „Milch, Eier und Butter kommen schon aus den Rezepten und
+ * werden nicht doppelt hinzugefügt." (spec §6).
+ *
+ * Why the note is ADDITIVE rather than striking the chips in step 1: rewriting step 1's UI from
+ * step 2 reads as the app undoing choices the user just made. The design is explicit about this.
+ *
+ * DELIBERATE WORDING DEVIATION from the spec's sketch, which reads „… — sie werden nicht
+ * doppelt hinzugefügt.“ That works for a plural overlap and breaks for a single article
+ * („Milch … sie wird“), whose gender is unknowable. „… und werden/wird nicht doppelt
+ * hinzugefügt“ says the same thing in both numbers with no pronoun at all. The sketch is a
+ * wireframe, not a copy contract.
+ *
+ * Why the sentence avoids pronouns entirely („und wird“ instead of „er/sie/es wird“): the article
+ * names are free text with unknowable gender, and the recipe label is user-chosen too (ruling R7
+ * of Slice 18 fixed the label as neuter, but articles have no such fallback). A construction with
+ * no pronoun is correct for every noun.
+ *
+ * Returns "" for an empty overlap so the caller can render it unconditionally.
+ */
+export function formatRecipeOverlapNote(names: string[], labels: RecipeLabels): string {
+  if (names.length === 0) return "";
+  const verb = names.length === 1 ? "kommt" : "kommen";
+  const added = names.length === 1 ? "wird" : "werden";
+  // „aus den“ governs the dative, so weak plurals need the extra -n („Rezepten“, not
+  // „Rezepte“). Same heuristic as formatUsedInRecipes: a plural that already ends in -n or
+  // -s stays as written („Sets“). Always the PLURAL — the source is the recipes as a set,
+  // even when a single article is named.
+  const source = /[ns]$/i.test(labels.plural) ? labels.plural : `${labels.plural}n`;
+  return `${formatArticleEnumeration(names)} ${verb} schon aus den ${source} und ${added} nicht doppelt hinzugefügt.`;
+}
+
+/**
+ * „Liste anlegen · 15 Artikel“ — the second pane's commit button (spec §6).
+ *
+ * Why a second label function next to formatNewListLabel rather than a parameter: the one-pane
+ * button promises „Liste mit 15 Einträgen anlegen“ (dative, counting ENTRIES), while this one
+ * counts distinct ARTICLES across recipes and pre-fill (ruling R5) — two different nouns making
+ * two different promises. Zero collapses to the same „Leere Liste anlegen“, because an empty list
+ * is an empty list either way.
+ */
+export function formatNewListWithRecipesLabel(count: number): string {
+  if (count === 0) return "Leere Liste anlegen";
+  return `Liste anlegen · ${count} Artikel`;
+}

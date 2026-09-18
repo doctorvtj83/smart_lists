@@ -10,6 +10,7 @@ import {
   deleteRecipe,
   getRecipeWithItems,
   listRecipes,
+  listRecipesForApply,
   removeRecipeItem,
   renameRecipe,
   updateRecipeItem,
@@ -500,5 +501,43 @@ describe("addRecipeItemFromRow", () => {
     await expect(
       addRecipeItemFromRow(db, { projectId, recipeId: recipe.id, text: "   " }, labels),
     ).rejects.toMatchObject({ status: 400, message: "Name darf nicht leer sein" });
+  });
+});
+
+describe("listRecipesForApply", () => {
+  it("returns each recipe with its article names, alphabetically", async () => {
+    const milk = await makeArticle("Milch");
+    const salt = await makeArticle("Salz");
+    const zucchini = await createRecipe(db, { projectId, name: "Zucchinisuppe" }, labels);
+    const lasagne = await createRecipe(db, { projectId, name: "Lasagne" }, labels);
+    await addRecipeItem(
+      db,
+      { projectId, recipeId: lasagne.id, catalogItemId: milk.id, quantity: 1, unit: "l" },
+      labels,
+    );
+    await addRecipeItem(db, { projectId, recipeId: lasagne.id, catalogItemId: salt.id }, labels);
+    await addRecipeItem(db, { projectId, recipeId: zucchini.id, catalogItemId: salt.id }, labels);
+
+    const recipes = await listRecipesForApply(db, projectId);
+
+    expect(recipes).toEqual([
+      {
+        id: lasagne.id,
+        name: "Lasagne",
+        articles: [
+          { catalogItemId: milk.id, name: "Milch" },
+          { catalogItemId: salt.id, name: "Salz" },
+        ],
+      },
+      { id: zucchini.id, name: "Zucchinisuppe", articles: [{ catalogItemId: salt.id, name: "Salz" }] },
+    ]);
+  });
+
+  it("never reaches into another project", async () => {
+    const otherUser = await db.user.create({ data: { googleSub: "g-o", email: "o@example.com" } });
+    const other = await db.project.create({ data: { name: "Fremd", ownerId: otherUser.id } });
+    await createRecipe(db, { projectId: other.id, name: "Fremdrezept" }, labels);
+
+    expect(await listRecipesForApply(db, projectId)).toEqual([]);
   });
 });
