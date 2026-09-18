@@ -25,7 +25,7 @@ type ApplyRecipeSheetProps = {
 };
 
 /**
- * The „Rezept hinzufügen“ sheet (spec §6, „Into an existing list“).
+ * The add-to-list sheet (`labels.addToList`; spec §6, "Into an existing list").
  *
  * Three states in one component, because they are three views of one decision:
  *  1. the PICKER — one stepper per recipe,

@@ -368,7 +368,7 @@ export default async function ListDetailPage({ params }: Props) {
     return { list: l, labels: recipeLabels(settings) };
   }
 
-  /** „Rezept hinzufügen“: applies the picker's selection. Member-level. */
+  /** Apply-to-list action (`labels.addToList`): applies the picker's selection. Member-level. */
   async function applyRecipesAction(
     _prev: ApplyFormState,
     formData: FormData,
@@ -412,7 +412,7 @@ export default async function ListDetailPage({ params }: Props) {
     }
   }
 
-  /** „Rezept aus Liste anlegen“: turns the ticked rows into a new recipe. Member-level. */
+  /** Derive-from-list action (`labels.fromList`): turns the ticked rows into a new recipe. Member-level. */
   async function createRecipeFromListAction(
     _prev: DeriveFormState,
     formData: FormData,

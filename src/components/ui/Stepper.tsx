@@ -23,7 +23,7 @@ type StepperProps = {
 /**
  * The `[− N +]` counter (spec §6: the recipe picker's stepper).
  *
- * Why a primitive rather than two buttons inside each sheet: both the list's „Rezept hinzufügen“
+ * Why a primitive rather than two buttons inside each sheet: both the list's apply-to-existing
  * sheet and the „Neue Liste“ sheet's second pane need it, and a control this small is exactly the
  * kind that drifts into two slightly different versions.
  *

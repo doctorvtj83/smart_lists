@@ -48,7 +48,7 @@ export const ENTRY_FORM_IDLE: EntryFormState = {
 };
 
 /**
- * The result shape the „Rezept hinzufügen“ Server Action returns.
+ * The result shape the apply-to-list Server Action returns.
  *
  * A third shape next to `EntryFormState` rather than more optional fields on it: applying has no
  * entry id, no sheet to open and no merge cue — it has one German sentence describing what
@@ -67,7 +67,7 @@ export type ApplyFormState = {
 export const APPLY_FORM_IDLE: ApplyFormState = { error: null, ok: false, message: null };
 
 /**
- * The result shape the „Rezept aus Liste anlegen“ Server Action returns.
+ * The result shape the derive-from-list Server Action returns.
  *
  * It carries the created recipe's NAME and line count rather than its id, because step ③ renders
  * „„Lasagne“ angelegt · 4 Artikel" and never links anywhere: the flow loops back into the same

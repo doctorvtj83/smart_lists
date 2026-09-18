@@ -175,7 +175,7 @@ export function formatArticleEnumeration(names: string[]): string {
 }
 
 /**
- * The new-list sheet's step-2 note: „Milch, Eier und Butter kommen schon aus den Rezepten und
+ * The new-list sheet's step-2 note: "Milch, Eier und Butter kommen schon aus den {plural} und
  * werden nicht doppelt hinzugefügt." (spec §6).
  *
  * Why the note is ADDITIVE rather than striking the chips in step 1: rewriting step 1's UI from
@@ -198,10 +198,10 @@ export function formatRecipeOverlapNote(names: string[], labels: RecipeLabels): 
   if (names.length === 0) return "";
   const verb = names.length === 1 ? "kommt" : "kommen";
   const added = names.length === 1 ? "wird" : "werden";
-  // „aus den“ governs the dative, so weak plurals need the extra -n („Rezepten“, not
-  // „Rezepte“). Same heuristic as formatUsedInRecipes: a plural that already ends in -n or
-  // -s stays as written („Sets“). Always the PLURAL — the source is the recipes as a set,
-  // even when a single article is named.
+  // "aus den" governs the dative, so weak plurals need the extra -n (a noun that would
+  // otherwise stay in nominative plural). Same heuristic as formatUsedInRecipes: a plural
+  // that already ends in -n or -s stays as written ("Sets"). Always the PLURAL — the source
+  // is the recipes as a set, even when a single article is named.
   const source = /[ns]$/i.test(labels.plural) ? labels.plural : `${labels.plural}n`;
   return `${formatArticleEnumeration(names)} ${verb} schon aus den ${source} und ${added} nicht doppelt hinzugefügt.`;
 }

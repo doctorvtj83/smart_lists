@@ -171,7 +171,7 @@ export interface RecipeForPicker {
  * second pane.
  *
  * Why the article names travel to the client at all: step 2 has to name the overlap with the
- * pre-fill („Milch, Eier und Butter kommen schon aus den Rezepten…“) and show a DE-DUPLICATED
+ * pre-fill ("Milch, Eier und Butter come from the chosen recipes already…") and show a DE-DUPLICATED
  * count on the button. Both sets are already client-side at that moment, so this is a local
  * computation — and the alternative, asking the server after every stepper tap, would put a
  * round-trip inside a control the user presses repeatedly.

@@ -29,7 +29,7 @@ type DeriveRecipeSheetProps = {
 };
 
 /**
- * „Rezept aus Liste anlegen“ — the three-step flow of spec §7.
+ * The derive-from-list sheet (`labels.fromList`) — the three-step flow of spec §7.
  *
  *  ① pick the rows that belong to this dish,
  *  ② name it and set the amounts for ONE unit,
