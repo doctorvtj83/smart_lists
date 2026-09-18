@@ -30,8 +30,10 @@ type ListMenuProps = {
     applyAction: (prev: ApplyFormState, formData: FormData) => Promise<ApplyFormState>;
   };
   /**
-   * Present only when the project has recipes ON (ruling R8). Unlike `recipeApply` there is no
-   * „at least one recipe“ condition — deriving is how the FIRST recipe gets created.
+   * Present only when the project has recipes ON and the list is completed (ruling R8). Unlike
+   * `recipeApply` there is no „at least one recipe“ condition — deriving is how the FIRST recipe
+   * gets created. The menu also hides the entry when `!isCompleted` so an open-list caller cannot
+   * offer it (spec §7: quantities are not settled yet).
    */
   recipeDerive?: {
     labels: RecipeLabels;

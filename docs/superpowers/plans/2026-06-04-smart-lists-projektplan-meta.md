@@ -77,11 +77,11 @@ under the table). Each slice is working, tested software on its own.
 | 16 | **Per-row remote-change flash** _(optional)_ | The design's 1.4 s highlight on rows a *remote* member changed. Pure comfort — sync works without it | _to be created_ | ⬜ Open (optional) |
 | 17 | **Entry merging** | Adding an entry for an article already on the list **sums the quantities** instead of creating a second row (same article + same unit, both quantified, unchecked target only). Carries the `AbsorbedEntry` idempotency ledger that keeps `add_item` replay-safe now that it no longer always creates a row | [2026-09-13-slice-17-entry-merging.md](2026-09-13-slice-17-entry-merging.md) | ✅ Done / verified |
 | 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | [2026-09-13-slice-18-recipes-core.md](2026-09-13-slice-18-recipes-core.md) | ✅ Done / verified |
-| 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | [2026-09-15-slice-19-recipes-apply-derive.md](2026-09-15-slice-19-recipes-apply-derive.md) | ✅ Done / verified |
+| 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | [2026-09-15-slice-19-recipes-apply-derive.md](2026-09-15-slice-19-recipes-apply-derive.md) | ✅ Done / verified (signed-in UAT outstanding; no Server Action tests) |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
-**Build order for what is left: 17 → 18 → 19**, then Slice 16 (optional), only if real use asks
+**Build order for what is left: Slice 16 (optional)**, only if real use asks
 for it. Slices 17–19 come from the
 [Recipes design](../specs/2026-09-13-smart-lists-recipes-design.md) (2026-09-13); see the note
 below the build-order notes.
@@ -275,7 +275,7 @@ Recipes (2026-09-13):
 4 Catalog ──> 18 Recipes core/mgmt ────┴──> 19 Recipes: applying + deriving
                                              (needs 5 pre-fill, 6 completed lists, 11 new-list sheet)
 
-Build order for what is left: 17 → 18 → 19, then Slice 16 (optional)
+Build order for what is left: Slice 16 (optional)
 ```
 
 - Slice 2 needs 1 (auth identity for membership checks).
@@ -353,22 +353,22 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Commit(s):** <hash(es)>
 > ```
 
-### 2026-09-18 — Slice 19: Recipes applying + deriving — ✅ Done / verified
+### 2026-09-18 — Slice 19: Recipes applying + deriving — ✅ Done / verified (signed-in UAT outstanding; no Server Action tests)
 - **Delivered:** Applying a recipe to an open list (count × quantity through `add_item`, retry-safe
   derived operation ids), the two-step new-list sheet (recipes first, pre-fill de-duplicated by
   normalized name, article count on the button), and deriving a recipe from a completed list with
   editable per-portion amounts and a build-another loop. Recipes stay out of delta sync; applying
   produces ordinary entry operations. Implementation review:
   [`docs/implementation-reviews/slice-19-recipes-apply-derive.md`](../../implementation-reviews/slice-19-recipes-apply-derive.md).
-- **Tested:** `npm test` → **105 files / 918 tests passed**; `npm run lint` → exit 0,
-  **0 errors / 14 inherited `_prev`/`_formData` warnings** in `ListBody.test.tsx`; `npm run build` →
-  exit 0. Wording audit (`grep -rn "Rezept" src/` excluding tests and `labels.ts`) produced no
-  output after comment-only English rewording. The twelve-item authenticated browser checklist
-  remains unobserved: login is Google OAuth gated by the email allowlist, no signed-in session was
-  available, and no credentials were invented. Domain/component coverage proves multiplication
-  (including D4), derived ids, merge-aware apply/retry, new-list ordering and de-duplication, the
-  duplicate-article refusal, compensating cleanup, label composition, and menu gating, but this is
-  not claimed as manual UAT.
+- **Tested:** **Verified:** domain + component tests — `npm test` → **105 files / 918 tests passed**;
+  `npm run lint` → exit 0, **0 errors / 14 inherited `_prev`/`_formData` warnings** in
+  `ListBody.test.tsx`; `npm run build` → exit 0. Wording audit (`grep -rn "Rezept" src/` excluding
+  tests and `labels.ts`) produced no output after comment-only English rewording. Domain/component
+  coverage proves multiplication (including D4), derived ids, merge-aware apply/retry, new-list
+  ordering and de-duplication, the duplicate-article refusal, compensating cleanup, label
+  composition, and menu gating. **Outstanding:** signed-in UAT (all twelve authenticated browser
+  checks — login is Google OAuth gated by the email allowlist; no signed-in session was available
+  and no credentials were invented); the three new Server Actions have no automated tests.
 - **Deviations from the plan:** (1) Built on `slice-18-recipes-core`, which had already merged
   `main` (Slice 17) at `358bec2`; branch `slice-19-recipes-apply-derive` was cut from that merged
   state, not a fresh merge of 17+18. (2) Ruling R3 kept: the compensating-delete duplication versus
@@ -385,12 +385,12 @@ When you have finished a slice, **before** the final commit do the following:
   prerequisite was already satisfied on the Slice 18 branch after it merged `main` at `358bec2`;
   Slice 19 did not re-merge the two sides.
 - **Inherited open items:** Human UAT for all twelve Slice 19 browser checks (and Slice 18's eleven);
-  Preview `DATABASE_URL`; Next.js `middleware` → `proxy`; no CI; and member-path smoke requiring a
-  second Google account.
+  no automated tests for the three new Server Actions; Preview `DATABASE_URL`; Next.js
+  `middleware` → `proxy`; no CI; and member-path smoke requiring a second Google account.
 - **Next open slice:** **Slice 16 (per-row remote-change flash, optional)** — the recipes feature is
   complete, and Slice 16 is the only thing left, still only if real use asks for it.
 - **Commit(s):** `e6de936`…`19ed6fb` (implementation) plus `ea0d8a8` (plan refresh against the merged
-  branch) plus this documentation commit.
+  branch) plus `6aedcd5` (implementation review and this meta-plan update).
 
 ### 2026-09-13 — Slice 18: Recipes core, management, settings — ✅ Done / verified
 - **Delivered:** Per-project opt-in recipes with project-owned singular/plural wording; owner-only

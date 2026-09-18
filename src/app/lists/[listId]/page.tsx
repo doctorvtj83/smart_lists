@@ -97,29 +97,37 @@ export default async function ListDetailPage({ params }: Props) {
     redirect("/projects");
   }
 
-  // Two independent reads → Promise.all: one round-trip of latency, not two.
-  const [list, vocabulary] = await Promise.all([
+  // Independent reads → Promise.all: one round-trip of latency, not N sequential Neon
+  // waits. Check-off revalidatePath re-runs this page, so extra queries AFTER this all
+  // would tax the hot path. Recipes settings live on the project (spec §4); this route
+  // sits OUTSIDE the project layout, so it reads the two settings columns itself rather
+  // than through getProjectNav. The recipes list is nested inside the all so the flag
+  // can skip it — an off project pays nothing for a feature it never enabled.
+  const [list, vocabulary, { project, recipes }] = await Promise.all([
     getListWithItems(prisma, listId),
     // The category chips and the parser's unit vocabulary — two short string
     // arrays. Before Slice 8 this read the whole catalog (CATALOG_DATALIST_LIMIT)
     // because the dropdown filtered it in the browser; the dropdown now fetches
     // per keystroke, so the rows themselves have no reader here any more.
     getCatalogVocabulary(prisma, projectId),
+    // Nested so the flag can skip listRecipes without a sequential wait after list +
+    // vocabulary: project settings first, recipes only when the feature is on.
+    (async () => {
+      const projectRow = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { recipesEnabled: true, recipeLabelSingular: true, recipeLabelPlural: true },
+      });
+      const enabled = projectRow?.recipesEnabled ?? false;
+      // Only read the recipes when there is a menu entry that could use them.
+      const recipeRows = enabled ? await listRecipes(prisma, projectId) : [];
+      return { project: projectRow, recipes: recipeRows };
+    })(),
   ]);
   // Deleted between guard and read (rare race) — same redirect as an unknown list.
   if (!list) redirect("/projects");
 
-  // The recipes feature is opt-in per project (spec §4), and this route sits OUTSIDE the project
-  // layout, so it reads the two settings columns itself rather than through getProjectNav.
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { recipesEnabled: true, recipeLabelSingular: true, recipeLabelPlural: true },
-  });
   const recipesEnabled = project?.recipesEnabled ?? false;
   const labels = project ? recipeLabels(project) : null;
-  // Only read the recipes when there is a menu entry that could use them — an off project pays
-  // nothing for a feature it never enabled.
-  const recipes = recipesEnabled ? await listRecipes(prisma, projectId) : [];
 
   // Flatten to the client shape. The display NAME lives on the catalog item
   // (article identity, MVP design §3.1), so it is resolved here — the same
@@ -528,7 +536,9 @@ export default async function ListDetailPage({ params }: Props) {
                 : undefined
             }
             recipeDerive={
-              recipesEnabled && labels
+              // Ruling R8: derive is completed-list only. Passing the entries on an open
+              // list would serialize them twice (ListBody + this prop) on every check-off.
+              recipesEnabled && labels && isCompleted
                 ? {
                     labels,
                     entries: derivableEntries,
