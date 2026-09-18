@@ -21,6 +21,7 @@ import { RowLink } from "@/components/ui/RowLink";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Sheet } from "@/components/ui/Sheet";
 import { TextField } from "@/components/ui/TextField";
+import { Stepper } from "@/components/ui/Stepper";
 import { Toggle } from "@/components/ui/Toggle";
 import { buildAutocomplete } from "@/lib/catalog/autocomplete";
 
@@ -43,6 +44,8 @@ export function Gallery() {
   const [favorites, setFavorites] = useState(["Milch", "Butter", "Brot"]);
   // Local state for the Toggle demo — mirrors the sheet's „Vorbefüllen" switch.
   const [prefill, setPrefill] = useState(true);
+  // Stepper demo — the recipe picker's counter, including its 0 = „nicht gewählt“ state.
+  const [count, setCount] = useState(2);
   // Autocomplete demo: a tiny fixed catalog so the dropdown has something to show.
   const [entryText, setEntryText] = useState("");
   const demoCatalog = [
@@ -141,6 +144,13 @@ export function Gallery() {
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700 }}>Vorbefüllen</span>
         <Toggle checked={prefill} onChange={setPrefill} label="Vorbefüllen" />
+      </div>
+
+      <SectionLabel>Stepper</SectionLabel>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <Stepper value={count} onChange={setCount} label="Anzahl Lasagne" />
+        <Stepper value={0} onChange={() => {}} label="Anzahl Chili" />
+        <Stepper value={99} onChange={() => {}} label="Anzahl Maximal" />
       </div>
 
       <SectionLabel>Banner</SectionLabel>

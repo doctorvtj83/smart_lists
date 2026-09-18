@@ -1,0 +1,39 @@
+/* The pill the three parts sit in — same border/radius language as Chip and TextField. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+/*
+ * 44px square: the handoff's tap-target rule, declared directly rather than via the ::after
+ * expander, because two expanders 2px apart would overlap and swallow each other's taps.
+ */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.button:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+/* Fixed width so stepping 9 -> 10 does not shift the two buttons sideways. */
+.value {
+  min-width: 2.5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
