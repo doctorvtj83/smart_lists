@@ -1,6 +1,9 @@
+import { randomUUID } from "node:crypto";
 import type { List, PrismaClient } from "@prisma/client";
+import { normalizeName } from "@/lib/catalog/normalize";
 import { ApiError } from "@/lib/http/errors";
-import { applyOperationDetailed } from "@/lib/lists/operations";
+import { createList, type CreateListInput } from "@/lib/lists/lists";
+import { applyOperation, applyOperationDetailed } from "@/lib/lists/operations";
 import { expandRecipe, assertValidRecipeCount } from "./expand";
 import { deriveOperationId } from "./operationIds";
 import type { RecipeLabels } from "./labels";
@@ -128,4 +131,76 @@ export async function applyRecipesToList(
     added,
     merged,
   };
+}
+
+export interface CreateListWithRecipesInput extends CreateListInput {
+  /** The suggestion chips that survived the sheet's de-selection, by article NAME. */
+  articleNames: string[];
+  /** The second pane's picker result. An empty array is the „no recipes chosen“ case. */
+  selections: RecipeSelection[];
+  /** The client's apply token, so a retried creation cannot double-count (ruling R1). */
+  token: string;
+}
+
+/**
+ * Creates a list, applies the chosen recipes, and THEN pre-fills with the suggestions that are not
+ * already on it (spec §6, „Into a new list“).
+ *
+ * WHY THE ORDER IS NOT NEGOTIABLE: a suggestion is an article-level wish with no quantity, and D1
+ * refuses to merge an entry that carries no number. Pre-filling first would therefore leave the
+ * recipe's „3 l Milch“ and the pre-fill's bare „Milch“ side by side forever. A recipe satisfies the
+ * wish more precisely, so the suggestion has nothing left to contribute.
+ *
+ * WHY THE SUBTRACTION HAPPENS HERE AND NOT IN THE FUNNEL: D1 stays exactly as it is written — this
+ * is a caller holding both sets and choosing what to send, not a new merge rule.
+ *
+ * Twin of `createListWithArticles` in src/lib/suggestions/suggestions.ts, deliberately NOT a flag
+ * on it (ruling R3): a project that never enables recipes keeps running that function unchanged.
+ * The compensating delete below is the same pattern, for the same reason — see its comment there
+ * for why this is not a db.$transaction.
+ */
+export async function createListWithRecipes(
+  db: PrismaClient,
+  input: CreateListWithRecipesInput,
+  labels: RecipeLabels,
+): Promise<List> {
+  // createList enforces the name rules and the optional client-supplied UUID, so an invalid
+  // request fails BEFORE anything is written.
+  const list = await createList(db, input);
+
+  try {
+    await applyRecipesToList(db, list, input.selections, input.token, labels);
+
+    // What the recipes just put on the list, by the catalog's OWN identity rule (ruling R4). One
+    // read, after the apply, so a merged line counts once and a line that inherited its article
+    // through get-or-create is included.
+    const present = await db.listItem.findMany({
+      where: { listId: list.id },
+      select: { catalogItem: { select: { normalizedName: true } } },
+    });
+    const seen = new Set(present.map((item) => item.catalogItem.normalizedName));
+
+    for (const name of input.articleNames) {
+      const normalized = normalizeName(name);
+      // Already on the list — from a recipe, or from an earlier duplicate in this very loop.
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+
+      // Only the NAME is passed: add_item resolves it to the project's catalog row and inherits
+      // its category/unit defaults, so the inheritance logic is never duplicated.
+      await applyOperation(db, list, {
+        op: "add_item",
+        itemId: randomUUID(), // stable entry identity, generated caller-side by convention
+        name,
+      });
+    }
+  } catch (error) {
+    // Pattern: COMPENSATING ACTION. A half-filled list is an artifact the user never asked for.
+    // .catch(): the cleanup is best-effort — if the delete ALSO fails, the caller must still see
+    // the ORIGINAL cause, not a secondary rollback error.
+    await db.list.delete({ where: { id: list.id } }).catch(() => undefined);
+    throw error;
+  }
+
+  return list;
 }

@@ -5,7 +5,7 @@ import { resetDb } from "@/test/reset-db";
 import { ApiError } from "@/lib/http/errors";
 import { recipeLabels } from "./labels";
 import { addRecipeItem, createRecipe } from "./recipes";
-import { applyRecipesToList } from "./apply";
+import { applyRecipesToList, createListWithRecipes } from "./apply";
 
 const db = new PrismaClient();
 const labels = recipeLabels({ recipeLabelSingular: "Rezept", recipeLabelPlural: "Rezepte" });
@@ -251,5 +251,133 @@ describe("applyRecipesToList", () => {
     } catch (error) {
       expect((error as ApiError).status).toBe(404);
     }
+  });
+});
+
+describe("createListWithRecipes", () => {
+  it("applies the recipes BEFORE the pre-fill, so the recipe rows come first", async () => {
+    const milk = await makeArticle("Milch");
+    const bread = await makeArticle("Brot");
+    const recipe = await makeRecipe("Lasagne", [
+      { catalogItemId: milk.id, quantity: 1, unit: "l" },
+    ]);
+
+    const list = await createListWithRecipes(
+      db,
+      {
+        projectId,
+        name: "Samstag",
+        articleNames: ["Brot"],
+        selections: [{ recipeId: recipe.id, count: 1 }],
+        token: randomUUID(),
+      },
+      labels,
+    );
+
+    expect(await entriesOf(list.id)).toEqual([
+      { name: "Milch", quantity: 1, unit: "l" },
+      { name: "Brot", quantity: null, unit: null },
+    ]);
+    expect(bread.id).toBeDefined(); // the article existed before the list did
+  });
+
+  it("skips a suggestion the recipes already put on the list (spec §6's ordering rule)", async () => {
+    const milk = await makeArticle("Milch");
+    const recipe = await makeRecipe("Lasagne", [
+      { catalogItemId: milk.id, quantity: 3, unit: "l" },
+    ]);
+
+    const list = await createListWithRecipes(
+      db,
+      {
+        projectId,
+        name: "Samstag",
+        // The pre-fill would add a bare, quantity-less „Milch“ — which D1 would never merge into
+        // the recipe's 3 l. Skipping it is what keeps the list from showing Milch twice.
+        articleNames: ["Milch"],
+        selections: [{ recipeId: recipe.id, count: 1 }],
+        token: randomUUID(),
+      },
+      labels,
+    );
+
+    expect(await entriesOf(list.id)).toEqual([{ name: "Milch", quantity: 3, unit: "l" }]);
+  });
+
+  it("matches the skip by NORMALIZED name, not by exact spelling", async () => {
+    const milk = await makeArticle("Milch");
+    const recipe = await makeRecipe("Lasagne", [
+      { catalogItemId: milk.id, quantity: 1, unit: "l" },
+    ]);
+
+    const list = await createListWithRecipes(
+      db,
+      {
+        projectId,
+        name: "Samstag",
+        articleNames: ["  milch  "],
+        selections: [{ recipeId: recipe.id, count: 1 }],
+        token: randomUUID(),
+      },
+      labels,
+    );
+
+    expect(await entriesOf(list.id)).toHaveLength(1);
+  });
+
+  it("drops a duplicate inside the pre-fill itself", async () => {
+    await makeArticle("Brot");
+
+    const list = await createListWithRecipes(
+      db,
+      {
+        projectId,
+        name: "Samstag",
+        articleNames: ["Brot", "Brot"],
+        selections: [],
+        token: randomUUID(),
+      },
+      labels,
+    );
+
+    expect(await entriesOf(list.id)).toEqual([{ name: "Brot", quantity: null, unit: null }]);
+  });
+
+  it("behaves exactly like a plain pre-fill when no recipe is chosen", async () => {
+    await makeArticle("Brot");
+
+    const list = await createListWithRecipes(
+      db,
+      { projectId, name: "Samstag", articleNames: ["Brot"], selections: [], token: randomUUID() },
+      labels,
+    );
+
+    expect(await entriesOf(list.id)).toEqual([{ name: "Brot", quantity: null, unit: null }]);
+  });
+
+  it("deletes the half-built list when the apply fails (compensating action)", async () => {
+    const milk = await makeArticle("Milch");
+    const recipe = await makeRecipe("Lasagne", [
+      { catalogItemId: milk.id, quantity: 1, unit: "l" },
+    ]);
+
+    await expect(
+      createListWithRecipes(
+        db,
+        {
+          projectId,
+          name: "Samstag",
+          articleNames: ["Brot"],
+          // 100 is out of range: the apply throws before it writes anything.
+          selections: [{ recipeId: recipe.id, count: 100 }],
+          token: randomUUID(),
+        },
+        labels,
+      ),
+    ).rejects.toThrow("Anzahl muss zwischen 1 und 99 liegen");
+
+    // A list named „Samstag“ holding an arbitrary subset would appear under AKTIVE LISTEN with no
+    // sign that anything went wrong.
+    expect(await db.list.count({ where: { projectId } })).toBe(0);
   });
 });
