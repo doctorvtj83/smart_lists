@@ -25,14 +25,21 @@
 }
 
 .md {
-  font-size: 15px;
+  /* 16px, not the handoff's 15px: iOS WebKit force-zooms the viewport when a
+     text input below 16px takes focus, and because the app is display:
+     "standalone" with no maximumScale there is nothing to restore the scale
+     afterwards — the whole screen stays zoomed with its right edge cut off.
+     See src/test/ios-input-zoom.test.ts, which pins this floor. */
+  font-size: 16px;
   padding: 11px 14px;
   border-radius: var(--radius-control);
   min-height: 44px;
 }
 
 .sm {
-  font-size: 14.5px;
+  /* Same 16px iOS floor as .md — .sm differs only in padding and radius now.
+     This is the field from the entry sheet's Menge/Einheit/Kategorie row. */
+  font-size: 16px;
   padding: 9px 11px;
   border-radius: var(--radius-control-sm);
 }

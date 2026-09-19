@@ -83,6 +83,25 @@ All code written in this project must be **meticulously documented with inline c
 - Comments are in **English** (code identifier language); in-app user-facing strings stay German.
 - Do not remove or thin out existing comments when editing a file.
 
+## Deploying a change that carries a migration
+
+A push to `main` deploys to production automatically, but **migrations are not part of the build**
+(deliberately — see the runbook). So whenever a branch's diff touches `prisma/migrations/`, the
+production schema must be migrated **before** the merge, never after:
+
+```bash
+read -rs PROD_URL                                     # Neon console, branch `production`
+DATABASE_URL="$PROD_URL" npx prisma migrate status    # is production behind this branch?
+DATABASE_URL="$PROD_URL" npx prisma migrate deploy    # apply, then merge/push
+unset PROD_URL
+```
+
+Our migrations are additive, so a schema that is *ahead* of the deployed code is harmless — the old
+code ignores the new columns. Code ahead of the schema is an outage: every read of a not-yet-existing
+column throws `P2022` and the page 500s. This is exactly how Slices 17–19 took the project screen
+down on 2026-09-18; [the runbook's *migration gate*](docs/deployment/2026-09-06-production-deploy-runbook.md)
+has the full post-mortem and the `$PROD_URL` handling rules (never put it in `.env`).
+
 ## Implementation review (per slice)
 
 After completing each implementation slice, create a review document in `docs/implementation-reviews/` named `slice-<N>-<slug>.md`. This document is for the developer to build a mental model of what was built. It must cover:
@@ -93,4 +112,5 @@ After completing each implementation slice, create a review document in `docs/im
 4. **Most important lines of code** — quote the 5–10 lines (or small blocks) that carry the most conceptual weight, with an explanation of why each is significant.
 5. **Architecture contribution** — which part of the overall system architecture was assembled by this slice, and how it connects to what comes next.
 
-The review is written in English. It is part of the Definition of Done for every slice.
+The review is written in English. It is part of the Definition of Done for every slice —
+as is the migration gate above, whenever the slice added anything under `prisma/migrations/`.

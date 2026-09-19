@@ -28,7 +28,9 @@
   min-width: 0;
   border: none;
   background: transparent;
-  font-size: 14px;
+  /* 16px is the iOS focus-zoom floor, not a type choice — see
+     src/test/ios-input-zoom.test.ts. */
+  font-size: 16px;
   padding: 10px 0;
   outline: none;
 }

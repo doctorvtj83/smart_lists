@@ -239,10 +239,11 @@ This also closes the two checks Slice 8 had to skip for lack of a device
 ## After the first deploy
 
 - **Deploying** = push to `main`. Vercel builds and promotes automatically.
-- **Schema changes** = `npx prisma migrate dev` locally against `dev`, commit the migration, push,
-  then run `DATABASE_URL="$PROD_URL" npx prisma migrate deploy` **before or right after** the deploy
-  that needs it. This is deliberately not wired into the build command: an automatic migration on
-  every build makes a failed deploy able to damage production data.
+- **Schema changes** = `npx prisma migrate dev` locally against `dev`, commit the migration, then
+  run `DATABASE_URL="$PROD_URL" npx prisma migrate deploy` **before the push that deploys the code
+  needing it** — see *The migration gate* below. This is deliberately not wired into the build
+  command: an automatic migration on every build makes a failed deploy able to damage production
+  data.
 - **Getting `$PROD_URL` again.** It is not kept on disk, and `vercel env pull` cannot recover it —
   the Vercel variables are marked Sensitive, so they read back as `[SENSITIVE]`. Copy it from the
   Neon console (branch `production`, pooling off) into a file outside the repo, without leaving it
@@ -259,6 +260,42 @@ This also closes the two checks Slice 8 had to skip for lack of a device
   every existing JWT becomes invalid.
 - **Rollback**: Vercel → Deployments → an older production deployment → *Promote to Production*.
   Note that a rollback does **not** roll back a database migration.
+
+## The migration gate
+
+**Rule: migrate production BEFORE the push that deploys the code needing it.** A push to `main`
+promotes to production automatically, so code and schema cannot be released in one step — one of the
+two is always ahead. Prisma migrations here are additive (new tables, new columns with defaults), so
+the *schema ahead of the code* is the harmless order: the old code simply ignores the new columns.
+The reverse order takes production down.
+
+Before merging a branch whose diff touches `prisma/migrations/`:
+
+```bash
+read -rs PROD_URL                                     # from the Neon console, branch `production`
+DATABASE_URL="$PROD_URL" npx prisma migrate status    # names every pending migration
+DATABASE_URL="$PROD_URL" npx prisma migrate deploy    # apply them, then merge/push
+unset PROD_URL
+```
+
+`migrate status` is the cheap half and answers the only question that matters — *is production's
+schema behind this branch?* Run it even when you believe nothing changed; the answer is
+`Database schema is up to date!` or a list of what is missing.
+
+> **This gate exists because it was skipped.** Slices 17–19 merged to `main` on 2026-09-18 carrying
+> `20260913160600_add_absorbed_entries` and `20260913163142_add_recipes`. The migrations were never
+> applied to the `production` branch, so the moment the new code deployed, every project screen
+> returned *"This page couldn't load"* — `src/app/projects/[projectId]/page.tsx` reads
+> `projects.recipes_enabled` on every render, and the column did not exist. The Vercel runtime log
+> named it exactly: `PrismaClientKnownRequestError … P2022 … The column projects.recipes_enabled
+> does not exist in the current database`. Nothing was wrong with the code; only the ordering was.
+>
+> Second lesson from the same incident: read the **migration body** before applying, not just its
+> name. That recipes migration also carried
+> `UPDATE "projects" SET "suggestion_rule_n" = 3 WHERE "suggestion_rule_n" = 2` — a behavior change
+> to live projects (Slice 18, ruling D8) hidden inside a migration whose name says "add recipes".
+
+---
 
 ## Known limitations of this setup
 
