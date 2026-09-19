@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { Autocomplete } from "@/components/ui/Autocomplete";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -111,8 +111,12 @@ export function RecipeDetail({
     const formData = new FormData();
     formData.set("text", text);
     // requestSubmit would re-read the input, which we are about to clear — so the action is
-    // invoked directly with the text that was actually typed.
-    void addFormAction(formData);
+    // invoked directly with the text that was actually typed. startTransition is required: the
+    // returned useActionState dispatcher is not a form `action` here, and React 19 warns (and
+    // skips isPending) if it is called outside a transition.
+    startTransition(() => {
+      void addFormAction(formData);
+    });
     setDraft("");
     inputRef.current?.focus();
   };

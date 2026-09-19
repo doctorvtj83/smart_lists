@@ -79,12 +79,6 @@ export default async function RecipeDetailPage({ params }: Props) {
     return recipeLabels(settings);
   }
 
-  /** Maps a thrown domain error onto the inline form state; a non-ApiError is a real bug. */
-  function toFormState(error: unknown): RecipeFormState {
-    if (error instanceof ApiError) return { error: error.message, ok: false, recipeId };
-    throw error;
-  }
-
   async function addLineAction(
     _prev: RecipeFormState,
     formData: FormData,
@@ -101,7 +95,10 @@ export default async function RecipeDetailPage({ params }: Props) {
       revalidatePath(`/projects/${projectId}/rezepte/${recipeId}`);
       return { error: null, ok: true, recipeId };
     } catch (error) {
-      return toFormState(error);
+      // Inlined on purpose: a helper closed over by an inline `"use server"` action is not
+      // serializable when that action is passed to a Client Component (Next.js 16).
+      if (error instanceof ApiError) return { error: error.message, ok: false, recipeId };
+      throw error;
     }
   }
 
@@ -132,7 +129,8 @@ export default async function RecipeDetailPage({ params }: Props) {
       revalidatePath(`/projects/${projectId}/rezepte/${recipeId}`);
       return { error: null, ok: true, recipeId };
     } catch (error) {
-      return toFormState(error);
+      if (error instanceof ApiError) return { error: error.message, ok: false, recipeId };
+      throw error;
     }
   }
 
@@ -150,7 +148,8 @@ export default async function RecipeDetailPage({ params }: Props) {
       revalidatePath(`/projects/${projectId}/rezepte/${recipeId}`);
       return { error: null, ok: true, recipeId };
     } catch (error) {
-      return toFormState(error);
+      if (error instanceof ApiError) return { error: error.message, ok: false, recipeId };
+      throw error;
     }
   }
 
