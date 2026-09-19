@@ -2,10 +2,11 @@
  * The merge DECISION, as pure functions (recipes design §3, D1/D2).
  *
  * Why a separate module rather than a few private helpers inside operations.ts: this is the
- * subtlest rule in the feature — nine ways to say "no" and one to say "yes" — and it is the piece
- * that must be provable without a database. Keeping it pure turns the design's truth table into a
- * literal test table (merge.test.ts) and leaves operations.ts to do the one thing it is about:
- * writing. Nothing here touches Prisma, so Slice 19's recipe apply can reuse the same rule.
+ * subtlest rule in the feature — the ways to say "no" and the two ways to say "yes" (sum vs.
+ * presence) — and it is the piece that must be provable without a database. Keeping it pure turns
+ * the design's truth table into a literal test table (merge.test.ts) and leaves operations.ts to
+ * do the one thing it is about: writing. Nothing here touches Prisma, so Slice 19's recipe apply
+ * can reuse the same rule.
  */
 
 import { formatQuantityLabel } from "@/lib/format/quantity";
@@ -54,13 +55,14 @@ export interface MergeCandidate {
 }
 
 /**
- * A candidate that PASSED: same article, same unit, unchecked, and quantified. The narrowed
- * `quantity` is the point — the caller adds to it without a non-null assertion, because the rule
- * that guarantees it lives here and nowhere else.
+ * A candidate that PASSED: same article, same unit, unchecked, and either both sides quantified
+ * (the number will be added) or both unquantified (the incoming add is absorbed as presence).
+ *
+ * `quantity` stays `number | null` on purpose: a presence merge has no number to contribute, and
+ * narrowing it to `number` would force the caller to pretend Salz has an amount. The write path
+ * branches on null vs. number; that branch IS the rule.
  */
-export interface MergeTarget extends MergeCandidate {
-  quantity: number;
-}
+export type MergeTarget = MergeCandidate;
 
 /** The add being applied, after unit inheritance has been resolved (operations.ts step 5). */
 export interface IncomingEntry {
@@ -72,7 +74,7 @@ export interface IncomingEntry {
 /**
  * Picks the row an incoming add should be added to, or null when it must become its own row.
  *
- * ALL FIVE RULES LIVE HERE, including the article check the caller's query already performed
+ * ALL RULES LIVE HERE, including the article check the caller's query already performed
  * (ruling R3). The caller narrows the candidate set for cost; this function decides. Duplicating
  * a rule into the `where` clause would be exactly how the two drift apart.
  *
@@ -84,20 +86,19 @@ export function findMergeTarget(
   candidates: MergeCandidate[],
   incoming: IncomingEntry,
 ): MergeTarget | null {
-  // D1: an add with no quantity has no number to contribute. Checked first because it disqualifies
-  // every candidate at once — the caller uses the same fact to skip the query entirely.
-  if (incoming.quantity === null) return null;
-
   let best: MergeTarget | null = null;
   for (const candidate of candidates) {
-    // Destructured so the null check narrows the VALUE, which is what builds the MergeTarget below
-    // without a cast (`candidate.quantity` would stay `number | null` after the spread).
-    const { quantity } = candidate;
-    if (quantity === null) continue; // D1: both sides must carry a quantity
     if (candidate.checked) continue; // D2: a settled row never absorbs
     if (candidate.catalogItemId !== incoming.catalogItemId) continue; // same article only
     if (!unitsMatch(candidate.unit, incoming.unit)) continue; // same unit bucket, no conversion
-    if (best === null || candidate.sortIndex < best.sortIndex) best = { ...candidate, quantity };
+    // D1: merge when BOTH sides carry a quantity (there is a number to add) OR when NEITHER
+    // does (the incoming add is the same unquantified wish already on the list — a second
+    // „Salz" row would be a duplicate with nothing to tell the two apart). Mixed pairs stay
+    // apart: a bare wish next to a measured amount is two different statements, not a sum.
+    const bothQuantified = incoming.quantity !== null && candidate.quantity !== null;
+    const bothUnquantified = incoming.quantity === null && candidate.quantity === null;
+    if (!bothQuantified && !bothUnquantified) continue;
+    if (best === null || candidate.sortIndex < best.sortIndex) best = candidate;
   }
   return best;
 }
@@ -112,10 +113,10 @@ export interface MergeOutcome {
   targetItemId: string;
   /** The article's display name, for „Zu 1 l Milch addiert". */
   name: string;
-  /** The target's quantity BEFORE this add. */
-  previousQuantity: number;
-  /** The target's quantity AFTER it. */
-  quantity: number;
+  /** The target's quantity BEFORE this add. Null on a presence merge (neither side had a number). */
+  previousQuantity: number | null;
+  /** The target's quantity AFTER it. Null on a presence merge — the row did not change. */
+  quantity: number | null;
   /** The target's unit — unchanged by the merge; the existing row wins every field but the number. */
   unit: string | null;
 }
@@ -129,6 +130,10 @@ export interface MergeOutcome {
  * comma and the "quantity without a unit" case are handled exactly as the row label handles them.
  */
 export function formatMergeMessage(merge: MergeOutcome): string {
+  // A presence merge did not change a number — there is no „Zu X addiert → Y" to say. Callers that
+  // render this banner (ListBody) also skip it when quantity is null; this keeps the function total
+  // on the new outcome shape rather than producing „Zu  Salz addiert → ".
+  if (merge.previousQuantity === null || merge.quantity === null) return "";
   const before = formatQuantityLabel(merge.previousQuantity, merge.unit);
   const after = formatQuantityLabel(merge.quantity, merge.unit);
   return `Zu ${before} ${merge.name} addiert → ${after}`;

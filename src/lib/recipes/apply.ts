@@ -147,12 +147,14 @@ export interface CreateListWithRecipesInput extends CreateListInput {
  * already on it (spec §6, „Into a new list“).
  *
  * WHY THE ORDER IS NOT NEGOTIABLE: a suggestion is an article-level wish with no quantity, and D1
- * refuses to merge an entry that carries no number. Pre-filling first would therefore leave the
- * recipe's „3 l Milch“ and the pre-fill's bare „Milch“ side by side forever. A recipe satisfies the
- * wish more precisely, so the suggestion has nothing left to contribute.
+ * still refuses to merge that mixed pair into a quantified recipe row. Pre-filling first would
+ * therefore leave the recipe's „3 l Milch“ and the pre-fill's bare „Milch“ side by side forever.
+ * A recipe satisfies the wish more precisely, so the suggestion has nothing left to contribute.
  *
- * WHY THE SUBTRACTION HAPPENS HERE AND NOT IN THE FUNNEL: D1 stays exactly as it is written — this
- * is a caller holding both sets and choosing what to send, not a new merge rule.
+ * WHY THE SUBTRACTION HAPPENS HERE AND NOT IN THE FUNNEL: the mixed case (unquantified wish vs.
+ * quantified row) is still two rows under D1. Skipping the suggestion here is a caller holding
+ * both sets and choosing what to send. Unquantified+unquantified now merges in the funnel
+ * (presence merge) — that is Check 5's Salz, a different pair.
  *
  * Twin of `createListWithArticles` in src/lib/suggestions/suggestions.ts, deliberately NOT a flag
  * on it (ruling R3): a project that never enables recipes keeps running that function unchanged.

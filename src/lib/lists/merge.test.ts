@@ -94,14 +94,44 @@ describe("findMergeTarget", () => {
     expect(findMergeTarget([row({ unit: "l" })], incoming({ unit: null }))).toBeNull();
   });
 
-  // D1: BOTH entries must carry a quantity. A bare „Milch" is an article-level wish and has no
-  // number to add — merging it would invent one.
-  it("refuses when the incoming add has no quantity", () => {
+  // D1 mixed case: a bare „Milch" into a quantified row has no number to add — merging it
+  // would invent nothing useful and hide the wish next to a measured amount.
+  it("refuses when the incoming add has no quantity and the existing row does", () => {
     expect(findMergeTarget([row()], incoming({ quantity: null }))).toBeNull();
   });
 
-  it("refuses when the existing row has no quantity", () => {
+  it("refuses when the existing row has no quantity and the incoming add does", () => {
     expect(findMergeTarget([row({ quantity: null })], incoming())).toBeNull();
+  });
+
+  // D1 presence case: two unquantified wishes for the same article in the same unit bucket
+  // are indistinguishable. A second „Salz" row is a duplicate the user cannot tell apart
+  // (UAT Check 5: applying the recipe again must not spawn a second Salz).
+  it("absorbs an unquantified add into an existing unquantified row of the same article", () => {
+    expect(
+      findMergeTarget(
+        [row({ quantity: null, unit: null })],
+        incoming({ quantity: null, unit: null }),
+      )?.id,
+    ).toBe("row-1");
+  });
+
+  it("absorbs two unquantified rows that share a unit bucket", () => {
+    expect(
+      findMergeTarget(
+        [row({ quantity: null, unit: "Prise" })],
+        incoming({ quantity: null, unit: "prise" }),
+      )?.id,
+    ).toBe("row-1");
+  });
+
+  it("refuses an unquantified add when the existing unquantified row is in a different unit", () => {
+    expect(
+      findMergeTarget(
+        [row({ quantity: null, unit: "Prise" })],
+        incoming({ quantity: null, unit: null }),
+      ),
+    ).toBeNull();
   });
 
   // D2: what is already in the basket is settled.
@@ -176,5 +206,17 @@ describe("formatMergeMessage", () => {
         unit: null,
       }),
     ).toBe("Zu 2 Zwiebeln addiert → 5");
+  });
+
+  it("has nothing to say for a presence merge — the row did not change", () => {
+    expect(
+      formatMergeMessage({
+        targetItemId: "row-1",
+        name: "Salz",
+        previousQuantity: null,
+        quantity: null,
+        unit: null,
+      }),
+    ).toBe("");
   });
 });

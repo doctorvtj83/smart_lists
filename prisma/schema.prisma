@@ -323,9 +323,10 @@ model AbsorbedEntry {
   // re-enable the double-count it exists to prevent.
   targetItemId String @db.Uuid @map("target_item_id")
 
-  // What THIS operation contributed to the target — not the target's total. Required (an add without
-  // a quantity can never merge, see findMergeTarget), and it is what lets a replay reconstruct the
-  // exact message the first application produced.
+  // What THIS operation contributed to the target — not the target's total. 0 is the presence-merge
+  // discriminator (an unquantified add absorbed into an unquantified row has no number to add, but
+  // a retry still has to resolve here). A real add cannot contribute 0: assertValidQuantity rejects
+  // it. It is also what lets a replay reconstruct the exact message the first application produced.
   quantity Float
 
   createdAt DateTime @default(now()) @map("created_at")

@@ -440,7 +440,7 @@ describe("add_item — merging", () => {
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
   });
 
-  it("does not merge when the incoming add carries no quantity", async () => {
+  it("does not merge when the incoming add carries no quantity and the existing row does", async () => {
     await add({ name: "Milch", quantity: 1, unit: "l" });
 
     const { merge } = await add({ name: "Milch" });
@@ -449,10 +449,45 @@ describe("add_item — merging", () => {
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
   });
 
-  it("does not merge when the existing row carries no quantity", async () => {
+  it("does not merge when the existing row carries no quantity and the incoming add does", async () => {
     await add({ name: "Milch" });
 
     const { merge } = await add({ name: "Milch", quantity: 2, unit: null });
+
+    expect(merge).toBeNull();
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
+  });
+
+  // Presence merge: two unquantified wishes are the same statement. Without this, applying a
+  // recipe a second time (UAT Check 5) would spawn a second indistinguishable „Salz" row.
+  it("absorbs an unquantified add into an existing unquantified row of the same article", async () => {
+    const first = await add({ name: "Salz" });
+    const secondId = randomUUID();
+
+    const { item, merge } = await add({ itemId: secondId, name: "Salz" });
+
+    expect(item!.id).toBe(first.item!.id);
+    expect(item!.quantity).toBeNull();
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(merge).toMatchObject({
+      targetItemId: first.item!.id,
+      name: "Salz",
+      previousQuantity: null,
+      quantity: null,
+      unit: null,
+    });
+    // Ledger under the client's id, contribution 0: there was no number to add, but a retry
+    // still has to resolve to this row instead of creating a duplicate.
+    const ledger = await db.absorbedEntry.findUniqueOrThrow({ where: { id: secondId } });
+    expect(ledger.targetItemId).toBe(first.item!.id);
+    expect(ledger.quantity).toBe(0);
+  });
+
+  it("does not absorb an unquantified add into a checked unquantified row (D2)", async () => {
+    const first = await add({ name: "Salz" });
+    await applyOperation(db, list, { op: "check_item", itemId: first.item!.id, checked: true });
+
+    const { merge } = await add({ name: "Salz" });
 
     expect(merge).toBeNull();
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
@@ -591,6 +626,21 @@ describe("add_item — merge idempotency", () => {
     // The replay reports the same outcome the first application did, so a retried request paints
     // the same banner rather than nothing.
     expect(merge).toMatchObject({ previousQuantity: 1, quantity: 3 });
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(1);
+  });
+
+  it("replaying a presence merge does not spawn a second unquantified row", async () => {
+    const first = await add({ name: "Salz" });
+    const replayId = randomUUID();
+    const merged = { itemId: replayId, name: "Salz" };
+
+    await add(merged);
+    const { item, merge } = await add(merged);
+
+    expect(item!.id).toBe(first.item!.id);
+    expect(item!.quantity).toBeNull();
+    expect(merge).toMatchObject({ previousQuantity: null, quantity: null });
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
     expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(1);
   });

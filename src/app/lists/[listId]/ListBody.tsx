@@ -347,8 +347,11 @@ export function ListBody({
         {/* Slice 17: the add went INTO an existing row. Without this line a row
             quietly changing from 1 l to 3 l reads as a bug. It sits under the
             trailing row (where the user's attention already is) and survives until
-            the next add — the same lifecycle as the error above it. */}
-        {addState.merge ? (
+            the next add — the same lifecycle as the error above it.
+            quantity !== null: a presence merge (two unquantified „Salz" rows) did not
+            change a number, so the „Zu X addiert" sentence would be empty. The row
+            still flashes via targetItemId above — that is the whole cue. */}
+        {addState.merge && addState.merge.quantity !== null ? (
           <div className={styles.mergeBanner}>
             <Banner tone="info">{formatMergeMessage(addState.merge)}</Banner>
           </div>

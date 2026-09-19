@@ -97,6 +97,37 @@ describe("applyRecipesToList", () => {
     expect(await entriesOf(list.id)).toEqual([{ name: "Salz", quantity: null, unit: null }]);
   });
 
+  // UAT Check 5: applying the same recipe again must grow quantified rows and leave unquantified
+  // ones (Salz) as a single line — D1's presence merge, not a second indistinguishable row.
+  it("does not duplicate an unquantified line when the same recipe is applied again", async () => {
+    const apples = await makeArticle("Äpfel");
+    const bananas = await makeArticle("Banenen");
+    const salt = await makeArticle("Salz");
+    const recipe = await makeRecipe("Obstsalat", [
+      { catalogItemId: apples.id, quantity: 500, unit: "g" },
+      { catalogItemId: bananas.id, quantity: 3, unit: null },
+      { catalogItemId: salt.id, quantity: null, unit: null },
+    ]);
+    const list = await makeList();
+
+    await applyRecipesToList(db, list, [{ recipeId: recipe.id, count: 2 }], randomUUID(), labels);
+    const second = await applyRecipesToList(
+      db,
+      list,
+      [{ recipeId: recipe.id, count: 1 }],
+      randomUUID(),
+      labels,
+    );
+
+    expect(await entriesOf(list.id)).toEqual([
+      { name: "Äpfel", quantity: 1500, unit: "g" },
+      { name: "Banenen", quantity: 9, unit: null },
+      { name: "Salz", quantity: null, unit: null },
+    ]);
+    expect(second.added).toBe(0);
+    expect(second.merged).toBe(3);
+  });
+
   it("inherits the catalog default unit for a line that has none", async () => {
     const yoghurt = await makeArticle("Joghurt", "Becher");
     const recipe = await makeRecipe("Frühstück", [

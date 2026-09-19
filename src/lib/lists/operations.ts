@@ -268,9 +268,27 @@ export async function applyOperationDetailed(
         // the entry. One rule, not two (recipes design §3).
         if (target) {
           // Reconstruct the outcome of the ORIGINAL application from the contribution the ledger
-          // recorded, so a retry renders the identical banner instead of a silent nothing. A null
-          // quantity means someone cleared the row afterwards — there is no sum left to describe,
-          // so report the row without a merge cue rather than invent numbers.
+          // recorded, so a retry renders the identical banner instead of a silent nothing.
+          //
+          // Contribution 0 is the presence-merge discriminator (an add cannot legally contribute
+          // 0 as a quantity — assertValidQuantity rejects it). Report the same null-quantity
+          // outcome the first application produced, even if someone later typed a number onto
+          // the row: the replay must still count as merged for applyRecipesToList's banner.
+          if (absorbed.quantity === 0) {
+            return {
+              item: target,
+              merge: {
+                targetItemId: target.id,
+                name: target.catalogItem.name,
+                previousQuantity: null,
+                quantity: null,
+                unit: target.unit,
+              },
+            };
+          }
+          // A null quantity on a SUM merge means someone cleared the row afterwards — there is
+          // no sum left to describe, so report the row without a merge cue rather than invent
+          // numbers.
           const merge =
             target.quantity === null
               ? null
@@ -304,34 +322,61 @@ export async function applyOperationDetailed(
       // STEP 6 — Find the row that should absorb this add. The query narrows to candidates only
       // (this list, this article); findMergeTarget owns every RULE, including re-checking the
       // article — one source of truth, so the `where` clause and the predicate cannot drift apart
-      // (recipes design §3 / ruling R3). Skipped entirely when there is no quantity, because
-      // findMergeTarget would refuse every candidate anyway and this saves a round-trip on the
-      // most common add of all („Milch" with no number).
-      const target =
-        quantity === null
-          ? null
-          : findMergeTarget(
-              await db.listItem.findMany({
-                where: { listId: list.id, catalogItemId: catalogItem.id },
-                orderBy: { sortIndex: "asc" },
-              }),
-              { catalogItemId: catalogItem.id, quantity, unit: effectiveUnit },
-            );
+      // (recipes design §3 / ruling R3). Always queried, including when quantity is null: D1 now
+      // absorbs an unquantified add into an existing unquantified row (presence merge). Skipping
+      // the query here would re-create the UAT Check 5 duplicate „Salz".
+      const target = findMergeTarget(
+        await db.listItem.findMany({
+          where: { listId: list.id, catalogItemId: catalogItem.id },
+          orderBy: { sortIndex: "asc" },
+        }),
+        { catalogItemId: catalogItem.id, quantity, unit: effectiveUnit },
+      );
 
-      // STEP 7 — MERGE: the only field that changes is the number. Category, unit spelling,
-      // sortIndex and checked state belong to the row that was already there; overwriting them
-      // would silently re-file an entry the user deliberately placed.
+      // STEP 7 — MERGE: a quantified add changes only the number; a presence merge changes
+      // nothing on the row (the wish is already there). Category, unit spelling, sortIndex and
+      // checked state belong to the row that was already there; overwriting them would silently
+      // re-file an entry the user deliberately placed.
       // KNOWN MVP LIMIT: two parallel adds can both observe no target and create two rows. That
       // race stays deliberately open because it is self-revealing (the user sees both rows), unlike
       // silent quantity loss. Closing it needs a partial unique index plus retry, which is out of
       // MVP scope.
       if (target) {
+        // Presence merge: neither side has a number. Record the ledger so a retry resolves here,
+        // but do NOT invent a quantity — the row stays a bare wish. Contribution 0 is the replay
+        // discriminator (see step 3); a real add cannot contribute 0 (assertValidQuantity).
+        if (quantity === null) {
+          await db.absorbedEntry.create({
+            data: {
+              id: operation.itemId,
+              listId: list.id,
+              targetItemId: target.id,
+              quantity: 0,
+            },
+          });
+          await flowBackCatalogDefaults(db, catalogItem.id, {
+            category: operation.category,
+            unit: operation.unit,
+          });
+          const existing = await db.listItem.findUniqueOrThrow({ where: { id: target.id } });
+          return {
+            item: existing,
+            merge: {
+              targetItemId: existing.id,
+              name: catalogItem.name,
+              previousQuantity: null,
+              quantity: null,
+              unit: existing.unit,
+            },
+          };
+        }
+
         // ONE interactive transaction, because incrementing, normalizing and recording the ledger
         // are one fact: "this add became part of that row". The callback is intentionally local:
         // no helper that requires a full PrismaClient receives Prisma's narrower transaction
         // client. Keeping all three writes here also keeps the row lock acquired by the increment
         // until the rounded value and replay marker are safely committed together.
-        const contribution = quantity!;
+        const contribution = quantity;
         const mergedItem = await db.$transaction(async (tx) => {
           const incrementedItem = await tx.listItem.update({
             where: { id: target.id },
