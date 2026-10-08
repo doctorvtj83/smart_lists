@@ -135,9 +135,15 @@ and `uat-member@example.test` is a member of it.
    `{"name":"authjs.session-token","value":"…","domain":"localhost","path":"/","projectId":"…","user":"…"}`.
 3. With the `devspace-playwright` MCP server: open `http://localhost:3000/login`, set the cookie
    in the page with `document.cookie = "authjs.session-token=<value>; path=/"`, then open
-   `http://localhost:3000/projects/<projectId>`.
-4. Walk the slice's checklist as that user. To switch users, mint the other cookie and set it.
-5. Report honestly what you performed in the browser and what you did not.
+   `http://localhost:3000/projects/<projectId>`. Check who you are: `/api/auth/session` shows the
+   user's email.
+4. Walk the slice's checklist as that user.
+5. To switch users, sign out first ("Abmelden"), or close the browser (`browser_close`; the server
+   runs `--isolated`, so the next page starts without cookies). Then set the other user's cookie as
+   in step 3 and check `/api/auth/session` again. Why: once the app has answered a request, Auth.js
+   re-issues the session cookie as **HttpOnly**, and a browser does not let `document.cookie`
+   overwrite an HttpOnly cookie. The new value is silently ignored and you stay the previous user.
+6. Report honestly what you performed in the browser and what you did not.
 
 The script refuses to run against anything but the dev branch (`scripts/dev-session-guard.ts`).
 UAT users and their data stay in the dev branch, like the owner's manual testing.

@@ -49,3 +49,6 @@ next-env.d.ts
 # reviewed spreadsheets), not source — never belongs in git history.
 scripts/**/*.csv
 scripts/**/*.xlsx
+
+# Playwright MCP server output (console logs, snapshots) from UAT sessions
+.playwright-mcp/
