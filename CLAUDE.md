@@ -102,6 +102,42 @@ column throws `P2022` and the page 500s. This is exactly how Slices 17–19 took
 down on 2026-09-18; [the runbook's *migration gate*](docs/deployment/2026-09-06-production-deploy-runbook.md)
 has the full post-mortem and the `$PROD_URL` handling rules (never put it in `.env`).
 
+## Agents in the devspace runner
+
+Agents also work on this repo in a devspace runner (mydevspace, `projects/smart-lists.yaml`). That
+is a container with the checkout at `~/work/smart_lists`. `.env` (Neon `dev`) and `.env.test` (Neon
+`test`) are written from 1Password at every runner start, and the Vercel CLI is set up with a
+token. There is **no production database URL** in the runner. Rules:
+
+- **Deploying is always a PR.** Never push to `main` (a ruleset rejects it anyway) and never run
+  `gh pr merge`: the owner reviews and merges in the GitHub UI. The token *could* merge, so this
+  rule is what keeps production behind a review.
+- **Vercel is read-only by default.** Fine: `vercel ls`, `vercel inspect <url> --logs`,
+  `vercel logs <url>`. Only when the owner asks in the session: `vercel --prod`, `vercel deploy`,
+  `vercel env`, `vercel rollback`, `vercel promote`, or any project settings change.
+- **Worktrees need their env files.** `.env` and `.env.test` are gitignored, so a new worktree
+  has neither. After `git worktree add .worktrees/<name> …`, run
+  `devspace-env-files --into "$PWD/.worktrees/<name>"` before `npm test` or `npm run dev` there.
+  Never write `.env`/`.env.test` by hand in the runner; the next start rewrites them anyway.
+- **Migrations in a PR.** A PR whose diff touches `prisma/migrations/` lists each migration in
+  its description and quotes every `UPDATE`, `DELETE`, `DROP` and `ALTER … TYPE` statement.
+- The migration gate above still applies until it is automated: the owner migrates production
+  before merging.
+
+**Post-merge check** (when the owner asks): `vercel ls --prod` shows the new deployment as Ready.
+Then over HTTP:
+
+```bash
+base=https://smart-lists-jade.vercel.app
+curl -s -o /dev/null -w '/ %{http_code} %{redirect_url}\n' "$base/"        # 307 to /login
+for p in /login /api/auth/providers /dev/ui; do
+  curl -s -o /dev/null -w "$p %{http_code}\n" "$base$p"                     # 200, 200, 404
+done
+```
+
+On a failure, run `vercel logs <deployment url>` and report. A Vercel rollback does **not** undo a
+migration.
+
 ## Implementation review (per slice)
 
 After completing each implementation slice, create a review document in `docs/implementation-reviews/` named `slice-<N>-<slug>.md`. This document is for the developer to build a mental model of what was built. It must cover:
