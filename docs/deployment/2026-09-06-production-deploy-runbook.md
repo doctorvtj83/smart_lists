@@ -302,6 +302,12 @@ schema behind this branch?* Run it even when you believe nothing changed; the an
 - **Preview deployments cannot log in.** Their URL changes per deployment and Google requires exact
   redirect URIs, so OAuth fails there. Previews are still useful for build checks. Fixing this
   properly means a stable preview domain plus its own OAuth client.
+- **`main` takes PRs only.** A GitHub ruleset requires a pull request and a passing `Vercel` check,
+  blocks force pushes and deletion, and has no bypass. Production deploys happen when the owner
+  merges a PR. Agents in the devspace runner open PRs and never merge them (`CLAUDE.md`, "Agents in
+  the devspace runner").
+- **Preview builds** run for every PR. They build without a database: `prisma generate` needs no
+  connection.
 - **No CI.** `npm test` / `npm run lint` are not run on push; a broken test only shows up locally.
   A GitHub Actions workflow would need the `test`-branch `DATABASE_URL` as a repository secret.
 - **The `middleware` → `proxy` migration** (Next.js deprecation warning) is still open and carried
