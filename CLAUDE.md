@@ -124,6 +124,24 @@ token. There is **no production database URL** in the runner. Rules:
 - The migration gate above still applies until it is automated: the owner migrates production
   before merging.
 
+### Signed-in UAT
+
+Google login cannot be automated. UAT therefore signs in with a minted session cookie for one of
+two test users in the **dev** database: `uat-owner@example.test` owns the project "UAT-Projekt",
+and `uat-member@example.test` is a member of it.
+
+1. Start the dev server: `npm run dev` (in a worktree only after `devspace-env-files --into`).
+2. Run `npx tsx scripts/dev-session.ts owner` (or `member`). It prints one JSON line:
+   `{"name":"authjs.session-token","value":"…","domain":"localhost","path":"/","projectId":"…","user":"…"}`.
+3. With the `devspace-playwright` MCP server: open `http://localhost:3000/login`, set the cookie
+   in the page with `document.cookie = "authjs.session-token=<value>; path=/"`, then open
+   `http://localhost:3000/projects/<projectId>`.
+4. Walk the slice's checklist as that user. To switch users, mint the other cookie and set it.
+5. Report honestly what you performed in the browser and what you did not.
+
+The script refuses to run against anything but the dev branch (`scripts/dev-session-guard.ts`).
+UAT users and their data stay in the dev branch, like the owner's manual testing.
+
 **Post-merge check** (when the owner asks): `vercel ls --prod` shows the new deployment as Ready.
 Then over HTTP:
 
