@@ -1,4 +1,5 @@
 import { parseGermanDecimal } from "@/lib/format/quantity";
+import { BASE_UNIT_ALIASES } from "@/lib/units/aliases";
 
 /**
  * The trailing entry row's quantity heuristic (handoff §10: „Mengen-Parsing
@@ -17,77 +18,22 @@ import { parseGermanDecimal } from "@/lib/format/quantity";
  * unhelpful — the user can still set Menge/Einheit in the entry sheet.
  */
 
-/**
- * Lowercase alias → canonical display unit.
- *
- * The values are what the entry row will print („1,5 l"), so they carry the
- * spelling and case the design asks for; the keys are every spelling a German
- * household actually types. Common plurals are listed explicitly rather than
- * stemmed: a lookup table is obvious and cheap, while a stemmer would guess.
- */
-const BASE_UNIT_ALIASES: Record<string, string> = {
-  // Weight
-  g: "g",
-  gramm: "g",
-  kg: "kg",
-  kilo: "kg",
-  kilogramm: "kg",
-  // Volume
-  ml: "ml",
-  milliliter: "ml",
-  cl: "cl",
-  l: "l",
-  liter: "l",
-  // Packaging and count
-  stk: "Stk",
-  stück: "Stk",
-  stueck: "Stk",
-  pck: "Packung",
-  pkg: "Packung",
-  packung: "Packung",
-  packungen: "Packung",
-  dose: "Dose",
-  dosen: "Dose",
-  flasche: "Flasche",
-  flaschen: "Flasche",
-  glas: "Glas",
-  gläser: "Glas",
-  becher: "Becher",
-  bund: "Bund",
-  beutel: "Beutel",
-  tüte: "Tüte",
-  tüten: "Tüte",
-  rolle: "Rolle",
-  rollen: "Rolle",
-  tafel: "Tafel",
-  tafeln: "Tafel",
-  scheibe: "Scheibe",
-  scheiben: "Scheibe",
-  kiste: "Kiste",
-  kisten: "Kiste",
-  karton: "Karton",
-  // Cooking
-  tl: "TL",
-  el: "EL",
-  prise: "Prise",
-  // Length
-  m: "m",
-  cm: "cm",
-};
+// Base unit aliases live in @/lib/units/aliases (shared with the scale converter).
 
 /** Lowercase alias → the unit as it should be stored and displayed. */
 export type UnitLookup = Record<string, string>;
 
 /**
- * The unit vocabulary for ONE project: the base list above unioned with every
- * `defaultUnit` the project's catalog already uses (ruling 2).
+ * The unit vocabulary for ONE project: {@link BASE_UNIT_ALIASES} from
+ * `@/lib/units/aliases` unioned with every `defaultUnit` the project's catalog
+ * already uses (ruling 2).
  *
  * WHY the project's own units join in: the catalog is the project's memory
  * (MVP design §4.4). A household that has been writing „Kiste" for months has
  * already taught the app that word, and the parser should not need a code
  * change to hear it.
  *
- * WHY the base list is spread LAST, i.e. wins a collision: a project whose
+ * WHY `BASE_UNIT_ALIASES` is spread LAST, i.e. wins a collision: a project whose
  * catalog holds „Liter" must still render the design's „1,5 l" (handoff §2).
  * Project units therefore only ever ADD keys, they never re-spell a known one.
  */

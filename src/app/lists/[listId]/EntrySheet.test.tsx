@@ -126,4 +126,74 @@ describe("EntrySheet", () => {
     expect(screen.queryByRole("button", { name: "Molkerei" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Kategorie")).toBeInTheDocument();
   });
+
+  // --- Live MENGE conversion (Slice 20, spec §4) ---------------------------------
+
+  it("converts MENGE live when EINHEIT changes within a scale group", async () => {
+    renderSheet();
+    const unit = screen.getByLabelText("Einheit");
+    await userEvent.clear(unit);
+    await userEvent.type(unit, "ml");
+    expect(screen.getByLabelText("Menge")).toHaveValue("1500");
+    await userEvent.clear(unit);
+    await userEvent.type(unit, "dl");
+    expect(screen.getByLabelText("Menge")).toHaveValue("15");
+  });
+
+  it("converts from the anchor, not step by step (cm → m → mm)", async () => {
+    renderSheet({ entry: { ...milch, quantity: 0.5, unit: "mm" } });
+    const unit = screen.getByLabelText("Einheit");
+    await userEvent.clear(unit);
+    await userEvent.type(unit, "m"); // passes through a valid length unit
+    await userEvent.type(unit, "m"); // now "mm" again
+    expect(screen.getByLabelText("Menge")).toHaveValue("0,5");
+  });
+
+  it("shows the anchor quantity for a half-typed or other-group unit", async () => {
+    renderSheet();
+    const unit = screen.getByLabelText("Einheit");
+    await userEvent.clear(unit);
+    expect(screen.getByLabelText("Menge")).toHaveValue("1,5");
+    await userEvent.type(unit, "kg");
+    expect(screen.getByLabelText("Menge")).toHaveValue("1,5");
+  });
+
+  it("re-anchors on a typed MENGE", async () => {
+    renderSheet();
+    await userEvent.clear(screen.getByLabelText("Einheit"));
+    await userEvent.type(screen.getByLabelText("Einheit"), "ml");
+    await userEvent.clear(screen.getByLabelText("Menge"));
+    await userEvent.type(screen.getByLabelText("Menge"), "2000");
+    await userEvent.clear(screen.getByLabelText("Einheit"));
+    await userEvent.type(screen.getByLabelText("Einheit"), "l");
+    expect(screen.getByLabelText("Menge")).toHaveValue("2");
+  });
+
+  it("does not convert an empty MENGE", async () => {
+    renderSheet({ entry: { ...milch, quantity: null } });
+    await userEvent.clear(screen.getByLabelText("Einheit"));
+    await userEvent.type(screen.getByLabelText("Einheit"), "ml");
+    expect(screen.getByLabelText("Menge")).toHaveValue("");
+  });
+
+  it("saves a converted quantity and the new unit as separate changes", async () => {
+    const onSave = vi.fn();
+    renderSheet({ onSave });
+    await userEvent.clear(screen.getByLabelText("Einheit"));
+    await userEvent.type(screen.getByLabelText("Einheit"), "ml");
+    await userEvent.click(screen.getByRole("button", { name: "Fertig" }));
+    expect(onSave).toHaveBeenCalledWith({ quantity: 1500, unit: "ml" });
+  });
+
+  it("sends no quantity change after a round trip back to the original unit", async () => {
+    const onSave = vi.fn();
+    renderSheet({ onSave });
+    const unit = screen.getByLabelText("Einheit");
+    await userEvent.clear(unit);
+    await userEvent.type(unit, "ml");
+    await userEvent.clear(unit);
+    await userEvent.type(unit, "l");
+    await userEvent.click(screen.getByRole("button", { name: "Fertig" }));
+    expect(onSave).toHaveBeenCalledWith({});
+  });
 });

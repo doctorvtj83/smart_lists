@@ -6,22 +6,15 @@
  * presence) — and it is the piece that must be provable without a database. Keeping it pure turns
  * the design's truth table into a literal test table (merge.test.ts) and leaves operations.ts to
  * do the one thing it is about: writing. Nothing here touches Prisma, so Slice 19's recipe apply
- * can reuse the same rule.
+ * can reuse the same rule. Scale-group conversion also lives here because the merge decision must
+ * reject contributions that cannot be represented safely in the existing row's unit.
  */
 
 import { formatQuantityLabel } from "@/lib/format/quantity";
+import { canonicalUnit } from "@/lib/units/aliases";
+import { convertQuantity, sameScaleGroup } from "@/lib/units/scale";
 
-/**
- * Rounds a quantity to three decimals.
- *
- * Why it exists: float addition leaks precision — `0.1 + 0.2` is `0.30000000000000004`. The row
- * label would hide that (formatGermanNumber caps at maximumFractionDigits: 3), but the entry
- * sheet's MENGE field prints the stored number and would eventually surface it. Rounding at the
- * same precision the UI formats at keeps the stored value and the displayed value one thing.
- */
-export function round3(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
+export { round3 } from "@/lib/units/round";
 
 /**
  * Collapses a unit to its comparison key: trimmed, lowercased, and blank -> null.
@@ -55,14 +48,15 @@ export interface MergeCandidate {
 }
 
 /**
- * A candidate that PASSED: same article, same unit, unchecked, and either both sides quantified
- * (the number will be added) or both unquantified (the incoming add is absorbed as presence).
+ * A candidate that PASSED: same article, compatible unit scale group, unchecked, and either both
+ * sides quantified (the converted contribution will be added) or both unquantified (the incoming
+ * add is absorbed as presence).
  *
- * `quantity` stays `number | null` on purpose: a presence merge has no number to contribute, and
- * narrowing it to `number` would force the caller to pretend Salz has an amount. The write path
- * branches on null vs. number; that branch IS the rule.
+ * `contribution` is expressed in the target row's unit so the write path can add it directly.
+ * It stays null for a presence merge because inventing a number for an unquantified item would
+ * violate D1.
  */
-export type MergeTarget = MergeCandidate;
+export type MergeTarget = MergeCandidate & { contribution: number | null };
 
 /** The add being applied, after unit inheritance has been resolved (operations.ts step 5). */
 export interface IncomingEntry {
@@ -90,7 +84,9 @@ export function findMergeTarget(
   for (const candidate of candidates) {
     if (candidate.checked) continue; // D2: a settled row never absorbs
     if (candidate.catalogItemId !== incoming.catalogItemId) continue; // same article only
-    if (!unitsMatch(candidate.unit, incoming.unit)) continue; // same unit bucket, no conversion
+    const exactUnitMatch = unitsMatch(candidate.unit, incoming.unit);
+    const scaleGroupMatch = sameScaleGroup(candidate.unit, incoming.unit);
+    if (!exactUnitMatch && !scaleGroupMatch) continue; // same exact unit or convertible scale group
     // D1: merge when BOTH sides carry a quantity (there is a number to add) OR when NEITHER
     // does (the incoming add is the same unquantified wish already on the list — a second
     // „Salz" row would be a duplicate with nothing to tell the two apart). Mixed pairs stay
@@ -98,7 +94,28 @@ export function findMergeTarget(
     const bothQuantified = incoming.quantity !== null && candidate.quantity !== null;
     const bothUnquantified = incoming.quantity === null && candidate.quantity === null;
     if (!bothQuantified && !bothUnquantified) continue;
-    if (best === null || candidate.sortIndex < best.sortIndex) best = candidate;
+
+    let contribution: number | null = null;
+    if (incoming.quantity !== null && candidate.quantity !== null) {
+      // Aliases that resolve to one canonical unit need no arithmetic; preserving the incoming
+      // value also avoids needless floating-point work for spellings such as „Liter“ and „l“.
+      const sameCanonicalUnit =
+        canonicalUnit(candidate.unit) === canonicalUnit(incoming.unit);
+      if (exactUnitMatch || sameCanonicalUnit) {
+        contribution = incoming.quantity;
+      } else {
+        // Reaching conversion implies a scale-group match, whose units are always non-null. The
+        // explicit guard makes that invariant visible to TypeScript and keeps this boundary total.
+        if (incoming.unit === null || candidate.unit === null) continue;
+        contribution = convertQuantity(incoming.quantity, incoming.unit, candidate.unit);
+      }
+      // A conversion that rounds to zero is not a valid contribution and therefore cannot merge.
+      if (contribution === null) continue;
+    }
+
+    if (best === null || candidate.sortIndex < best.sortIndex) {
+      best = { ...candidate, contribution };
+    }
   }
   return best;
 }

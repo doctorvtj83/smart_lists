@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "@/test/reset-db";
 import { ApiError } from "@/lib/http/errors";
+import { applyOperation } from "@/lib/lists/operations";
 import { recipeLabels } from "./labels";
 import { addRecipeItem, createRecipe } from "./recipes";
 import { applyRecipesToList, createListWithRecipes } from "./apply";
@@ -166,6 +167,30 @@ describe("applyRecipesToList", () => {
     expect(await entriesOf(list.id)).toEqual([{ name: "Milch", quantity: 2.5, unit: "l" }]);
     expect(result.added).toBe(1);
     expect(result.merged).toBe(1);
+  });
+
+  // Slice 20 (U3/U4/U7): a recipe line in ml folds into a list row in l, and because the catalog
+  // already says "l", the recipe's "ml" must NOT re-unit the article.
+  it("merges a recipe line in ml into a list row in l and keeps the catalog unit", async () => {
+    const milk = await makeArticle("Milch", "l");
+    const recipe = await makeRecipe("Pfannkuchen", [
+      { catalogItemId: milk.id, quantity: 500, unit: "ml" },
+    ]);
+    const list = await makeList();
+    // The list already holds 1 l Milch, added through the same funnel the UI uses.
+    await applyOperation(db, list, {
+      op: "add_item",
+      itemId: randomUUID(),
+      name: "Milch",
+      quantity: 1,
+      unit: "l",
+    });
+
+    await applyRecipesToList(db, list, [{ recipeId: recipe.id, count: 1 }], randomUUID(), labels);
+
+    expect(await entriesOf(list.id)).toEqual([{ name: "Milch", quantity: 1.5, unit: "l" }]);
+    const article = await db.catalogItem.findUniqueOrThrow({ where: { id: milk.id } });
+    expect(article.defaultUnit).toBe("l"); // the same-group add did not re-unit the catalog
   });
 
   it("is a no-op when the SAME token is applied twice (the retry case)", async () => {

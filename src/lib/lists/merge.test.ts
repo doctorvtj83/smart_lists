@@ -74,7 +74,9 @@ describe("unitsMatch", () => {
 
 describe("findMergeTarget", () => {
   it("merges into the same article with the same unit", () => {
-    expect(findMergeTarget([row()], incoming())?.id).toBe("row-1");
+    const target = findMergeTarget([row()], incoming());
+    expect(target?.id).toBe("row-1");
+    expect(target).toMatchObject({ contribution: 2 });
   });
 
   it("merges when both sides have no unit at all", () => {
@@ -85,8 +87,37 @@ describe("findMergeTarget", () => {
     expect(findMergeTarget([row({ unit: "L" })], incoming({ unit: "l" }))?.id).toBe("row-1");
   });
 
-  it("refuses a different unit (no conversion: 1 l and 500 ml stay apart)", () => {
-    expect(findMergeTarget([row({ unit: "l" })], incoming({ unit: "ml" }))).toBeNull();
+  it("merges a same-group unit and converts the contribution into the row's unit", () => {
+    expect(findMergeTarget([row({ unit: "l" })], incoming({ quantity: 500, unit: "ml" })))
+      .toMatchObject({ id: "row-1", contribution: 0.5 });
+  });
+
+  it("merges g into a kg row", () => {
+    expect(findMergeTarget([row({ unit: "kg" })], incoming({ quantity: 250, unit: "g" })))
+      .toMatchObject({ contribution: 0.25 });
+  });
+
+  it("refuses a unit from another group", () => {
+    expect(findMergeTarget([row({ unit: "g" })], incoming({ unit: "l" }))).toBeNull();
+  });
+
+  it("matches an unscaled unit by exact spelling with an unchanged contribution", () => {
+    expect(findMergeTarget([row({ unit: "Flasche" })], incoming({ quantity: 2, unit: "flasche" })))
+      .toMatchObject({ contribution: 2 });
+  });
+
+  it("refuses a same-group add whose conversion rounds to zero", () => {
+    expect(findMergeTarget([row({ unit: "kg" })], incoming({ quantity: 0.4, unit: "g" }))).toBeNull();
+  });
+
+  it("carries a null contribution on a presence merge across a scale group", () => {
+    expect(findMergeTarget([row({ unit: "l", quantity: null })], incoming({ quantity: null, unit: "ml" })))
+      .toMatchObject({ contribution: null });
+  });
+
+  it("still refuses a checked same-group row", () => {
+    expect(findMergeTarget([row({ unit: "l", checked: true })], incoming({ quantity: 500, unit: "ml" })))
+      .toBeNull();
   });
 
   it("refuses when only one side has a unit", () => {

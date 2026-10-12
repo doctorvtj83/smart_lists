@@ -1,6 +1,7 @@
 import type { List, ListItem, PrismaClient } from "@prisma/client";
 import { flowBackCatalogDefaults, getOrCreateCatalogItem } from "@/lib/catalog/catalog";
 import { ApiError } from "@/lib/http/errors";
+import { sameScaleGroup, scaleToDefault } from "@/lib/units/scale";
 import { isUuid } from "@/lib/validate";
 import { findMergeTarget, round3, type MergeOutcome } from "./merge";
 
@@ -314,10 +315,37 @@ export async function applyOperationDetailed(
       // written. `undefined` = "not supplied" -> inherit the catalog default; `null` = explicit
       // empty. Computing it here rather than inline in the create is what makes two adds that both
       // inherit „Becher" land in the same merge bucket.
-      const effectiveUnit =
+      let effectiveUnit =
         operation.unit !== undefined ? operation.unit : catalogItem.defaultUnit;
       // Normalize the "no quantity" case once: parseOperation admits both undefined and null.
-      const quantity = operation.quantity ?? null;
+      let quantity = operation.quantity ?? null;
+
+      // U3 — SCALE TO THE CATALOG DEFAULT. If the add's unit is in the same scale group as the
+      // article's catalog default (ml vs. l, g vs. kg/Pfund, ...), express the entry in the
+      // default unit BEFORE matching or writing: 500 ml of a „l" article becomes 0,5 l. That keeps
+      // new rows reading like the catalog, and it means findMergeTarget compares like with like.
+      // scaleToDefault returns null whenever nothing should change (no default, no explicit unit,
+      // other group, or a conversion that rounds to zero) — then the add stays exactly as typed.
+      // `let` instead of `const` above is the price of this one reassignment; everything below
+      // sees only the scaled values.
+      const scaled = scaleToDefault(quantity, operation.unit, catalogItem.defaultUnit);
+      if (scaled) {
+        quantity = scaled.quantity;
+        // `?? null`: scaleToDefault's declared type admits undefined, but on this path it always
+        // returns the catalog default's spelling; the fallback only satisfies the compiler
+        // (effectiveUnit is `string | null`).
+        effectiveUnit = scaled.unit ?? null;
+      }
+
+      // U7 — GUARD THE FLOW-BACK. Normally an explicitly typed unit becomes the catalog default
+      // (design §4.4). But a unit from the SAME scale group as the default is just another way to
+      // write the same measure — letting „500 ml" overwrite „l" would make the catalog flip-flop
+      // with every add. So same-group units are withheld from flow-back (undefined = skipped by
+      // flowBackCatalogDefaults); a unit from another group („Flasche"), or an article with no
+      // default yet, still flows back as before. Computed once, used by all three branches below.
+      const flowBackUnit = sameScaleGroup(operation.unit, catalogItem.defaultUnit)
+        ? undefined
+        : operation.unit;
 
       // STEP 6 — Find the row that should absorb this add. The query narrows to candidates only
       // (this list, this article); findMergeTarget owns every RULE, including re-checking the
@@ -356,7 +384,7 @@ export async function applyOperationDetailed(
           });
           await flowBackCatalogDefaults(db, catalogItem.id, {
             category: operation.category,
-            unit: operation.unit,
+            unit: flowBackUnit,
           });
           const existing = await db.listItem.findUniqueOrThrow({ where: { id: target.id } });
           return {
@@ -376,7 +404,15 @@ export async function applyOperationDetailed(
         // no helper that requires a full PrismaClient receives Prisma's narrower transaction
         // client. Keeping all three writes here also keeps the row lock acquired by the increment
         // until the rounded value and replay marker are safely committed together.
-        const contribution = quantity;
+        //
+        // U4 — The contribution is what `findMergeTarget` already CONVERTED into the target row's
+        // unit (500 ml onto a „l" row = 0,5), NOT the raw quantity typed. It is non-null here
+        // because the presence-merge branch above handled the null-quantity case, and a candidate
+        // whose conversion failed was disqualified in the matcher. The ledger below must hold this
+        // converted number: replay derives „row total minus my contribution" in the ROW's unit, so
+        // recording 500 would make a retry report a nonsense previousQuantity (and break the
+        // sum/replay symmetry).
+        const contribution = target.contribution!;
         const mergedItem = await db.$transaction(async (tx) => {
           const incrementedItem = await tx.listItem.update({
             where: { id: target.id },
@@ -419,7 +455,7 @@ export async function applyOperationDetailed(
         // independent of where the entry landed (design §3, step 7).
         await flowBackCatalogDefaults(db, catalogItem.id, {
           category: operation.category,
-          unit: operation.unit,
+          unit: flowBackUnit,
         });
 
         return {
@@ -467,7 +503,7 @@ export async function applyOperationDetailed(
       // on first creation (replays returned early above), keeping add idempotent.
       await flowBackCatalogDefaults(db, catalogItem.id, {
         category: operation.category,
-        unit: operation.unit,
+        unit: flowBackUnit,
       });
       return { item: created, merge: null };
     }
