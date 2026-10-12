@@ -1,4 +1,5 @@
 import { parseGermanDecimal } from "@/lib/format/quantity";
+import { BASE_UNIT_ALIASES } from "@/lib/units/aliases";
 
 /**
  * The trailing entry row's quantity heuristic (handoff §10: „Mengen-Parsing
@@ -17,63 +18,7 @@ import { parseGermanDecimal } from "@/lib/format/quantity";
  * unhelpful — the user can still set Menge/Einheit in the entry sheet.
  */
 
-/**
- * Lowercase alias → canonical display unit.
- *
- * The values are what the entry row will print („1,5 l"), so they carry the
- * spelling and case the design asks for; the keys are every spelling a German
- * household actually types. Common plurals are listed explicitly rather than
- * stemmed: a lookup table is obvious and cheap, while a stemmer would guess.
- */
-const BASE_UNIT_ALIASES: Record<string, string> = {
-  // Weight
-  g: "g",
-  gramm: "g",
-  kg: "kg",
-  kilo: "kg",
-  kilogramm: "kg",
-  // Volume
-  ml: "ml",
-  milliliter: "ml",
-  cl: "cl",
-  l: "l",
-  liter: "l",
-  // Packaging and count
-  stk: "Stk",
-  stück: "Stk",
-  stueck: "Stk",
-  pck: "Packung",
-  pkg: "Packung",
-  packung: "Packung",
-  packungen: "Packung",
-  dose: "Dose",
-  dosen: "Dose",
-  flasche: "Flasche",
-  flaschen: "Flasche",
-  glas: "Glas",
-  gläser: "Glas",
-  becher: "Becher",
-  bund: "Bund",
-  beutel: "Beutel",
-  tüte: "Tüte",
-  tüten: "Tüte",
-  rolle: "Rolle",
-  rollen: "Rolle",
-  tafel: "Tafel",
-  tafeln: "Tafel",
-  scheibe: "Scheibe",
-  scheiben: "Scheibe",
-  kiste: "Kiste",
-  kisten: "Kiste",
-  karton: "Karton",
-  // Cooking
-  tl: "TL",
-  el: "EL",
-  prise: "Prise",
-  // Length
-  m: "m",
-  cm: "cm",
-};
+// Base unit aliases live in @/lib/units/aliases (shared with the scale converter).
 
 /** Lowercase alias → the unit as it should be stored and displayed. */
 export type UnitLookup = Record<string, string>;

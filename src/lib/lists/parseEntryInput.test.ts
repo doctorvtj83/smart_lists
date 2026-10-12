@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canonicalUnit } from "@/lib/units/aliases";
 import { buildUnitLookup, parseEntryInput } from "./parseEntryInput";
 
 // The base vocabulary alone — most cases need no project units at all.
@@ -172,5 +173,33 @@ describe("parseEntryInput", () => {
       unit: null,
       name: "Zwerge Bier",
     });
+  });
+
+  it.each([
+    ["500 mm Schraube", 500, "mm", "Schraube"],
+    ["2 dl Sahne", 2, "dl", "Sahne"],
+    ["1 Pfund Hack", 1, "Pfund", "Hack"],
+    ["3 Zentimeter Band", 3, "cm", "Band"],
+    ["2 Meter Kabel", 2, "m", "Kabel"],
+    ["5 Zentiliter Rum", 5, "cl", "Rum"],
+    ["1 Deziliter Milch", 1, "dl", "Milch"],
+    ["4 Millimeter Draht", 4, "mm", "Draht"],
+  ])("recognises the scale-group unit in %s", (raw, quantity, unit, name) => {
+    expect(parseEntryInput(raw, units)).toEqual({ quantity, unit, name });
+  });
+});
+
+describe("canonicalUnit", () => {
+  it("maps trimmed, lowercased aliases to canonical display units", () => {
+    expect(canonicalUnit(" Liter ")).toBe("l");
+    expect(canonicalUnit("KG")).toBe("kg");
+    expect(canonicalUnit("pfund")).toBe("Pfund");
+  });
+
+  it("returns null for unknown, empty, or prototype-polluting keys", () => {
+    expect(canonicalUnit("Ltr")).toBeNull();
+    expect(canonicalUnit("")).toBeNull();
+    expect(canonicalUnit(null)).toBeNull();
+    expect(canonicalUnit("constructor")).toBeNull(); // Object.hasOwn guard
   });
 });
