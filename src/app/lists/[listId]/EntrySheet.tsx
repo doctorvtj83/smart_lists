@@ -7,6 +7,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { TextField } from "@/components/ui/TextField";
 import { formatGermanNumber } from "@/lib/format/date";
 import { parseGermanDecimal } from "@/lib/format/quantity";
+import { convertQuantity, sameScaleGroup } from "@/lib/units/scale";
 import type { ListEntry } from "./EntryRow";
 import styles from "./EntrySheet.module.css";
 
@@ -50,6 +51,64 @@ export function EntrySheet({ entry, categories, error, onClose, onSave, onDelete
   );
   const [unit, setUnit] = useState(entry.unit ?? "");
   const [category, setCategory] = useState(entry.category ?? "");
+
+  /**
+   * The conversion ANCHOR: the last quantity the user actually committed (initial
+   * value or a typed MENGE) together with the unit it was expressed in.
+   *
+   * Why it exists: EINHEIT is free text, so typing "mm" passes through the valid
+   * intermediate unit "m" on the way. If each keystroke converted the *currently
+   * displayed* MENGE, the conversions would chain (mm → m → mm) and every step
+   * would apply `round3`, compounding rounding error and corrupting the number
+   * (0,5 mm → 0,001 m → 1 mm). Converting always from the anchor means any unit
+   * the user lands on yields exactly one conversion of the original quantity, and
+   * returning to the anchor's unit restores the original text untouched.
+   *
+   * Only a typed MENGE re-anchors it; EINHEIT edits never do (spec §4).
+   */
+  const [anchor, setAnchor] = useState({
+    quantity: entry.quantity === null ? "" : formatGermanNumber(entry.quantity),
+    unit: entry.unit ?? "",
+  });
+
+  /**
+   * MENGE edit: store the draft AND re-anchor. The user's typed number becomes the
+   * new source of truth, expressed in whatever unit is currently in the EINHEIT field.
+   */
+  const changeQuantity = (text: string) => {
+    setQuantity(text);
+    setAnchor({ quantity: text, unit });
+  };
+
+  /**
+   * EINHEIT edit: store the draft, then derive MENGE from the anchor.
+   *
+   * - Anchor quantity a finite number > 0, same scale group, conversion non-null
+   *   → show the converted quantity in German format.
+   * - Anything else (empty/invalid MENGE, half-typed or other-group unit, a
+   *   conversion that rounds to zero) → show the anchor text verbatim, so the
+   *   quantity snaps back instead of keeping a stale intermediate conversion.
+   *
+   * `collectChanges` is untouched: it still diffs quantity and unit separately,
+   * so a round trip back to the original unit yields no quantity change.
+   */
+  const changeUnit = (newUnit: string) => {
+    setUnit(newUnit);
+    const anchorValue = parseGermanDecimal(anchor.quantity);
+    if (
+      anchorValue !== null &&
+      Number.isFinite(anchorValue) &&
+      anchorValue > 0 &&
+      sameScaleGroup(anchor.unit, newUnit)
+    ) {
+      const converted = convertQuantity(anchorValue, anchor.unit, newUnit);
+      if (converted !== null) {
+        setQuantity(formatGermanNumber(converted));
+        return;
+      }
+    }
+    setQuantity(anchor.quantity);
+  };
 
   /**
    * Diffs the drafts against the entry and returns ONLY what changed.
@@ -97,7 +156,7 @@ export function EntrySheet({ entry, categories, error, onClose, onSave, onDelete
             fieldSize="sm"
             value={quantity}
             error={error}
-            onChange={(event) => setQuantity(event.target.value)}
+            onChange={(event) => changeQuantity(event.target.value)}
           />
         </div>
         <div className={styles.unitField}>
@@ -107,7 +166,7 @@ export function EntrySheet({ entry, categories, error, onClose, onSave, onDelete
             placeholder="l"
             fieldSize="sm"
             value={unit}
-            onChange={(event) => setUnit(event.target.value)}
+            onChange={(event) => changeUnit(event.target.value)}
           />
         </div>
         <div className={styles.categoryField}>
