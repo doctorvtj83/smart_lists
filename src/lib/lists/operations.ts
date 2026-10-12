@@ -337,7 +337,7 @@ export async function applyOperationDetailed(
         effectiveUnit = scaled.unit ?? null;
       }
 
-      // U4 — GUARD THE FLOW-BACK. Normally an explicitly typed unit becomes the catalog default
+      // U7 — GUARD THE FLOW-BACK. Normally an explicitly typed unit becomes the catalog default
       // (design §4.4). But a unit from the SAME scale group as the default is just another way to
       // write the same measure — letting „500 ml" overwrite „l" would make the catalog flip-flop
       // with every add. So same-group units are withheld from flow-back (undefined = skipped by
@@ -405,7 +405,7 @@ export async function applyOperationDetailed(
         // client. Keeping all three writes here also keeps the row lock acquired by the increment
         // until the rounded value and replay marker are safely committed together.
         //
-        // U7 — The contribution is what `findMergeTarget` already CONVERTED into the target row's
+        // U4 — The contribution is what `findMergeTarget` already CONVERTED into the target row's
         // unit (500 ml onto a „l" row = 0,5), NOT the raw quantity typed. It is non-null here
         // because the presence-merge branch above handled the null-quantity case, and a candidate
         // whose conversion failed was disqualified in the matcher. The ledger below must hold this

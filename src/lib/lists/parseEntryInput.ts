@@ -24,15 +24,16 @@ import { BASE_UNIT_ALIASES } from "@/lib/units/aliases";
 export type UnitLookup = Record<string, string>;
 
 /**
- * The unit vocabulary for ONE project: the base list above unioned with every
- * `defaultUnit` the project's catalog already uses (ruling 2).
+ * The unit vocabulary for ONE project: {@link BASE_UNIT_ALIASES} from
+ * `@/lib/units/aliases` unioned with every `defaultUnit` the project's catalog
+ * already uses (ruling 2).
  *
  * WHY the project's own units join in: the catalog is the project's memory
  * (MVP design §4.4). A household that has been writing „Kiste" for months has
  * already taught the app that word, and the parser should not need a code
  * change to hear it.
  *
- * WHY the base list is spread LAST, i.e. wins a collision: a project whose
+ * WHY `BASE_UNIT_ALIASES` is spread LAST, i.e. wins a collision: a project whose
  * catalog holds „Liter" must still render the design's „1,5 l" (handoff §2).
  * Project units therefore only ever ADD keys, they never re-spell a known one.
  */
