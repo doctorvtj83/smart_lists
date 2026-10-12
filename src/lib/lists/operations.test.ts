@@ -493,14 +493,8 @@ describe("add_item — merging", () => {
     expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
   });
 
-  it("does not merge across different units (1 l and 500 ml stay apart)", async () => {
-    await add({ name: "Milch", quantity: 1, unit: "l" });
-
-    const { merge } = await add({ name: "Milch", quantity: 500, unit: "ml" });
-
-    expect(merge).toBeNull();
-    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(2);
-  });
+  // (Slice 20 replaced the old "1 l and 500 ml stay apart" test: same-group units now merge —
+  // see `describe("add_item — unit scaling")` at the end of this file.)
 
   it("merges across a unit case difference", async () => {
     const first = await add({ name: "Milch", quantity: 1, unit: "L" });
@@ -740,5 +734,162 @@ describe("add_item — merge idempotency", () => {
     await db.list.delete({ where: { id: list.id } });
 
     expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slice 20 — unit scaling in the add_item funnel (U3/U4/U7).
+// Same-group units (ml/l, g/kg/Pfund, ...) fold into ONE row instead of piling up.
+// ---------------------------------------------------------------------------
+
+/** Creates the catalog row up front (as the Joghurt test does) so an add inherits/compares it. */
+async function catalog(name: string, defaultUnit: string | null) {
+  return db.catalogItem.create({
+    data: { projectId, name, normalizedName: name.trim().toLowerCase(), defaultUnit },
+  });
+}
+
+/** Re-reads a catalog row's default unit straight from the database. */
+async function defaultUnitOf(catalogItemId: string) {
+  return (await db.catalogItem.findUniqueOrThrow({ where: { id: catalogItemId } })).defaultUnit;
+}
+
+describe("add_item — unit scaling", () => {
+  it("merges 500 ml into a 1 l row as 1,5 l", async () => {
+    await add({ name: "Milch", quantity: 1, unit: "l" });
+
+    const { item, merge } = await add({ name: "Milch", quantity: 500, unit: "ml" });
+
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(item!.quantity).toBe(1.5);
+    expect(item!.unit).toBe("l");
+    expect(merge).toMatchObject({ previousQuantity: 1, quantity: 1.5, unit: "l" });
+  });
+
+  it("converts a new row to the catalog default", async () => {
+    const milch = await catalog("Milch", "l");
+
+    const { item } = await add({ name: "Milch", quantity: 500, unit: "ml" });
+
+    expect(item!.quantity).toBe(0.5);
+    expect(item!.unit).toBe("l");
+    expect(await defaultUnitOf(milch.id)).toBe("l");
+  });
+
+  it("spells the row like the catalog default", async () => {
+    await catalog("Milch", "Liter");
+
+    const { item } = await add({ name: "Milch", quantity: 500, unit: "ml" });
+
+    expect(item!.quantity).toBe(0.5);
+    expect(item!.unit).toBe("Liter");
+  });
+
+  it("converts into a Pfund default", async () => {
+    await catalog("Hack", "Pfund");
+
+    const { item } = await add({ name: "Hack", quantity: 250, unit: "g" });
+
+    expect(item!.quantity).toBe(0.5);
+    expect(item!.unit).toBe("Pfund");
+  });
+
+  it("converts into the row's unit when it differs from the default", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+    // The catalog default drifts to ml (e.g. another edit) while the existing row stays in l.
+    await db.catalogItem.update({
+      where: { id: first.item!.catalogItemId },
+      data: { defaultUnit: "ml" },
+    });
+
+    const { item } = await add({ name: "Milch", quantity: 500, unit: "ml" });
+
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(item!.quantity).toBe(1.5);
+    expect(item!.unit).toBe("l");
+  });
+
+  it("replays a converted merge without adding twice", async () => {
+    await add({ name: "Milch", quantity: 1, unit: "l" });
+    const replayId = randomUUID();
+    const converted = { itemId: replayId, name: "Milch", quantity: 500, unit: "ml" };
+
+    const firstRun = await add(converted);
+    const replay = await add(converted);
+
+    expect(replay.item!.quantity).toBe(1.5); // NOT 2
+    // The ledger holds the CONVERTED contribution (0,5 l), because replay derives
+    // "total minus my contribution" in the row's unit.
+    const ledger = await db.absorbedEntry.findUniqueOrThrow({ where: { id: replayId } });
+    expect(ledger.quantity).toBe(0.5);
+    expect(replay.merge).toEqual(firstRun.merge);
+    expect(replay.merge).toMatchObject({ previousQuantity: 1, quantity: 1.5, unit: "l" });
+  });
+
+  it("presence-merges a bare same-group add", async () => {
+    await catalog("Milch", "l");
+    await add({ name: "Milch" }); // inherits "l", no quantity
+
+    const { item, merge } = await add({ name: "Milch", quantity: null, unit: "ml" });
+
+    expect(await db.listItem.count({ where: { listId: list.id } })).toBe(1);
+    expect(item!.quantity).toBeNull();
+    expect(item!.unit).toBe("l");
+    expect(merge).not.toBeNull();
+  });
+
+  it("keeps a rounds-to-zero add as its own row", async () => {
+    const mehl = await catalog("Mehl", "kg");
+    await add({ name: "Mehl", quantity: 1, unit: "kg" });
+
+    const { item, merge } = await add({ name: "Mehl", quantity: 0.4, unit: "g" });
+
+    expect(merge).toBeNull();
+    const rows = await db.listItem.findMany({
+      where: { listId: list.id },
+      orderBy: { sortIndex: "asc" },
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toMatchObject({ id: item!.id, quantity: 0.4, unit: "g" });
+    expect(await db.absorbedEntry.count({ where: { listId: list.id } })).toBe(0);
+    expect(await defaultUnitOf(mehl.id)).toBe("kg");
+  });
+
+  it("does not re-unit the catalog on a same-group add", async () => {
+    const milch = await catalog("Milch", "l");
+
+    await add({ name: "Milch", quantity: 500, unit: "ml" });
+
+    expect(await defaultUnitOf(milch.id)).toBe("l");
+  });
+
+  it("still flows a unit from another group back", async () => {
+    const milch = await catalog("Milch", "l");
+
+    const { item } = await add({ name: "Milch", quantity: 2, unit: "Flasche" });
+
+    expect(item!.unit).toBe("Flasche");
+    expect(await defaultUnitOf(milch.id)).toBe("Flasche");
+  });
+
+  it("learns the unit when the catalog has none", async () => {
+    const { item } = await add({ name: "Milch", quantity: 500, unit: "ml" });
+
+    expect(await defaultUnitOf(item!.catalogItemId)).toBe("ml");
+  });
+
+  it("update_item unit change still flows back (U10: quantity is not converted)", async () => {
+    const first = await add({ name: "Milch", quantity: 1, unit: "l" });
+
+    await applyOperation(db, list, {
+      op: "update_item",
+      itemId: first.item!.id,
+      field: "unit",
+      value: "ml",
+    });
+
+    expect(await defaultUnitOf(first.item!.catalogItemId)).toBe("ml");
+    const row = await db.listItem.findUniqueOrThrow({ where: { id: first.item!.id } });
+    expect(row.quantity).toBe(1); // the edit relabels the row; it never rescales the number
   });
 });
