@@ -78,9 +78,9 @@ export function convertQuantity(
  * Expresses an add's quantity in the catalog's default unit when both are in one scale group.
  *
  * WHY preserve defaultUnit spelling: the row should read like the catalog („0,5 Liter“),
- * not force the canonical short form. Returns null when there is no default, units do not
- * share a group, quantity is missing for an inherit path (caller step 5), or conversion
- * would round to zero.
+ * not force the canonical short form. Returns null when there is no default, the unit is
+ * missing (inherit path — caller step 5), units do not share a group, or conversion would
+ * round to zero. A null quantity with a same-group unit only replaces the unit.
  */
 export function scaleToDefault(
   quantity: number | null,
@@ -88,7 +88,8 @@ export function scaleToDefault(
   defaultUnit: string | null,
 ): { quantity: number | null; unit: string | null | undefined } | null {
   if (defaultUnit === null) return null;
-  if (unit === undefined) return null;
+  // null and undefined both mean "no explicit unit" — narrow before convertQuantity's string params.
+  if (unit == null) return null;
   if (!sameScaleGroup(unit, defaultUnit)) return null;
 
   if (quantity === null) {
