@@ -21,6 +21,10 @@ auth split described below.
 > database-free half (providers, session strategy, pages, `authorized` + `session` callbacks), and
 > the middleware builds its own NextAuth instance from it. Bundle: **1.02 MB → 316 KB**.
 > `src/test/middleware-edge-bundle.test.ts` walks the import graph and fails if the chain returns.
+>
+> *Update (Slice 21, 2026-11-27):* the gate is now `src/proxy.ts` and runs on Node.js, so the Edge
+> cap no longer applies. The guard was renamed to `src/test/proxy-bundle.test.ts` and still keeps
+> Prisma out of the request gate.
 
 Phase C done 2026-09-06: deploy `smart-lists-9v8mb0dot` is Ready, functions in `fra1`, middleware
 122.83 KB, Deployment Protection off for production. Production alias:
@@ -315,5 +319,4 @@ schema behind this branch?* Run it even when you believe nothing changed; the an
   at a non-production Neon branch (`dev`), never `production`.
 - **No CI.** `npm test` / `npm run lint` are not run on push; a broken test only shows up locally.
   A GitHub Actions workflow would need the `test`-branch `DATABASE_URL` as a repository secret.
-- **The `middleware` → `proxy` migration** (Next.js deprecation warning) is still open and carried
-  in the meta plan.
+- ~~The `middleware` → `proxy` migration~~ — resolved in Slice 21 (2026-11-27).
