@@ -78,13 +78,15 @@ under the table). Each slice is working, tested software on its own.
 | 17 | **Entry merging** | Adding an entry for an article already on the list **sums the quantities** instead of creating a second row (same article + same unit, both quantified, unchecked target only). Carries the `AbsorbedEntry` idempotency ledger that keeps `add_item` replay-safe now that it no longer always creates a row | [2026-09-13-slice-17-entry-merging.md](2026-09-13-slice-17-entry-merging.md) | ✅ Done / verified |
 | 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | [2026-09-13-slice-18-recipes-core.md](2026-09-13-slice-18-recipes-core.md) | ✅ Done / verified |
 | 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | [2026-09-15-slice-19-recipes-apply-derive.md](2026-09-15-slice-19-recipes-apply-derive.md) | ✅ Done / verified (signed-in UAT outstanding; no Server Action tests) |
+| 20 | **Unit scaling** | Scale groups (weight g/Pfund/kg, volume ml/cl/dl/l, length mm/cm/m) with pure conversion in `src/lib/units/`; merging across a group („1 l“ + „500 ml“ → „1,5 l“), new rows stored in the catalog default unit, no same-group catalog flow-back, live MENGE conversion in the entry sheet. No migration | [2026-10-12-slice-20-unit-scaling.md](2026-10-12-slice-20-unit-scaling.md) | ✅ Done / verified |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
 **Build order for what is left: Slice 16 (optional)**, only if real use asks
 for it. Slices 17–19 come from the
 [Recipes design](../specs/2026-09-13-smart-lists-recipes-design.md) (2026-09-13); see the note
-below the build-order notes.
+below the build-order notes. Slice 20 comes from the
+[Unit scaling design](../specs/2026-10-12-unit-scaling-design.md) (2026-10-12).
 
 > **Build-order note (2026-07-26):** Slice 5 was built LAST of the functional slices, after 6 and 7.
 > Its N-of-M statistic reads *completed* lists, which only exist once Slice 6 ships, so the real
@@ -275,6 +277,9 @@ Recipes (2026-09-13):
 4 Catalog ──> 18 Recipes core/mgmt ────┴──> 19 Recipes: applying + deriving
                                              (needs 5 pre-fill, 6 completed lists, 11 new-list sheet)
 
+Unit scaling (2026-10-12):
+15 Qty parsing + 17 Entry merging + 19 Recipes apply ──> 20 Unit scaling
+
 Build order for what is left: Slice 16 (optional)
 ```
 
@@ -352,6 +357,42 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-11-27 — Housekeeping: Slice 20 recorded; Preview `DATABASE_URL` gap closed
+- **Delivered:** (docs only) Slice 20 was merged on 2026-10-12 (PR #12, `166d023`) but never logged
+  here; this entry and the status-table row catch the meta plan up. The Preview-build `DATABASE_URL`
+  gap (found 2026-09-08) is **closed**: the owner configured a `DATABASE_URL` for the Vercel Preview
+  environment, and PR #12's `Vercel` preview check passed („Deployment has completed“). The deploy
+  runbook's *Known limitations* now say so.
+- **Inherited open items:** Human UAT for Slice 18 (11 checks) and Slice 19 (12 checks) — now
+  agent-executable via `scripts/dev-session.ts` (see CLAUDE.md, *Signed-in UAT*); member-path smoke,
+  likewise runnable with `dev-session.ts member`; no automated tests for the three Slice 19 Server
+  Actions; Next.js `middleware` → `proxy`; no CI; Slice 8's skipped live offline-navigation and
+  physical-iPhone checks.
+- **Next open slice:** **Slice 16 (per-row remote-change flash, optional)**, only if real use asks
+  for it. Beyond that the roadmap is Phase 2 (offline) and Phase 3 from the Vision PRD §8.
+
+### 2026-10-12 — Slice 20: Unit scaling — ✅ Done / verified
+- **Delivered:** A pure unit domain in `src/lib/units/` (shared alias table, `sameScaleGroup`,
+  `convertQuantity`, `scaleToDefault`); merging across a scale group with the contribution converted
+  into the target row's unit; `add_item` scales a new row to the catalog default and withholds
+  same-group units from catalog flow-back; the entry sheet converts MENGE live when EINHEIT changes
+  within a group. Packaging/count/cooking units stay outside every group. Implementation review:
+  [`docs/implementation-reviews/slice-20-unit-scaling.md`](../../implementation-reviews/slice-20-unit-scaling.md).
+- **Tested:** `npm test` → **108 files / 1001 tests passed**; `npm run lint` → 0 errors / 14
+  inherited warnings; `npm run build` → exit 0. Signed-in UAT as `uat-owner@example.test` (minted
+  cookie, dev branch): all five checks passed. Not performed: member user, polling with a second
+  browser, mobile viewport.
+- **Deviations from the plan:** UAT check (d) ran on a 2 l row instead of 1,5 l (same logic, expected
+  2000 instead of 1500).
+- **Follow-up decisions for later slices:** Any new surface that adds entries must go through
+  `applyOperationDetailed` to inherit scaling. `update_item` deliberately never converts and still
+  teaches the catalog its unit. New units (mg, Dutzend, packaging/cooking) are one table row plus an
+  alias. `RecipeItemSheet` and the catalog screen do not convert (out of scope by design).
+- **Migration gate:** not applicable — no changes under `prisma/`.
+- **Inherited open items:** Unchanged from Slice 19.
+- **Commit(s):** `1bd061f` (spec), `9c63fdd` (plan), `98faf16`…`3860b59` (implementation + review),
+  merged via `166d023` (PR #12).
 
 ### 2026-09-18 — Slice 19: Recipes applying + deriving — ✅ Done / verified (signed-in UAT outstanding; no Server Action tests)
 - **Delivered:** Applying a recipe to an open list (count × quantity through `add_item`, retry-safe
