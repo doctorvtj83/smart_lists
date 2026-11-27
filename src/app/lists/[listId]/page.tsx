@@ -81,7 +81,7 @@ function toEntryFormState(error: unknown, itemId: string | null): EntryFormState
 export default async function ListDetailPage({ params }: Props) {
   const { listId } = await params;
   const session = await auth();
-  // middleware.ts guarantees a session on this route; user.id is safe to assert.
+  // proxy.ts guarantees a session on this route; user.id is safe to assert.
   const userId = session!.user.id;
 
   // Guard: same rule as the REST routes. requireListAccess throws (404-style) for

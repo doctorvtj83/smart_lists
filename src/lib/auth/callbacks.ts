@@ -79,7 +79,7 @@ export function enrichSession(session: Session, token: JWT): Session {
   return session;
 }
 
-// The middleware authorization predicate. A request is authorized only when the
+// The proxy authorization predicate. A request is authorized only when the
 // session carries the app database user id — i.e. the full sign-in gate above ran
 // and provisioning succeeded. Pure boolean so it is trivially testable.
 export function isRequestAuthorized(auth: Session | null): boolean {

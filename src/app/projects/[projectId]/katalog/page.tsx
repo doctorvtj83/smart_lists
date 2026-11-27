@@ -47,7 +47,7 @@ function toFormState(error: unknown, articleId: string | null): CatalogFormState
 export default async function CatalogPage({ params }: Props) {
   const { projectId } = await params;
   const session = await auth();
-  // middleware.ts guarantees a session on this route, so user.id is safe.
+  // proxy.ts guarantees a session on this route, so user.id is safe.
   const userId = session!.user.id;
 
   // A non-member must not learn that this project exists — same redirect as the

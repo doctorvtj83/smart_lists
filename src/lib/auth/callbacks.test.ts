@@ -131,7 +131,7 @@ describe("enrichSession (mirrors JWT identity into the session)", () => {
   });
 });
 
-describe("isRequestAuthorized (middleware predicate)", () => {
+describe("isRequestAuthorized (proxy predicate)", () => {
   it("authorizes a session that carries an app user id", () => {
     expect(isRequestAuthorized({ user: { id: "u-1", isAdmin: false }, expires: "" } as Session)).toBe(true);
   });

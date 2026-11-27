@@ -16,7 +16,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { ContinueCard } from "./ContinueCard";
 import styles from "./page.module.css";
 
-// Middleware is the first protection layer; this explicit check keeps the page safe if middleware behavior changes.
+// The proxy is the first protection layer; this explicit check keeps the page safe if proxy behavior changes.
 // Slice 14 restyles it to handoff screen 3c and adds the "Weitermachen" card.
 export default async function HomePage() {
   const session = await auth();

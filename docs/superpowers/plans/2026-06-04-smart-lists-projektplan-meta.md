@@ -79,6 +79,7 @@ under the table). Each slice is working, tested software on its own.
 | 18 | **Recipes: core, management, settings** | `Recipe`/`RecipeItem` per project, `/projects/[id]/rezepte` screen (CRUD reusing the trailing row + entry sheet), owner-only `/projects/[id]/einstellungen` with the **opt-in toggle and the project's own singular/plural label**, catalog-delete guard extended to recipe usage, `suggestionRuleN` default 2 → 3 | [2026-09-13-slice-18-recipes-core.md](2026-09-13-slice-18-recipes-core.md) | ✅ Done / verified |
 | 19 | **Recipes: applying + deriving** | `expandRecipe` (count × quantity), „Rezept hinzufügen" into an open list, the **two-step new-list sheet** (name/pre-fill → recipes) with the recipes-first ordering rule, and „Rezept aus Liste anlegen" from a completed list with editable per-portion quantities and a build-another loop | [2026-09-15-slice-19-recipes-apply-derive.md](2026-09-15-slice-19-recipes-apply-derive.md) | ✅ Done / verified (signed-in UAT outstanding; no Server Action tests) |
 | 20 | **Unit scaling** | Scale groups (weight g/Pfund/kg, volume ml/cl/dl/l, length mm/cm/m) with pure conversion in `src/lib/units/`; merging across a group („1 l“ + „500 ml“ → „1,5 l“), new rows stored in the catalog default unit, no same-group catalog flow-back, live MENGE conversion in the entry sheet. No migration | [2026-10-12-slice-20-unit-scaling.md](2026-10-12-slice-20-unit-scaling.md) | ✅ Done / verified |
+| 21 | **`middleware` → `proxy` migration** _(maintenance)_ | Rename `src/middleware.ts` to the Next 16 `src/proxy.ts` convention (named `proxy` export, matcher unchanged); proxy now runs on Node.js, the `auth.config` split and the bundle guard are kept with a restated rationale. No migration | [2026-11-27-slice-21-middleware-to-proxy.md](2026-11-27-slice-21-middleware-to-proxy.md) | ✅ Done / verified |
 
 **Status legend:** ⬜ Open · 🟨 In progress · ✅ Done / verified unless the row includes an explicit caveat
 
@@ -357,6 +358,18 @@ When you have finished a slice, **before** the final commit do the following:
 > - **Inherited open items:** … (or "none")
 > - **Commit(s):** <hash(es)>
 > ```
+
+### 2026-11-27 — Slice 21: `middleware` → `proxy` migration — ✅ Done / verified
+- **Delivered:** `src/middleware.ts` is now `src/proxy.ts` with a named `proxy` export; the matcher is
+  byte-identical. Tests renamed (`src/proxy.test.ts`, `src/test/proxy-bundle.test.ts`) plus one new
+  test for the export. Every comment that named the middleware was updated; the Edge/1 MB incident
+  stays as history. No migration. The runtime is now Node.js (not configurable in Next 16).
+- **Tested:** `npm test` 108 files / 1002 tests passed; `npm run lint` 0 errors / 14 inherited
+  warnings; `npm run build` shows a `Proxy` row and no deprecation warning. Signed-out curl and
+  signed-in browser UAT as `uat-owner` passed (see the implementation review).
+- **Inherited open items:** Human UAT for Slices 18/19; member-path smoke; no automated tests for the
+  three Slice 19 Server Actions; no CI; Slice 8's skipped live offline and physical-iPhone checks.
+  **Closed:** `middleware` → `proxy`.
 
 ### 2026-11-27 — Housekeeping: Slice 20 recorded; Preview `DATABASE_URL` gap closed
 - **Delivered:** (docs only) Slice 20 was merged on 2026-10-12 (PR #12, `166d023`) but never logged

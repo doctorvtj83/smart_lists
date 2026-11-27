@@ -9,7 +9,7 @@ import { THEME_COLOR } from "@/lib/pwa/app-metadata";
  * MetadataRoute.Manifest and can import THEME_COLOR — so the manifest and the
  * viewport meta tag cannot drift apart.
  *
- * Note on middleware: the generated path contains a dot, so the auth matcher's
+ * Note on the proxy: the generated path contains a dot, so the auth matcher's
  * `.*\..*` exclusion already lets it through unauthenticated. That matters —
  * a browser fetches the manifest before the user has any session.
  */

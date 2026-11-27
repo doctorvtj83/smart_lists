@@ -13,7 +13,7 @@ import styles from "./page.module.css";
  * be nothing to cache. It also means the page must NOT read the session — which
  * is fine, because "you are offline" is the same message for everyone.
  *
- * It is exempted from the auth middleware in src/middleware.ts for the same
+ * It is exempted from the auth proxy in src/proxy.ts for the same
  * reason: without that, install-time precaching would store a /login redirect.
  *
  * The copy follows the design's empty-state pattern (handoff § Empty States):
