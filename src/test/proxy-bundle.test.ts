@@ -3,12 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 
 /**
- * Guards the one property of src/middleware.ts that cannot be seen by reading it:
- * what its *transitive* imports drag into the Edge bundle.
+ * Guards the one property of src/proxy.ts that cannot be seen by reading it:
+ * what its *transitive* imports drag into the request gate.
  *
- * Why this test exists: the first production deploy (2026-09-06) failed with
+ * History (Slice 21 renamed middleware.ts → proxy.ts and this file with it).
+ * Why this test was created: the first production deploy (2026-09-06) failed with
  * `The Edge Function "_middleware" size is 1.02 MB and your plan size limit is
- * 1 MB`. The cause was invisible in the middleware source — it imported `@/auth`,
+ * 1 MB`. The cause was invisible in the then-middleware source — it imported `@/auth`,
  * which imports the Prisma singleton from `@/lib/db`, so the Prisma query-engine
  * WASM ended up inside an Edge function that never runs a single query. The
  * middleware only evaluates `isRequestAuthorized`, a pure boolean over the JWT.
@@ -19,15 +20,22 @@ import { dirname, relative, resolve } from "node:path";
  * a lint rule expressed as a test: cheap, no build step, and it fails at the
  * moment someone reintroduces the dependency rather than 50 seconds into a
  * Vercel deploy.
+ *
+ * Why it still matters under Next 16: the proxy runs on Node.js (not
+ * configurable; see node_modules/next/dist/docs/01-app/03-api-reference/
+ * 03-file-conventions/proxy.md), so the 1 MB Edge cap is gone. But the proxy
+ * runs on every matched request, and importing Prisma would create a client and
+ * connection pool in the gate for a check that only verifies a JWT. Keeping the
+ * guard costs nothing and removing it buys nothing.
  */
 
-// Specifiers that must never be reachable from the middleware at runtime.
+// Specifiers that must never be reachable from the proxy at runtime.
 // `@prisma/client` is the direct offender; `@/lib/db` is the path that pulled it
 // in, named separately so a failure message points at the actual mistake.
 const FORBIDDEN = ["@prisma/client", "@/lib/db"];
 
 // Two patterns, because a re-export is an edge in the graph just like an import
-// — `src/middleware.ts` reached Prisma through `export { auth as middleware }
+// — `src/middleware.ts` (the old name) reached Prisma through `export { auth as middleware }
 // from "@/auth"`, and a scanner that only looked for `import` walked straight
 // past it. Both capture (1) the `type` keyword if present and (2) the
 // specifier; `import type`/`export type` are erased by TypeScript and never
@@ -66,7 +74,7 @@ function resolveLocal(specifier: string, importerFile: string): string | null {
 /**
  * Walks the import graph from an entry file and returns every specifier reached,
  * plus the chain that led there. The chain is what makes a failure actionable:
- * "middleware → auth → lib/db" tells you exactly which edge to cut.
+ * "proxy → auth → lib/db" tells you exactly which edge to cut.
  */
 function collectRuntimeImports(entry: string): Map<string, string[]> {
   const found = new Map<string, string[]>();
@@ -100,23 +108,23 @@ function collectRuntimeImports(entry: string): Map<string, string[]> {
   return found;
 }
 
-describe("middleware Edge bundle", () => {
+describe("proxy bundle", () => {
   it("never reaches Prisma at runtime", () => {
-    const imports = collectRuntimeImports(resolve(process.cwd(), "src/middleware.ts"));
+    const imports = collectRuntimeImports(resolve(process.cwd(), "src/proxy.ts"));
 
     for (const specifier of FORBIDDEN) {
       const chain = imports.get(specifier);
       expect(
         chain,
-        `src/middleware.ts must not import ${specifier} at runtime — it bundles the ` +
-          `Prisma query engine into the Edge function and breaks the 1 MB deploy limit. ` +
+        `src/proxy.ts must not import ${specifier} at runtime — it puts a database ` +
+          `client into the request gate on every matched request. ` +
           `Reached via: ${chain?.join(" -> ")}`
       ).toBeUndefined();
     }
   });
 
   it("still authorizes requests through the shared auth config", async () => {
-    // The split must not silently drop the two callbacks the middleware depends
+    // The split must not silently drop the two callbacks the proxy depends
     // on: `authorized` decides the redirect, and `session` is what puts
     // `user.id` on the session object that `authorized` reads. Losing `session`
     // would make every request look unauthenticated — an infinite /login loop.
