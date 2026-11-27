@@ -101,6 +101,9 @@ Commit and push these changes to `main` before creating the Vercel project.
    Next.js. Do **not** deploy yet — add the environment variables in the import screen first.
 2. 🔑 Environment variables, **scope: Production only** (leave Preview/Development empty for now):
 
+   > **Later addition (2026-09-08):** Preview also needs a `DATABASE_URL` (Neon `dev`, never
+   > `production`) or every PR's preview build fails in `prisma.config.ts` — see *Known limitations*.
+
    | Name | Value |
    |---|---|
    | `DATABASE_URL` | Neon **`production`, pooled** connection string |
@@ -306,8 +309,10 @@ schema behind this branch?* Run it even when you believe nothing changed; the an
   blocks force pushes and deletion, and has no bypass. Production deploys happen when the owner
   merges a PR. Agents in the devspace runner open PRs and never merge them (`CLAUDE.md`, "Agents in
   the devspace runner").
-- **Preview builds** run for every PR. They build without a database: `prisma generate` needs no
-  connection.
+- **Preview builds** run for every PR, and the passing `Vercel` check is what the ruleset requires.
+  `prisma.config.ts` refuses to load without `DATABASE_URL`, so the **Preview** environment needs one
+  too; the owner added it after the 2026-09-08 build failure (PR #12's preview passed). It must point
+  at a non-production Neon branch (`dev`), never `production`.
 - **No CI.** `npm test` / `npm run lint` are not run on push; a broken test only shows up locally.
   A GitHub Actions workflow would need the `test`-branch `DATABASE_URL` as a repository secret.
 - **The `middleware` → `proxy` migration** (Next.js deprecation warning) is still open and carried
