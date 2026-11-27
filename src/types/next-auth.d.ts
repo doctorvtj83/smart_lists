@@ -10,7 +10,7 @@ declare module "next-auth" {
   }
 }
 
-// The JWT stores the database user identity so middleware and server code can avoid a session table.
+// The JWT stores the database user identity so the proxy and server code can avoid a session table.
 declare module "next-auth/jwt" {
   interface JWT {
     userId?: string;

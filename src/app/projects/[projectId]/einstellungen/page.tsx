@@ -29,7 +29,7 @@ type Props = { params: Promise<{ projectId: string }> };
 export default async function ProjectSettingsPage({ params }: Props) {
   const { projectId } = await params;
   const session = await auth();
-  // middleware.ts guarantees a session on this route, so user.id is safe.
+  // proxy.ts guarantees a session on this route, so user.id is safe.
   const userId = session!.user.id;
 
   const nav = await getProjectNav(prisma, projectId, userId);

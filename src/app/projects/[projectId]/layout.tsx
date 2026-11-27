@@ -27,7 +27,7 @@ type Props = {
 export default async function ProjectLayout({ children, params }: Props) {
   const { projectId } = await params;
   const session = await auth();
-  // middleware.ts guarantees a session on this route, so user.id is safe.
+  // proxy.ts guarantees a session on this route, so user.id is safe.
   const userId = session!.user.id;
 
   // One read covers the guard AND the nav: the membership predicate is inside

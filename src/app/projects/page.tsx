@@ -22,7 +22,7 @@ import styles from "./page.module.css";
 // project list for the summary read model that carries the meta line and the role.
 export default async function ProjectsPage() {
   const session = await auth();
-  // middleware.ts guarantees an authenticated session on this route, so user.id is always present.
+  // proxy.ts guarantees an authenticated session on this route, so user.id is always present.
   const userId = session!.user.id;
 
   // The summary read model (Slice 14) instead of listProjectsForUser: the design's
@@ -38,7 +38,7 @@ export default async function ProjectsPage() {
     // because actions can be called from anywhere once registered).
     const s = await auth();
     const uid = s?.user?.id;
-    if (!uid) return; // Should not happen behind middleware, but guard anyway.
+    if (!uid) return; // Should not happen behind the proxy, but guard anyway.
 
     const name = String(formData.get("name") ?? "").trim();
     if (!name) return; // Ignore empty submissions silently.

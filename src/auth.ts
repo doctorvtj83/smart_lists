@@ -9,9 +9,10 @@ import { handleSignIn, enrichToken } from "@/lib/auth/callbacks";
  * callbacks that need database access.
  *
  * Why the config is split across two files: importing this module pulls in the
- * Prisma client, which is far too large for an Edge Function. `middleware.ts`
- * therefore builds its own, leaner instance from `@/auth.config` — see the
- * comment there and in auth.config.ts. Nothing outside the middleware needs the
+ * Prisma client. `proxy.ts` therefore builds its own, leaner instance from
+ * `@/auth.config` so no database client sits in the request gate (history: as
+ * middleware it was an Edge Function and this import broke Vercel's 1 MB cap) —
+ * see the comment there and in auth.config.ts. Nothing outside the proxy needs the
  * lean instance; everything else runs on Node.js and should import from here.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({

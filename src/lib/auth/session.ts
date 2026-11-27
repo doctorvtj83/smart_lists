@@ -7,9 +7,9 @@ import { isUuid } from "@/lib/validate";
  * Resolves the signed-in user's id for use in API route handlers.
  * Throws ApiError(401) if there is no session.
  *
- * Defense in depth: middleware already protects routes, but API handlers must never assume a caller —
- * they re-derive identity from the trusted session. This ensures that even if middleware is bypassed
- * or a new API route is added without updating the middleware config, the handler itself is still safe.
+ * Defense in depth: the proxy already protects routes, but API handlers must never assume a caller —
+ * they re-derive identity from the trusted session. This ensures that even if the proxy is bypassed
+ * or a new API route is added without updating the proxy config, the handler itself is still safe.
  *
  * Pattern: Single responsibility — every route handler delegates auth identity resolution to this
  * function so it's consistent and easy to test/change in one place.

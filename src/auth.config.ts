@@ -6,21 +6,23 @@ import { enrichSession, isRequestAuthorized } from "@/lib/auth/callbacks";
  * The half of the Auth.js configuration that touches no database.
  *
  * Pattern: split config (the approach Auth.js documents for edge-compatible
- * middleware). `auth.ts` spreads this and adds the two Prisma-backed callbacks;
- * `middleware.ts` builds its own NextAuth instance from this file ALONE.
+ * middleware, now the Next 16 proxy). `auth.ts` spreads this and adds the two
+ * Prisma-backed callbacks; `proxy.ts` builds its own NextAuth instance from this file ALONE.
  *
- * Why the split is load-bearing and not cosmetic: the middleware runs as an Edge
- * Function, and Vercel's Hobby plan caps that bundle at 1 MB. When
- * `middleware.ts` re-exported `auth` from `auth.ts`, the import chain
- * `middleware -> auth -> lib/db -> @prisma/client` pulled the Prisma query-engine
- * WASM into the bundle — 1.02 MB, and the first production deploy (2026-09-06)
- * was rejected. The middleware never runs a query; it only evaluates
+ * Why the split is kept: the proxy runs on every matched request, and importing
+ * Prisma there would create a client and connection pool in the request gate for
+ * a check that only verifies a JWT. History: as `middleware.ts` it ran as an Edge
+ * Function with a 1 MB cap on Vercel's Hobby plan; when it re-exported `auth`
+ * from `auth.ts`, the chain `middleware -> auth -> lib/db -> @prisma/client`
+ * pulled the Prisma query-engine WASM into the bundle — 1.02 MB, and the first
+ * production deploy (2026-09-06) was rejected. Next 16 runs the proxy on Node.js
+ * so the cap is gone, but the proxy still never runs a query; it only evaluates
  * `isRequestAuthorized`, a pure boolean over the JWT. `src/test/
- * middleware-edge-bundle.test.ts` fails the build if that chain comes back.
+ * proxy-bundle.test.ts` fails the build if that chain comes back.
  *
  * Note that `callbacks.session` MUST live here, not in auth.ts: `authorized`
  * reads `auth.user.id`, and `enrichSession` is what copies that id out of the
- * token onto the session. Without it in the middleware's own instance every
+ * token onto the session. Without it in the proxy's own instance every
  * request would look signed-out and redirect to /login forever.
  */
 export const authConfig = {
@@ -48,7 +50,7 @@ export const authConfig = {
     error: "/auth/error",
   },
   callbacks: {
-    // Auth.js v5 only blocks middleware-matched routes when this callback says the request is authorized.
+    // Auth.js v5 only blocks proxy-matched routes when this callback says the request is authorized.
     authorized({ auth }) {
       return isRequestAuthorized(auth);
     },
